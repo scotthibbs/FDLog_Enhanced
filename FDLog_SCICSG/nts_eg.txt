@@ -1,0 +1,33 @@
+National Traffic System Message Examples
+
+
+
+Originated Message
+
+    Num Prec HX Orig_Sta  Check         Place  Time      Date Filed
+      1    R  E   WB6ZQZ     24  El Dorado NF  1800 UTC  23 June 2010
+
+    To:     ARRL Section Manager
+            Sacramento Valley Section
+                    
+    Msg:    The High Sierra Field Day
+            Group is operating for Field
+            Day in the El Dorado
+            National Forest with xx ARRL
+            members and yy participants.
+            
+    Sig:    Alan Biocca WB6ZQZ Group Leader
+
+
+
+Relayed Messages
+    
+
+    Num Prec HX Orig_Sta  Check      Place  Time      Date Filed
+     23    R  E   xx6xxx     99      where  xxxx UTC  xx June 2010
+
+    To:
+                    
+    Msg:
+    
+    Sig: 

@@ -1,0 +1,296 @@
+
+FDLOG = Field Day Logging Program                    (c) 2002-2010 A K Biocca
+
+  Welcome to WB6ZQZ's FDLOG program. This getting started dialog will review
+the essentials and get you started using the program.
+
+  FDLOG is distributed under the GNU Public License. A copy is included
+in the distribution package (gnu.txt) or can be found at www.gnu.org.
+
+  Starting the program by either double clicking on fdlog.py, or typing
+it on the command line. It will come up and ask for some configuration info.
+
+  The node id is used to identify the database records for each node in
+the network of logging computers. These names must be unique - no two nodes
+may use the same id at the same time. 
+The suggested id is the callsign of the equipment owner followed by a dash
+and a single digit, similar to packet radio id's. An example would be:
+wb6zqz-1. Valid characters include lowercase letters, numbers, and dash.
+An alternate form is to use suffix-digit or just suffix such as 'zqz-1' or
+just zqz.
+
+  The node id will be requested as input during the first startup. Thereafter
+it may be changed from the Properties menu.
+
+  The authentication key is used to validate packets. Outgoing packets are
+signed, and incoming packets are checked for correct signatures. Invalid
+packets are not processed. Set the authentication key to the same value
+for all nodes during startup.  The authentication key is made up of three
+components. The first 3 characters are used as part of the logfile name.
+Typically these are set to 'tst' for testing, or the two digit year and a
+letter, such as '04a' for 2004, log file version a. This allows multiple
+logfiles if desired. The next 3 digits are the port number factor. Characters
+beyond that are used for the signature hash: 'yycppphhh...'
+
+  The authentication key is input at each program startup. To change it,
+quit and restart the program.
+
+  Host based firewalls (such as Zone Alarm) can be used with FDLog.
+The program needs to be a server and client on the internet, so give it
+that access (if network/wireless synchronization between stations is
+desired).
+
+  The display consists of four areas. The Menu Bar, the Button area,
+and the Input Window.
+
+  The window title bar displays a lot of information. Some items may not have
+values and so will not display until they do. From left to right:
+
+    FDLOG                       program name
+    2A SV-Sacramento Valley     field day class and section (the report)
+    Node: wb6zqz-1              node id
+    Time on Band 0:23           time on this band in hours, minutes
+    13:35 UTC 04/23             UTC time and date
+
+  The Menu has many options which will be covered later. In particular,
+there are many useful items under the Help menu.
+
+  The Band Buttons are used to set the band of this station. They are in
+wavelength (meters) from 160 through 2, and then in frequency from 220
+through 1200. Satellite is abbreviated 'sat'. Cw, Digital and Phone are
+indicated by a single postfix letter; 'c', 'd', and 'p'. Thus Satellite
+Phone is 'satp' and twenty meter cw is '20c'.
+
+  The 'off' selections are to be selected when the station is not on a
+band. This allows other stations to use the band.
+
+  The Class indicator shows the number of stations on vs the number allowed.
+Thus 0/2 is none on, two allowed. The VHF label indicates the number of
+stations on VHF, and the number of Free stations available. Thus 1/1 shows
+one station on VHF, one free allowed. Similarly, 2/1 indicates two stations
+on, and one free is allowed. The second VHF station will count against the
+Class transmitter count.
+
+  The FonQ indicator shows the number of phone contacts. The GOTAq indicator
+shows the number of Get On The Air station contacts. This lower right label
+gets overwritten with error messages regarding the networking when needed.
+These errors are described later.
+
+  This section has color coding. In the Band columns Gray indicates
+available bands, Yellow is on occupied bands, Orange an over-occupied
+band, White the band this station is on, and Red an over-occupied
+band this station is on. In the Class column White indicates no stations,
+Yellow is some but not all that are allotted, and Green is full usage of that
+station type. Red or Orange indicates too many stations for the current Class.
+
+  Just below the Band Button block is the (new) Operator/Logger/Power button
+row. These Menubuttons allow selecting from the participants for Operator and
+Logger, Adding new Participants, and entering the Power Level. Participants
+are indexed by initials, so they must be unique. The power level may be
+selected from the pulldown menu, or typed in. The Natural checkbox is used
+to designate Natural Power for proper bonus credit.
+
+  The Central window displays the current log entries. It may be scrolled
+back to inspect earlier entries. Log entries and QSTs from other stations
+are included in this display.
+
+  The Lower window is the input window. Log Entries are typed there, and it
+can be scrolled back to inspect earlier entries. Only local input data
+appears in the lower display.
+  
+  The computer's clock accuracy is important for sorting of reports. The
+program uses UTC time, so incorrect time zone settings can cause apparent time
+errors. The '.tdwin' command sets the tolerance for time difference in seconds.
+Incoming packets showing time differences exceeding this number of seconds
+are displayed in the Command Window.
+
+  The output power in (watts) is recorded in the log. An output power of
+0 watts indicates a test, so it will not be included in the final logs. Use
+the Power button or Power Entry box to set the power level. Check the Natural
+checkbox if the station is using natural power (to get credit for the extra
+points).
+
+  The operator and logger are recorded in the log. Use the Operator and Logger
+buttons to select.
+
+  The power, operator, logger, and authentication data are stored in a file with
+the log program on normal exit, and reloaded on restart to minimize re-entering.
+The band is not restored, so it will have to be re-selected after restarting the
+program.
+
+  Band is set by clicking on the desired gray band button or typing a command
+".band  <band><mode>". Bands are 160/80/40/20/15/10/6/2 meters or 220/440/1200
+mhz or sat (for satellite) followed by a mode letter c, d or p for cw, digital
+or phone. It will warn you if there is another station on that band, but it will
+allow the change anyway. Make sure the other station is not using the band
+before making contacts.
+
+  Testing can be done with the band set to 'off' (or by using the 'tst'
+authentication code). Contacts made to band 'off' are not counted in the
+various scoring outputs, and will be filtered from the final log. Use the
+auth key 'tst' to share data with test stations. In this configuration the
+band and mode can be set as if operating to fully exercise the system since
+the test log is separate from the contest log. When ready to join the actual
+field day data net, shut down the fdlog program. Restart the program and use
+the key that the group is using for the contest. Note that two groups in the
+same physical area can use keys with differing port fields to avoid
+authentication error warnings.
+
+  Logging contacts is optimized for minimum keystrokes. Enter the call suffix
+followed by a space to do a quick dup check. This will list any calls on this
+band/mode  that have that same suffix. To log that call enter the prefix and
+a space, and it will automatically pick up the earlier suffix and be ready for
+the report. After typing the report, wait for the actual QSL confirmation
+before hitting return. Return logs the Q into the database. Study the ARRL
+section abbreviations to use the correct ones. This will enable the worked
+all states function to be accurate.
+
+  Here is an example using 12 keystrokes to log a Q:
+
+  aw<space> ==> ['w2aw']         <shows w2aw was worked on this band>
+  w1<space> ==> w1aw<space>_     <waiting for report, not a dup>
+  <report>  ==> w1aw 2a nc_      <waiting for return to log the Q>
+  <return>  ==> w1aw 2a nc QSL   <entered into db>
+
+  ESCape will cancel an entry in progress and clear the input line.
+
+  Wait to hit <return> until tho QSO has been confirmed.
+
+  An incorrectly entered Q can be deleted with:
+".delete <node> <sequencenum> <reason>". This command actually places
+a 'delete' entry in the log which is used to filter clean logs. The
+node and sequence number are the right two log columns.
+
+  When taking a break in operations, set the band to 'off' with the "off"
+button or the ".off" command. This makes the band available to others.
+
+  If a node is just joining the net, or was off for awhile, it will take time
+for it to 'catch up' to the full database. It attempts to do this at 10 items 
+per second, so it should not take long. It will display the data as it comes in,
+so when it stops streaming data it is probably caught up. The 'Need Fill'
+indicator will appear until it is caught up.
+
+  QST broadcast messages can be sent to all nodes and entered into the log
+by typing '#<message>' starting in column one. These are visible in the upper
+window and scan be reviewed by selecting the log for band *QST, so watch for
+them!
+
+Platform Issues
+
+  This program was developed under Windows 2k. It should mostly work on Linux,
+Unix, and Macintosh due to the portability of Python and Tkinter. There are
+some issues that will affect portability, and some functions may not work.
+For example, launching the ARRL Rules pdf file may only work on Windows. Font
+sizes may be an issue on Linux.
+
+Troubleshooting
+
+  The program checks the networking and if any problems are noted they are
+displayed on the lower right button (that usually reads GOTAq), turning it
+yellow and putting a short message in it. These messages and what they mean
+are detailed below:
+
+
+  NO NODE    The node identification is missing. This is necessary
+             to identify the database records when they are shared.
+             It is recommended to set this to the callsign of the owner
+             of the station radio or computer (or the suffix), optionally
+             followed by a dash and a single digit number if more than one
+             id is needed. THIS MUST BE UNIQUE. DO NOT GIVE TWO NODES THE
+             SAME NODE ID at the same time. Restart the program
+             and answer the query during initialization to set it.
+
+  NO AUTHKEY The authentication key is missing. Restart the program
+             and answer the query during initialization to set it.
+             It must match the other nodes you are sharing data with.
+             
+  SNDP FAIL  The Packet Sender has received an error from the operating
+             sytem. This may occur when there is a network problem.
+             Restarting the program or rebooting may cure it.
+             
+  RCVP FAIL  Ten seconds have passed without receiving any packets. This
+             indicates that no other packets from a FDLOG program are
+             being received within the time window. This could indicate
+             a problem with the network or auth key, or it could be normal
+             if this is the only computer on this network running the
+             program. It will occur occasionally if there are only two
+             computers on the network running FDLog. Try restarting the
+             program after the network is known to be working.
+
+  AUTH FAIL  A packet has been received (on the port) that has the incorrect
+             authentication code. It will not be processed. All nodes
+             participating must use the same authentication key. Refer to
+             the command window for more information about this error. It
+             is best if test and production modes use different ports to
+             avoid seeing each others packets which have differing
+             authentication codes.
+
+  NEED FILL  A node status broadcast has been received, and one or more
+             of these nodes have data that this node's database does
+             not have. This node will request the missing data until
+             it is caught up. The new database items will be displayed in
+             the upper display as they come in. If the NEED FILL is
+             indicated, and no data is flowing into the upper display,
+             the requests for data are not being answered.
+
+  The incoming packets are checked for time skew. If it exceeds '.tdwin'
+seconds a message is displayed in the command window. The default is 10
+seconds. The message is 'tdel <diff> <host> <ip> <node> <utc date.time>'.
+The window can be adjusted with the '.tdwin <seconds> command. (Note -
+set the tmast variable to select a time master node - see the .set menu).
+
+Reports
+
+File / Save Entry File    - writes the complete Entry file to the file named
+                            'fdlog.log' (including ADIF format log)
+
+File / Preview Entry File - preview the existing entry file.
+
+File / View Raw Logfile   - view the raw database file ('fdlog.fdb')
+
+The following reports are generated from keyboard commands (starting with
+'.' (period)). They respond to the command window.
+
+.st     this station's status
+.ba     station and band status
+.re     log summary report
+.pr     save contest entry to 'fdlog.log'
+
+
+Keyboard Input Syntax for QSOs
+
+call is
+  <prefix><suffix><tag>
+
+prefix is
+  <letters><digits> or <digits><letters>
+
+suffix is
+  <letters or digits>  (different from end of prefix)
+
+tag is
+  /<letters or digits>
+
+qso is
+  <call> <report>
+
+report is
+  <letters or digits or spaces>
+
+commands are
+  .help
+  .pow <digits><optional 'n'>
+  .band <band><mode>           bands are 160..2m, 220..1200, modes are c d p
+  .edit <call>                 editing function (in work)
+  .delete <node> <seqnum>      delete a database entry
+  .st                          this node's status
+  .ba                          station band report
+  .re                          summary
+  .pr                          generate contest entry
+
+Forcing a Contact into the database at a specific time (eg: from paper logs):
+  :dd.hhmm <call> <report> (picks up band/mode/oper/log/power)
+
+QST messages to all nodes:
+  #<message>
+    

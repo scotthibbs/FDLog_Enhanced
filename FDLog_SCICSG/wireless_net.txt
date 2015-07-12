@@ -1,0 +1,121 @@
+Wireless Networking FD 2014
+
+Please connect to the Field Day wireless network. 
+
+
+Previous text below: 
+
+
+Wireless Networking      3/2002
+
+802.11 Wireless Network
+
+$Revision: 1.14b $
+
+2005 Notes
+
+For the last couple of years we have used an access point. This works very well.
+It is good to have a backup access point in case of equipment failure. Some
+access points don't work right when not connected to the internet. Check this out
+in advance.
+
+Wireless Configuration
+
+Choosing Peer to Peer versus an Access Point is a subject of some debate. The Peer
+to Peer solution is nice in that there is minimal hardware required (no access point),
+no power required for the access point, and no single point of failure. This is
+traded for more configuration complexity. Some wireless cards and software versions
+do not do peer to peer correctly. If you choose to use peer to peer then certainly
+a pre-FD test event is important to weed out the problems. If you choose to use an
+access point then make sure you have a spare and have figured out how to power it.
+Also, configuring the access point can be problematic, so testing is indicated here
+as well.
+
+Ad-Hoc (peer to peer)
+  Channel 10 (arbitrary, all use same)
+  net name 'fdnet'
+  select peer-to-peer or ad-hoc
+  encryption/wep off
+
+Access Point
+  if we have one then select that mode instead
+  and use DHCP if possible
+
+Host Name
+  hosts require unique node id
+  recommend <callsign>-<number> (or your choice)
+    or suffix-digit
+    eg wb6w, wb6w-1, wb6w-2, zqz-1
+  8 chars max, lowercase letters, numbers, - (hyphen)
+
+
+
+IP addresses (only if DHCP not used)
+
+  set fixed address, netmask
+
+  netmask        255.0.0.0
+
+  default route  10.0.0.1
+
+  NTP server     10.0.0.5   time server
+
+                            range of 10 addresses each, xx0..xx9
+
+  Alan    wb6zqz 10.0.0.10  fdlog prog web server
+  Eric    wd6cmu 10.0.0.20
+  Brad    n6bde  10.0.0.30
+  Frank   wb6mrq 10.0.0.40
+  Glenn   wb6w   10.0.0.50
+                 10.0.0.60
+  Ken     wb6mlc 10.0.0.70
+  Oliver  kb6ba  10.0.0.80
+  Rich    wa6fxp 10.0.0.90
+  Mike    wa6zty 10.0.0.100
+  Mike    k3mc   10.0.0.110
+                 10.0.0.120
+  Weo     wn6i   10.0.0.130
+  Kit     wa6pww 10.0.0.140
+  Cal     ka6boi 10.0.0.150
+                 10.0.0.160
+  ______________ 10.0.0.170
+
+
+Is it working?
+  Check Signal Strength
+  ping other stations
+
+
+Download Software
+  use internet explorer or netscape
+    http://10.0.0.10/
+      python
+      fdlog.zip
+      autochron.zip NTP client (optional)
+
+
+Install NTP Client (optional)
+  config
+    server, set time every 200 seconds
+  run
+  check clock
+  check time zone!
+
+
+Install Python
+
+
+Put FDLOG zip in a directory and unzip it
+  d:\fdlog
+
+
+run fdlog.py
+  double click on fdlog.py
+  set station id: (answer question)
+    (if GOTA station: set station id: .station gota)
+
+  set authentication key   (see Alan(wb6zqz) for key of the day)
+                                  or use practice key "tst"
+
+
+eof

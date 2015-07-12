@@ -1,0 +1,133 @@
+SB PROP @ ARL $ARLP025        2014
+ARLP025 Propagation de K7RA
+
+ZCZC AP25
+QST de W1AW  
+Propagation Forecast Bulletin 25  ARLP025
+From Tad Cook, K7RA
+Seattle, WA  June 20, 2014
+To all radio amateurs 
+
+SB PROP ARL ARLP025
+ARLP025 Propagation de K7RA
+
+The daily sunspot number rose dramatically this week on June 13 when
+it increased to 276, but two days later it was back below 100. The
+resulting weekly average for June 12-18 (141) was actually down 2.3
+points from the previous seven days. Average daily solar flux was
+down 11.7 points to 134.7.
+
+Predicted solar flux has weakened lately, and for the near term flux
+values are predicted at 105 on June 20-22, 100 on June 23-24, back
+to 105 on June 25-27, 120 on June 28 through July 6, 115 on July
+7-12, and peaking at 130 on July 13-19. ARRL Field Day is June
+28-29, when predicted flux values are 120. This is the highest
+predicted flux value for those two days since May 25, when it was
+also 120.
+
+Predicted planetary A index is 5 on June 20-21, 8 on June 22, 5 on
+June 23-25, 8 on June 26, 5 on June 27 through July 10, 8 on July
+11, 5 on July 12, then 10, 8, 8 on July 13-15, 5 on July 16-21 and 8
+on July 22-23.
+
+OK1HH predicts geomagnetic conditions will be quiet to unsettled
+June 20, mostly quiet June 21, quiet to unsettled June 22, mostly
+quiet June 23, quiet to unsettled June 24-25, quiet to active June
+26, active to disturbed June 27, quiet June 28-30, quiet to active
+July 1, quiet July 2-3, mostly quiet July 4-5, active to disturbed
+July 6, quiet to active July 7-8, quiet July 9, mostly quiet July
+10, quiet to unsettled July 11, quiet July 12, quiet to unsettled
+July 13, quiet to active July 14-15, and active to disturbed July
+16.
+
+Scott Bidstrup, TI3/W7RI shared an article from Scientific American
+by Clara Moskowitz, positing that perhaps the current solar cycle is
+not so terribly weak, but that we've become accustomed to stronger
+cycles in the second half of the twentieth century:
+
+http://www.scientificamerican.com/podcast/episode/strange-solar-cycle/
+
+Scott also shared some observations on June 16 about recent on-air
+conditions from his location in Costa Rica. Scott writes, "Sadly,
+propagation here in the low latitudes has really been in the
+doldrums over the last week or so. 10 meters has barely been open on
+the good days, and so little PSK activity, I've given up on it on 10
+and have been spending more time on 15 and even 20 lately -
+conditions not unlike the last solar minimum. Even the 10 meter FM
+repeaters, normally a daily phenomenon here, have been weak or
+absent. On looking at the data this morning, I see the 304a index is
+declining again, back down to only 14 points above the typical solar
+minimum. Except for two small regions, as I write this, there's
+nothing at all on the STEREO B image showing what's about to rotate
+into view on the solar disk.
+
+"The lower solar activity has greatly improved gray line DXing on 75
+meters, though, and HP3AK and W9UCW have been having a grand time
+working VKs, ZLs and the odd JA now and again every morning at their
+local sunrise - for about the last week, the best DXing conditions
+in a really long time. Sadly, the atmospheric noise has been pretty
+high lately too, approaching the seasonal maximum here, so that's
+tempered the fun a bit. HP3AK did manage to complete a contact with
+a VK on 160m, about a week ago.
+
+"6 meters has been all but dead since I last wrote; one brief
+opening between Costa Rica and the Leeward Islands several days ago,
+and that's been about it - KP4EIT was heard for about 20 minutes and
+an HI8 beacon for about half an hour, neither were ever strong
+enough to work. I did hear some mixed SSB on 50.110 for about a
+minute once last week. That's been about it. It's all been
+frustrating enough to make me want to go to work on that EME array
+I've been threatening for years.
+
+"73 from sunny and warm (76 deg F) Costa Rica, Scott Bidstrup,
+TI3/W7RI."
+
+Scott mentioned the 304a index, which is referenced on Scott's page
+at http://www.bidstrup.com/w7ri-hf-radio-propagation.htm . To
+paraphrase, "The 304A Index is the relative strength of total solar
+ultraviolet radiation at a wavelength of 304 angstroms, emitted
+primarily by ionized helium in the sun's photosphere. It is solar
+radiation in this frequency band that is directly responsible for
+about half of all the ionization of the F2 layer, the ionosphere
+layer of greatest significance to us."
+
+Ted Leaf notes that his call is K6HI, not K8HI as reported in last
+week's bulletin. I thought I'd messed up, but then noted that the
+email I was referencing was signed K8HI. At any rate, he is on the
+west coast of Hawaii, the Big Island, and not to be confused with
+KH6HI, who is on Oahu, also in the state of Hawaii. Is everything
+clear?
+
+This weekend is the All Asian DX CW Contest. For details, see
+https://www.jarl.org/English/4_Library/A-4-3_Contests/2014AA_rule.htm
+.
+
+And of course, ARRL Field Day, easily the most popular on-air
+activity, is next weekend!
+
+If you would like to make a comment or have a tip for our readers,
+email the author at, k7ra@arrl.net.
+
+For more information concerning radio propagation, see the ARRL
+Technical Information Service web page at
+http://arrl.org/propagation-of-rf-signals. For an explanation of the
+numbers used in this bulletin, see
+http://arrl.org/the-sun-the-earth-the-ionosphere. An archive of past
+propagation bulletins is at
+http://arrl.org/w1aw-bulletins-archive-propagation. More good
+information and tutorials on propagation are at http://k9la.us/.
+
+Monthly propagation charts between four USA regions and twelve
+overseas locations are at http://arrl.org/propagation.
+
+Instructions for starting or ending email distribution of ARRL
+bulletins are at http://arrl.org/bulletins.
+
+Sunspot numbers for June 12 through 18 were 196, 276, 159, 80, 81,
+87, and 108, with a mean of 141. 10.7 cm flux was 174.5, 152.7,
+143.5, 130.2, 116.8, 114.3, and 110.8, with a mean of 134.7.
+Estimated planetary A indices were 4, 5, 8, 5, 5, 8, and 16, with a
+mean of 7.3. Estimated mid-latitude A indices were 5, 6, 8, 9, 7, 9,
+and 13, with a mean of 8.1.
+NNNN
+/EX

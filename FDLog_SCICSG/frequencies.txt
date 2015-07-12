@@ -1,0 +1,91 @@
+Frequency List  $Revision: 1.7 $
+
+160 meter band 1.8-2.0 Mhz
+  1.8-2.0 e,a,g cw,dig,fone,img
+
+80/75 meter band 3.5-4.0 Mhz
+  3.500-3.525 e cw,dig
+  3.525-3.750 e,a,g cw,dig
+  3.675-3.725 n,p cw
+  3.750-3.775 e cw,fon,img
+  3.775-3.850 e,a cw,fon,img
+  3.850-4.000 e,a,g cw,fon,img
+
+60 meter band 5.33-5.41
+  NO CONTEST CONTACTS
+  e,a,g usb 50w dipole equiv
+  center carrier
+  5.3320 5.3305
+  5.3480 5.3465
+  5.3680 5.3665
+  5.3730 5.3715
+  5.4050 5.4035
+
+40 meter band 7.0-7.3 Mhz
+  7.000-7.025 e cw,dig
+  7.025-7.150 e,a,g cw,dig
+  7.100-7.150 n,p cw
+  7.150-7.225 e,a cw,fon,img
+  7.225-7.300 g cw,fon,img
+
+30 meter band 10.1-10.15 Mhz
+  NO CONTEST CONTACTS
+  max power 200w pep
+  10.100-10.150 e,a,g cw,dig
+
+20 meter band 14.0-14.35 Mhz
+  14.000-14.025 e cw,dig
+  14.025-14.150 e,a,g cw,dig
+  14.150-14.175 e cw,fon,img
+  14.175-14.225 e,a cw,fon,img
+  14.225-14.350 e,a,g cw,fon,img
+
+17 meter band 18.068-18.168 Mhz
+  NO CONTEST CONTACTS
+  18.068-18.110 e,a,g cw,dig
+  18.110-18.168 eag cw,fon,img
+
+15 meter band 21.0-21.450 Mhz
+  21.000-21.025 e cw,dig
+  21.025-21.200 e,a,g cw,dig
+  21.100-21.200 n,p cw
+  21.200-21.225 e cw,fon,img
+  21.225-21.300 e,a cw,fon,img
+  21.300-21.450 e,a,g cw,fon,img
+
+12 meter band 24.89-24.99 Mhz
+  NO CONTEST CONTACTS
+  24.890-24.930 e,a,g cw,dig
+  24.930-24.990 cw,fon,img
+
+10 meter band 28.0-29.7 Mhz
+  28.000-28.300 e,a,g cw,dig
+  28.100-28.300 n,p cw,dig
+  18.300-28.500 n,p cw,fon
+  28.300-29.700 e,a,g cw,fon,img
+
+6 meter band 50-54 Mhz
+  50.0-50.1 e,a,g,p,t cw
+  50.1-54.0 e,a,g,p,t cw,dig,fon,img,tst
+
+2 meter band 144-148 Mhz
+  144.0-144.1 e,a,g,p,t cw
+  144.1-148.0 e,a,g,p,t all
+
+1.25 meter band 222-225 Mhz
+  222.0-225.0 e,a,g,p,t,n all
+
+70 centimeter band 420-450 Mhz
+  420.0-450.0 e,a,g,p,t all
+
+33 centimeter band 902-928 Mhz
+  902.0-928.0 e,a,g,p,t all
+
+23 centimeter band 1240-1300 Mhz
+  1270-1295 n all
+  1240-1300 e,a,g,p,t all
+
+dig is rtty, data
+all is cw,dig,mcw,test,fon and img
+
+eof

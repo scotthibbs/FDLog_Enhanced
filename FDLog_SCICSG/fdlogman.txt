@@ -1,0 +1,413 @@
+Field Day Log Program Manual
+
+is distributed under the GNU Public License
+
+fdlogman.txt: Revision: 1.18
+
+2011 updates
+
+.set contst FD or VHF changes dup check to include <call>/<grid> for VHF contest
+
+New for 2006
+
+QSO Editing! Right-clicking on a Q in the log brings up an edit
+dialog box. From there it can be Deleted, or modified and then
+Saved. Errors light up the fields in yellow when Save is attempted.
+The Dialog disappears on Successful Save, Delete, or Quit.
+
+Log text from the local node is blue in color, from other nodes is black.
+Automatic case adjustment for various inputs simplifies usage. Automatic
+log lookups show log entries for duplicate stations and stations being
+logged show info from other bands. Log lookups (<callsign><return>)
+conveniently allow looking stations up in the log.
+
+Directly Executable Version distributed. fdlogexe.zip. Runs without Python
+installed. Windows required. 3.5 Megabyte download.
+
+
+New for 2005
+
+Time Synchronization. Designate one machine as the master, all others will
+chase it. Use '.set tmast <node>' to select master time node.
+
+Changed fd rules filename to 'fdrules.pdf'. Just download pdf rules and
+rename the file to this name. Then the rules can be accessed from the menu.
+
+Found and fixed another bug in the power type-in. Using the pulldown worked,
+but typing in caused problems. Root cause here is changes to how Python
+handles variable types.
+
+Made an attempt to fix up the GOTA scoring changes in the ARRL rules. Not
+tested.
+
+Added the second site visitor as well as the youth bonus.
+
+New for 2004
+
+Just before Field Day many minor changes were made to the startup. The
+messages were improved and things were simplified in general. Also added
+is a directly executable version that does not require Python to be installed.
+This version carries an interpreter along with it, so it is larger.
+The startup auth key is xxxyyyzzz... xxx goes onto filename. Use 04a for
+2004 version a. yyy for port, zzz... for hash key.
+
+Just after Field Day the Time Sync feature was added (enough problems with
+NTP servers and clients...). Now a node may be designated as the 'time master'
+and all client FDLog programs will track it. This DOES NOT change the system
+time, just the internal time FDLog uses in the log...
+
+
+Short History
+
+This new version of the FD Log program was written in March-April of 2002. It was
+written first for command line mode, and then altered for Windows Event type
+programming. It retains many of the line oriented commands, indeed the basic entry
+of QSO information is most efficient in this manner. Some of the command line
+commands are or will be deprecated as they are not consistent with the new mode.
+
+
+Program Requirements
+
+Efficient keystroke input for QSO entry was the fundamental requirement of the 
+original program written in 1984. This remains a priority requirement today. 
+This means that no mouse activity is required for data entry during QSO logging.
+It is not necessary to use the mouse to change bands or power 
+settings. These frequent items are available both in command
+and mouse/dialog box form.
+
+The new requirement, and indeed one of the strong motivations for a complete
+rewrite, is multi-station synchronization. The activity of Field Day operations
+is strongly dependent on sharing of information between stations - keeping the
+logs for each band and mode, and keeping track of which stations are on what
+bands, and how many are active. Running around the site looking for a band-mode
+floppy or transmitter token is not conducive to efficient operation. So this
+version is required to facilitate those activites.
+
+Robustness, as always, is a major requirement. This software operates in an
+environment of unreliable computers, power systems, and RF. Single points of
+failure must either be avoided or a failure mitigation strategy must be in place
+that minimizes the impacts of failures on the operation.
+
+
+Program Design
+
+The first attempt at a redesign of this software occurred in about 2000 and
+was based on PHP and MySQL. There were two problems with that approach. One
+was the huge single point of failure in that model, and the other was the 
+efficiency of the system with regard to operator keystrokes and response time.
+
+This second attempt was facilitated by the availability of two things. One
+is the peer to peer wireless networking, 802.11b. The other is a relatively
+new programming language that supports multiplatform rapid prototyping and 
+has the requisite socket libraries. I have experimented with many languages,
+but none have had the clean syntax and wide ranging capabilities that Python
+comes with. One purpose of using Python here is to write a nontrivial program
+in the language and see how the process and product progress. Thus far I am
+not disappointed. Progress has been rapid, with about a month of elapsed time,
+and less than a hundred hours to produce a nearly complete product, including
+the traversal of many learning curves.
+
+The program centers on several in-memory databases using Python dictionaries.
+These keep track of the log data and the by-suffix listings that are used to
+quickly find duplicates. A disk backup of the data is kept updated by appending
+new entries as they arrive.
+
+The user interface centers on a contact data parser
+that carefully analyzes the input as it is typed, keystroke by keystroke. This
+prevents typing far beyond syntax errors and gives rapid user feedback.
+
+The network sharing of data depends on three UDP message types. The periodic
+broadcast from each station contains a list of that station's database
+contents. By listening to broadcasts, each station can determine which
+stations have database entries they are missing, and request them. The request
+is the second message type. The third message type is the contact information,
+and it is transmitted in response to a request. Additionally, a broadcast
+transmission of new data occurs when that data is generated, so that stations
+only need to request fills when they miss the original data broadcast.
+
+The effect of all this is that each station has a complete copy of all data,
+and loss of a station has little effect on the system. Also, a new station
+can be added at any time. This can be done in two different ways. One is to
+copy a starter database from any station (file fdlog.fdd) and place it in
+the program directory before starting it. Alternately, starting the program
+with no database file will also work, but in this case it will take a bit
+longer to catch up. It should load 5 to 10 entries per second. Obviously
+starting with a partial database can speed things up considerably.
+
+
+Wireless Networking
+
+There is a separate note on Wireless setup, refer to that for details. There
+are basically two modes for wireless as I understand it, one is Access point
+and the other is peer-to-peer, also referred to as ad-hoc. In the access point
+style of operation, all packets flow through the access point which is a
+gateway onto the rest of the internet. This is a great model for work or
+home. Out in the woods it also works, and is similar to repeater operation.
+It has the effect of dropping the bandwidth in half since it is a store and
+forward type repeater. In peer-to-peer operation, stations communicate
+directly in a simplex mode type operation.
+
+If all stations can hear each other, the peer-to-peer operation should produce
+better performance, and avoids the single point of failure in the access
+point. If stations cannot all hear each other the software will still work,
+since the data will propagate partially from the initial broadcast and from
+there by fills. At some point the access point repeater type operation becomes
+more efficient if all stations can hear a single repeater.
+
+NOTE - Any standard networking will work, wireless is not required. Some
+folks prefer wired nets. The stations need to be within broadcast range
+of each other (at this time). The feature to span across networks is only
+partially implemented.
+
+
+Time Synchronization
+
+It is nice to have synchronous time in the database records. It is used to sort 
+log reports and determine the time window for 
+accepting contact data for the contest. FDLog will internally keep the clients
+fairly well synchronized if a master time node is specified.
+
+
+GUI Version
+
+The Graphical version of the software was started just after Beta-2 was released. 
+It came up quickly, but required significant effort to get it looking decent. Some
+important features were added and a few bugs in the old version were found and 
+fixed. Beta-3 is the first GUI release. It runs (more or less) on all three 
+platforms: Win32, MacOS, and Unix/Linux.
+
+
+  The text that follows concentrates on command techniques. The GUI menus and
+buttons are also available, explore them.
+
+  When you need to quit the program use File/Exit or the Window Exit button to exit
+properly. If it crashes it will not release the band. Start it again to release the 
+band you had reserved.
+
+  Timers have been added to the program. After a minute or so without hearing a
+station it will cancel the band reservation.
+
+  Set the output power (in watts) used by the station with the buttons on the GUI. 
+Check the Natural box if applicable. This allows counting the natural power Qs for 
+bonus points. (This is also referred to as alternate power).
+
+  Set the Operator and Logger with the buttons on the GUI.
+
+  Set the authentication code when asked during startup. The keys must match for the 
+net to share data.
+
+  The power, operator, logger, and authentication data are stored in a file with
+the log program on normal exit, and reloaded on restart to minimize re-entering.
+The band is not restored, so it will have to be re-selected after restarting the
+program.
+
+  Band is set with band select pushbuttons, or the command ".band <band>". Bands 
+are 160/80/40/20/15/10/6/2 meters, or
+220/440/1200 mhz or sat followed by a letter c, d or p for cw, digital or phone. 
+It will warn you if there is another station on that band, but it will allow the
+change anyway. Make sure the other station is not using the same band before making
+contacts.
+
+  Testing is best done with the band set to 'off'. This is the startup default.
+Contacts made to band 'off' are not counted in the various scoring outputs, and
+can be filtered from the log. 
+
+  Logging contacts is designed for maximum efficiency of keystrokes. Enter the 
+suffix followed by a space to do a quick dup callsign check. This will list any 
+calls on this band/mode that have that suffix. You could type the whole call and a 
+space, but the suffix lookup is quicker for most typists. To log that call enter 
+the prefix and a space, and it will automatically pick up the earlier suffix and 
+be ready for the report. After typing the report, wait for the actual QSL before 
+hitting return. Return logs the Q into the database, and sends it to all the
+cooperating databases.
+
+  Here is an example using 12 keystrokes to log a Q:
+
+  aw<space> ==> ['w2aw']         <shows w2aw was worked on this band>
+  w1<space> ==> w1aw<space>_     <waiting for report>
+  <report>  ==> w1aw 2a nc_      <waiting for return to log the Q>
+  <return>  ==> w1aw 2a nc QSL   <entered into db>
+
+  ESCape will cancel an entry in progress and clear the input line.
+
+  You can look up log info on a callsign with <call><return>. This will show
+log info for all bands/modes for this call.
+
+  An incorrectly entered Q can be deleted with the ".delete <station> 
+<sequence> <reason>" command. This command actually places a 'delete' 
+entry in the log which is used to filter clean logs. The reason is required. The
+sequence number and station are on the right hand side of the logs. If there is
+any problem with the syntax it will report 'illegal command'.
+
+  When taking a break in operations, set the band to 'off' with the ".off" command
+or GUI button. This makes the band available to others.
+
+  If a station is just joining the net, or was off for awhile, it will take time
+for it to 'catch up' to the full database. It attempts to do this at 10 contacts 
+per second, so it should not take long. It will display the data as it comes in,
+and a needs fill yellow indicator.
+
+Platform Issues
+
+  This program was developed under Windows 2k. It should mostly work on Linux,
+Unix, and Macintosh due to the portability of Python and Tkinter. There are
+some issues that will affect portability, and some functions may not work.
+For example, launching the ARRL Rules pdf file may only work on Win32.
+
+GUI Color Code
+
+  The GUI version has some color coding. In the band select area we have Gray
+for available bands,Yellow for occupied bands, Orange for an over-occupied band,
+White for the band your station is on, and Red for an over-occupied band you are on.
+In the Class column White indicates no stations, Yellow is some but not all we are
+allotted, and Green is full usage of that station type. Red or Orange indicates too
+many stations for our Class.
+
+Note that the 'target' for vhf is the number of 'free' stations, stations beyond
+the target value count toward the Class numbers.
+
+  In the log window the entries made by this node will be dark blue. Others are
+black.
+
+
+Reports (to Command window)
+
+.st     this station's status
+.ba     station and band status
+.re     log summary report
+.pr     print contest entry to file
+
+
+Time Difference Window
+
+  The .tdwin <secs> parameter sets the number of seconds of error 'allowed' on incoming
+packets. Time errors greater than this window will trigger printing of some packet
+info in the Command window. The packets are processed normally, so triggering this
+print is a warning only.
+
+
+Input Syntax
+
+call is
+  <prefix><suffix><tag>
+
+prefix is
+  <letters><digits> or <digits><letters>
+
+suffix is
+  <letters or digits>  (different from end of prefix)
+
+tag is
+  /<letters or digits>
+
+qso is
+  <call> <report>
+
+report is
+  <letters or digits or spaces>
+
+dot commands are
+  .help				   show .commands
+  .op <letters/digits>		   set operator (deprecated)
+  .log <letters/digits>		   set logger (deprecated)
+  .pow <digits[n]>		   set power level, trailing n iff natural
+  .band <bandmode>		   set band and mode
+  .node <letters/digits/->         set station/node name
+  .authkey <letters/digits>        set communications authentication key (deprecated)
+  .tdwin <secs>                    incoming packet warning time window
+  .set <param> <value>		   set global parameter (see Help Menu)
+  .st                              this station status
+  .ba                              station band report
+  .re                              contest report
+  .pr                              generate contest entry file
+  .delete <node-id> <seq> <reason> delete log entry
+
+
+
+Send a Broadcast to all stations:
+  #<message up to 34 chars>
+
+
+Deleting items (creating delete entry in database)
+
+  .delete <node-id> <seqnum> <reason>	delete log entry
+
+  Note that the node-id and sequence number come from the right two columns
+  of the log displays and that a reason is required.
+
+
+
+Forcing a Contact into the database at a specific time (eg: from paper logs)
+
+  First set band, mode, operator, logger and power as the Qs will pick this up.
+  Then for each QSO type it in the following format:
+
+  :dd.hhmm <call> <report>
+
+
+  Time and date should be in UTC, two digit day of month, two digit hours and minutes.
+
+
+
+Preparing for the contest
+
+  put a propagation report in 'propagation.txt'
+  copy field day rules (from ARRL) into fdrules.pdf
+  test everything using 'tst' authentication key
+
+  choose authentication key for operations (yy or yyzzzz)
+  change to contest key at start of contest (restart apps)
+  set time master node (.set tmast <node>)
+  set field day call (.set fdcall <call>)
+  set GOTA call (.set gcall <call>)
+  set GOTA node id to 'gota' (for the GOTA station computer only)
+  set class (.set class XX)
+  set section (.set sect XX-XXXXX XXXXX) (abbrev and full spelling)
+
+
+Computer Preparation
+
+  configure the network - see wireless net document
+  set time clock accurately - to within a couple of seconds
+  set computer timezone correctly
+  turn off screen saver
+  adjust auto-turnoff/hibernate/shutdown to avoid surprises
+  allow this program through or turn firewall off
+  if using a shortcut set the default directory to where the prog dir is
+  
+
+Preparing the report for submission after the contest
+
+  set fdstrt   (optional, this clips off qso's that are earlier)
+  set fdend    (optional, this clips of qso's that are later)
+  set submission from call (see set commands help in program)
+  set from name
+  set from address ..
+  set power sources
+  set visitors
+  set info booth
+  set demo stations
+  look through set commands, set as appropriate
+
+
+  put message texts into files
+    w1aw_msg.txt                                       copied w1aw message
+    nts_msg.txt                                        originated NTS message
+    nts_rly0.txt to nts_rly9.txt (one msg per file)    first 10 relayed NTS messages
+    soapbox.txt                                        soapbox comments
+    media.txt                                          media text
+
+    note sample nts msg text in nts_eg.txt
+
+  
+  generate the report (file/save entry file)
+
+  inspect the report, iterate as needed (fdlog.log)
+
+  copy off the top section for submission to ARRL
+  keep the whole file for your records
+
+
+Alan K Biocca  WB6ZQZ@ARRL.net
+
+eof
