@@ -1,5 +1,13 @@
 SCICSG-FDLog
 
+2015_beta-3
+	This is actually stable but it isn't 100% working. Now we 
+	make the program work and start upgrading it.  
+
+2015_beta-2 
+	More code intigration from the original fdlog. This one
+	from the beta 152i. We need to work on getting this stable. 
+
 2015_beta_1
 	Combined our stable version with the latest beta from 1-152-n.
 	This includes the sql database and the fixed time function. 

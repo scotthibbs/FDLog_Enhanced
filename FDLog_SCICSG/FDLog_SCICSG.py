@@ -1,9 +1,7 @@
-### This is v2015-beta-2 ###
-# I'm changing the name of the program to FDLog_SCICSG
-# This reflects the project rename to make it more "findable" online.
+### This is v2015-beta-3 ###
+# 
+# In beta 3 I'm attempting to get this code stable. 
 #
-# This is v2015-beta-1 combined with the code from FDLog v4-1-152i 2014/05/26
-# It is believed this is the latest beta from Alan W6ABK
 #
 # Please note that I am not interested in an internet version of this program.
 # This is largely due to operators surfing instead of operating.
@@ -37,7 +35,7 @@
 
 
 
-prog = "FDLog_SCICSG v2015-beta-2 July 12, 2015 \n"\
+prog = "FDLog_SCICSG v2015-beta-3 July 16, 2015 \n"\
        "Copywrite 2015 by South Central Indiana Communications Support Group \n"\
        "FDLog_SCICSG is under the GNU Public License v3 without warranty.\n"\
         "Please see the GPL.txt file for details.\n"
@@ -47,7 +45,7 @@ about = """
 
 FDLog_SCICSG
 
-Copyright South Central Indiana Communications Support Group www.scicsg.org
+Copyright 2015 South Central Indiana Communications Support Group www.scicsg.org
 
 Your donations are appreciated to support Amateur Radio projects. 
 
@@ -75,12 +73,12 @@ Your donations are appreciated to support Amateur Radio projects.
 
 
 #import os,sys,time,string,re,time,thread,threading,socket,md5,random
-import os,sys,time,string,re,thread,threading,socket,hashlib,random 
+import os,sys,time,string,re,thread,threading,socket,hashlib,random,calendar
 from Tkinter import *
 
 # import from 152i
 def fingerprint():
-    t = open('fdlog.py').read()
+    t = open('FDLog_SCICSG.py').read()
     h = hashlib.md5()
     h.update(t)
     print "  FDLog Fingerprint",h.hexdigest()
@@ -155,10 +153,10 @@ version = getver()
 #
 # may need a semaphore around these variables..
 
-timeok = 0              # system time is defined to be trusted (NTP etc)
+# removed timeok due to error and to avoid the user circumventing the time function. -Scott Hibbs 7/16/2015
+#timeok = 0              # system time is defined to be trusted (NTP etc)
 
 class clock_class:
-    
     
     level = 9           # my time quality level
     offset = 0          # my time offset from system clock, add to system time, sec
@@ -203,12 +201,13 @@ class clock_class:
             self.srclev = 1                       #   follow it
             self.errorn = 1                       
             self.errors = gpserr*2                # take the gps error
-            
-        elif timeok:                              # if system time defined accurate, use it
-            self.srclev = 2
-            self.errorn = 1
-            self.errors = -self.offset            # go gently to zero
-           # self.offset = 0
+
+        # Removed by Scott Hibbs 7/16/2015           
+        #elif timeok:                              # if system time defined accurate, use it
+        #    self.srclev = 2
+        #    self.errorn = 1
+        #    self.errors = -self.offset            # go gently to zero
+             # self.offset = 0
 
         if self.errorn > 0:                       # calc error average if data
             error = float(self.errors)/self.errorn
@@ -225,8 +224,9 @@ class clock_class:
             self.level = self.srclev + 3          # sync'd with something
             if gpslock:
                 self.level = 1                    # have our own clock
-            elif timeok:
-                self.level = 2                    # local clock defined good
+            #Removed by Scott Hibbs 7/16/2015
+            #elif timeok:
+            #    self.level = 2                    # local clock defined good
         else:
             self.level = self.srclev + 6          # following but not yet sync'd
 
@@ -247,8 +247,23 @@ class clock_class:
         self.lock.release()                           # release sem
         
         
-# not in 152i        globDb.put('toffset',self.offset) # save in global database
+        # not in 152i        globDb.put('toffset',self.offset) # save in global database
+      
+# oops I forgot to copy over this funtion from 152i - Scott
 
+    def calib(self,fnod,stml,td):
+        "process time info in incoming pkt"
+        if fnod == node: return                       # ignore self data
+        self.lock.acquire()                           # take semaphore
+        #    print "time fm",fnod,"lev",stml,"diff",td
+        stml = int(stml)                              # src time level
+        if stml < self.srclev:                        # find the best time data
+            self.errors,self.errorn = 0,0
+            self.srclev = stml
+        if stml == self.srclev:                       # average data at same level
+            self.errorn += 1
+            self.errors += td                         # time difference
+        self.lock.release()                           # release sem
 
     def adjust(self):
         "slew the clock each second as needed (called /sec)"
@@ -285,7 +300,8 @@ class clock_class:
         try:
             import serial
         except:
-            print "warning - serial import failed (only needed for gps clock)"
+            print " The W6AKB GPS USB Clock was not found."
+            #This is so much nicer than saying there is an error... Scott Hibbs 7/16/2015
             return
         print "  Searching for W6AKB GPS USB Clock"
         for i in range(20):
@@ -351,6 +367,17 @@ def exin(op):
 # should avoid the locking needed now, the database has the locks
 # write it out and then read it back from there
 # so the database becomes the central collaboration point
+
+# sqlite3.connect(":memory:", check_same_thread = False)
+    ## I found this online to correct thread errors
+    ## with sql locking to one thread only.
+    ## 
+    ## I'm pretty sure I emailed this fix to Alan Biocca
+    ## over a year ago. :(
+    ## 
+    ## Scott Hibbs 7/5/2015
+
+
 #
 # do db in parallel w ascii journal, ascii journal becomes a write only file
 #   some folks use this file for other purposes
@@ -361,9 +388,9 @@ import sqlite3
 class SQDB:
     def __init__(self):
         self.dbPath = logdbf[0:-4] + '.sq3'
-        print "Using database",self.dbPath
-       
-        self.sqdb = sqlite3.connect(self.dbPath)  # connect to the database
+        print "Using database",self.dbPath      
+        self.sqdb = sqlite3.connect(self.dbPath, check_same_thread = False)  # connect to the database
+        # Have to add FALSE here to get this stable - Scott Hibbs 7/17/2015
         self.sqdb.row_factory = sqlite3.Row   # namedtuple_factory
         self.curs = self.sqdb.cursor()      # make a database connection cursor
         sql = "create table if not exists qjournal(src text,seq int,date text,band text,call text,rept text,powr text,oper text,logr text,primary key (src,seq))"
@@ -1259,7 +1286,7 @@ class node_info:
 
 class netsync:
     "network database synchronization"
-    ## This is being reworked in 152i but is not being
+    ## This is being reworked in 152i but not all is being
     ## implemented here just yet. Scott Hibbs 7/12/2015
 
     netmask = '255.255.255.0'
@@ -1267,12 +1294,15 @@ class netsync:
     authkey = hashlib.md5()
     pkts_rcvd,fills,badauth_rcvd,send_errs = 0,0,0,0
     hostname = socket.gethostname()
+
+
     my_addr = socket.gethostbyname(hostname)        # fails on some systems
     if my_addr[:3] == '10.':
         bc_addr = '10.255.255.255'
         netmask = '255.0.0.0'
     else:
         bc_addr = re.sub(r'[0-9]+$', '255', my_addr)        # calc bcast addr
+
 
     si = node_info()                                        # node info
 
@@ -1393,8 +1423,8 @@ class netsync:
                         td = tmsub(stm,pkt_tm)
                         self.si.ssb(pkt_tm,host,sip,fnod,stm,stml,ver,td)
                         mclock.calib(fnod,stml,td)
-                        if abs(td) >= tdwin:
-                            print 'clock err',td,host,sip,fnod,pkt_tm                
+#                        if abs(td) >= tdwin:
+# not now                            print 'clock err',td,host,sip,fnod,pkt_tm                
                         if showbc:
                             print "bcast",host,sip,fnod,ver,pkt_tm,td
                     elif fields[0] == 's':      # source status
@@ -1596,7 +1626,8 @@ class GlobalDb:
         self.dbPath = globf[0:-4] + '.sq3'
         print "  Using local value database",self.dbPath
        
-        self.sqdb = sqlite3.connect(self.dbPath)  # connect to the database
+        self.sqdb = sqlite3.connect(self.dbPath, check_same_thread = False)  # connect to the database
+        # Have to add FALSE here to get this stable. - Scott Hibbs 7/17/2015        
         self.sqdb.row_factory = sqlite3.Row       # row factory
         self.curs = self.sqdb.cursor()            # make a database connection cursor
         sql = "create table if not exists global(nam text,val text,primary key(nam))"
@@ -1630,16 +1661,16 @@ class GlobalDb:
 def loadglob():
     "load persistent local config to global vars from file"
     # updated from 152i
-    global globDb,node,operator,logger,power,tdwin,debug,authk,timeok
+    global globDb,node,operator,logger,power,tdwin,debug,authk #timeok
     globDb = GlobalDb()
     node = globDb.get('node','')
     operator = globDb.get('operator','')
     logger = globDb.get('logger','')
-    power = globDb.get('power','0')       #made this 0 - sah 7/3/2015
+    power = globDb.get('power','0')
     authk = globDb.get('authk','tst')     
-    tdwin = int(globDb.get('tdwin',5))    #152i changed to 5 from 10
+    tdwin = int(globDb.get('tdwin',5))    #152i changed from 10 to 5
     debug = int(globDb.get('debug',0))
-    timeok = int(globDb.get('timeok',0))
+    #timeok = int(globDb.get('timeok',0))  #Removed Scott Hibbs 7/16/2015
     netsync.rem_host = globDb.get('remip','0.0.0.0')
 
     mclock.offsetinit()
@@ -1670,7 +1701,7 @@ def saveglob():
     globDb.put('authk',authk)
     globDb.put('tdwin',tdwin)
     globDb.put('debug',debug)
-    globDb.put('timeok',timeok)
+    #globDb.put('timeok',timeok) #Removed Scott Hibbs 7/16/2015
     
     ##    fd = file(globf,"w")
     ##    fd.write("|%s|%s|%s|%s|%s|%s|%s|"%(node,operator,logger,power,\
@@ -2666,7 +2697,7 @@ def testqgen(n):
 suffix   = ""
 call     = ""
 band     = "off"
-power    = "0"
+power = "0"
 operator = ""
 logger   = ""
 node     = ""
@@ -2896,7 +2927,7 @@ def setlog(logr):
     logmb.config(background='yellow')
     saveglob()
 
-f1b = Frame(root,bd=0)                         # oper logger power and network windows
+f1b = Frame(root,bd=0)     # oper logger power and network windows
 
 ##  Changed the color of the user buttons to red until assigned - KD4SIR Scott Hibbs 7/14/2013
 
@@ -2960,6 +2991,9 @@ def buildmenus():
 def ckpowr():
     global power
     pwr = ival(pwrnt.get())
+    print "power is this from ckpowr", power
+    print "pwr is this from ckpowr", pwr
+
     if pwr < 0: pwr = "0"
     elif pwr > 1500: pwr = "1500"
     pwrnt.delete(0,END)
@@ -3056,6 +3090,8 @@ natv = IntVar()
 powcb = Checkbutton(f1b,text="Natural",variable=natv,command=ckpowr,\
                     font=fdfont,relief='raised',background=pcolor)
 powcb.grid(row=0,column=9,sticky=NSEW)
+
+
 setpwr(power)
 
 f1b.grid(row=1,columnspan=2,sticky=NSEW)
@@ -3191,7 +3227,7 @@ def mhelp():
 
 def proc_key(ch):
     "process keystroke"
-    global kbuf,power,operator,logger,debug,band,node,suffix,tdwin
+    global kbuf,power,operator,logger,debug,band,node,suffix,tdwin #timeok
     testq = 0
     if ch == '?' and (kbuf == "" or kbuf[0] != '#'):    # ? for help
         mhelp()
@@ -3226,7 +3262,10 @@ def proc_key(ch):
 
         #This section was reworked and added from 152i
         pwr,s = testcmd(".pow",r"[0-9]{1,4}n?",power)
-        if pwr != power: setpwr(pwr)
+        if s is True:
+            power = pwr
+            setpwr(power)
+    
         netsync.rem_host,s = testcmd('.remip',r'([0-9]{1,3}[.]){3}[0-9]{1,3}',netsync.rem_host)
         if s: globDb.put('remip',netsync.rem_host)
         ##        v,s = testcmd('.remcli',r'[0-1]',netsync.rem_cli)
@@ -3235,14 +3274,27 @@ def proc_key(ch):
         ##        v,s = testcmd('.remsrv',r'[0-1]',netsync.rem_srv)
         ##        if s and v == 1:
         ##            pass # start server thread
-        v,s = testcmd(".timeok", r"[0-1]", str(timeok))
-        timeok = int(v)
-        v,s = testcmd(".debug", r"[0-9]+", str(debug))
-        debug = int(v)
-        v,s = testcmd(".tdwin", r"[0-9]{1,3}", str(tdwin))
-        tdwin = int(v)
-        v,s = testcmd(".testq", r"[0-9]{1,2}", str(testq))
-        testq = int(v)
+
+
+        # .timeok command was removed because it isn't prudent
+        # to give users the ability to circumvent the time function.
+        #
+        # This code does not work since it's now a tuple: str vs int
+        #   v,s = testcmd(".timeok", r"[0-1]", str(timeok))
+        #   timeok = int(v)
+        #
+        # The correction is:
+        #   v,s = testcmd(".timeok", r"[0-1]", timeok)
+        #   timeok = int(s)
+        # This change was made below for debug, tdwin, and testq
+        # Scott Hibbs 7/16/2015
+
+        v,s = testcmd(".debug", r"[0-9]+", debug)
+        if s is True: debug = int(v)
+        v,s = testcmd(".tdwin", r"[0-9]{1,3}", tdwin)
+        if s is True: tdwin = int(v)
+        v,s = testcmd(".testq", r"[0-9]{1,2}", testq)
+        if s is True: testq = int(v)
         if testq: testqgen(testq)
         saveglob()
         renew_title()
@@ -3360,7 +3412,7 @@ def proc_key(ch):
                 ## Added warning against 1D to 1D contacts being logged but not counting points -- KD4SIR Scott Hibbs Oct/13/2013
                     em = ''
                     if band == "off": em += " Band "
-                    if ival(power) < 1: em += " Power "
+                    if power == 0: em += " Power "
                     if len(operator) < 2: em += " Operator "
                     if len(logger) < 2: em += " Logger "
                     if em <> '':
@@ -3703,10 +3755,7 @@ net.bcast_now()                     # push band out
 time.sleep(0.2)
 saveglob()                          # save globals
 print "  globals saved"
-time.sleep(0.2)
-net.close_all()                     # close ports
-time.sleep(0.2)
-print "  ports closed"
+
 
 print "\n\nFDLog is shut down, you should close this console window now"
 time.sleep(0.5)

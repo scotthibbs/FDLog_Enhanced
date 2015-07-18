@@ -1,3 +1,44 @@
+FDLog_SCICSG              July 18, 2015      V2015-beta-3-stable
+
+Took a while to get this stable, but I'm not getting errors anymore. 
+Tested with two computers. Please note that just because this is 
+stable, doesn't mean that this version is 100% working. It's just
+not throwing errors or crashing. 
+
+TIME: Precious time.. Still needs to be worked on. I don't believe
+it works the way it is. I stopped a program on one computer and 
+changed the time and restarted and FDLog pulled the previous offset
+from the database. Hmm.... Shouldn't it check anyway? I also want to 
+add a function to check for the NIST internet time. This should also 
+be authoritative like the gps clock. If there is a time master then
+everything should skew to it. There should be checks in place so 
+that only those with Internet time or GPS time are a time master. I'm
+working on this. 
+
+HELP NEEDED: 
+1. I currently have a mouse over event to show those on band. It would 
+be nice if this were just a pop up that disappears when the mouse
+over event is over. 
+
+2. Change the add new participate window. After entering all the fields
+an enter key should save the data and close. If the fields are empty 
+and enter key is used, then close. Would also like a checkbox here to 
+track if the new participate is youth. This should help us change and 
+track the gota scoring. 
+
+3. I would like to see this integrate with Ham Radio Deluxe Free version 
+for our digital folks. It would be nice to have FDLog automatically add 
+contacts from that program when they are made. 
+
+4. It would be nice if this program was to catch up with Writelog in all 
+the automated features it offers. Like cw and voice keying. 
+
+If you think of anything else: Do it. 
+
+Scott 
+KD4SIR
+ 
+
 FDLog_SCICSG              July 12, 2015      V2015-beta-2
 
 I changed the name from SCICSG_FDLog to FDLog_SCICSG. 
@@ -32,6 +73,8 @@ At this rate we will have a great Field Day stable version for 2016.
 
 Scott Hibbs
 KD4SIR
+
+
 
 SCICSG_FDLog              July 3, 2015      V2015-beta-1
 
