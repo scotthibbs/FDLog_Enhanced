@@ -1,6 +1,24 @@
 # FDLog_Enhanced
 FDLog_SCICSG is an upgraded fdlog with lots of extras. Ongoing project - your help is needed.
 
+FDLog_SCICSG              July 18, 2015      V2015-beta-3
+
+This is stable but is not 100% working. At least it doesn't crash
+anymore. 
+
+The big fix was getting sqlite to accept multiple threads and getting
+the updates from the original fdlog to work within the Enhanced GUI
+that we use without throwing an error. 
+
+In beta 4, we will make everything work. We will make a "set up"
+routine that will help the first user set up the event and be the
+time master. Still looking at the new clock function... Once done
+with time, we will move to more challenges. 
+
+Your help is so needed. Please contact me for a list...
+Scott
+KD4SIR
+
 FDLog_SCICSG              July 12, 2015      V2015-beta-2
 
 I changed the name from SCICSG_FDLog to FDLog_SCICSG. Went from a 
