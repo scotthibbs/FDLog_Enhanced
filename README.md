@@ -1,6 +1,17 @@
 # FDLog_Enhanced
 FDLog_SCICSG is an upgraded fdlog with lots of extras. Ongoing project - your help is needed.
 
+FDLog_SCICSG             Sep 3, 2015      notes on beta 4 (unreleased) 
+
+Major overhaul to the clock feature underway. Before the GUI displays and right after the log is checked/loaded. If the log is new it will ask if you need to set up the event. After a series of questions (name, club call etc) it will check for an accurate time source (gps or internet), if found it will ask to set this first computer as time master. Clock skewing till take place before the gui displays. If you don't set up the event, the program will check for a time master and then skew the clock once a time broadcast is received. Once the time is accurate, it will display the gui.
+
+I got it roughly written except for the skewing...
+
+Again your help is needed!
+
+Scott
+
+
 FDLog_SCICSG              July 18, 2015      V2015-beta-3
 
 This is stable but is not 100% working. At least it doesn't crash
