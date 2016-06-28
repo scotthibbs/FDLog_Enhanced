@@ -2,7 +2,7 @@
 A Field Day Logging program for Amateur (Ham) Radio using a wireless network to distribute the database and coordinate operations. 
 
 FDLog_SCICSG             Jun 27, 2016      notes on Field Day 2016
-**********************************************************************************************************************************
+*******************************************************************
 Our group (5A) used the stable version from last year as the 4 beta versions were not completed. This was our fifth year or so 
 using this software, so we learned a few things because we knew what to look for. 
      * For years we couldn't figure out why the program stops inputing data. Usually rebooting helped. Turns out the program 
@@ -20,7 +20,7 @@ BTW, I'm not a programmer.. I've had to learn python... You can help more than I
 Please help. Scott KD4SIR
 
 FDLog_SCICSG             Sep 3, 2015      notes on beta 4 (unreleased) 
-*********************************************************************************************************************************
+**********************************************************************
 Major overhaul to the clock feature underway. Before the GUI displays and right after the log is checked/loaded. If the log is new it will ask if you need to set up the event. After a series of questions (name, club call etc) it will check for an accurate time source (gps or internet), if found it will ask to set this first computer as time master. Clock skewing till take place before the gui displays. If you don't set up the event, the program will check for a time master and then skew the clock once a time broadcast is received. Once the time is accurate, it will display the gui.
 
 I got it roughly written except for the skewing...
@@ -28,7 +28,7 @@ Again your help is needed!
 Scott
 
 FDLog_SCICSG              July 18, 2015      V2015-beta-3
-*********************************************************************************************************************************
+************************************************************
 This is stable but is not 100% working. At least it doesn't crash
 anymore. 
 
@@ -45,7 +45,7 @@ Your help is so needed. Please contact me for a list...
 Scott KD4SIR
 
 FDLog_SCICSG              July 12, 2015      V2015-beta-2
-**********************************************************************************************************************************
+***************************************************************
 I changed the name from SCICSG_FDLog to FDLog_SCICSG. Went from a 
 fork to a repository. 
 
@@ -81,7 +81,7 @@ Scott Hibbs KD4SIR
 
 (This is from my previous fork)
 SCICSG_FDLog              July 3, 2015      V2015-beta-1
-******************************************************************************************************************************
+*************************************************************************
 The code here is the combined code from the 2015 field day stable version
 with the enhancements and the latest non-stable beta version from 1-152-n. 
 I am going to work out the kinks to make it stable and then work on 
