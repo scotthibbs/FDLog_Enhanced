@@ -1,5 +1,5 @@
 # FDLog_Enhanced
-FDLog_SCICSG is an upgraded fdlog with lots of extras. Ongoing project - your help is needed.
+A Field Day Logging program for Amateur (Ham) Radio using a wireless network to distribute the database and coordinate operations. 
 
 FDLog_SCICSG             Sep 3, 2015      notes on beta 4 (unreleased) 
 
