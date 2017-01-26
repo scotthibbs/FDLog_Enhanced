@@ -1,18 +1,20 @@
 # FDLog_Enhanced
-A Field Day Logging program for Amateur (Ham) Radio using a wireless network to distribute the database and coordinate operations. 
+A Stable Field Day Logging program for Amateur (Ham) Radio using a wireless network to distribute the database and coordinate operations. 
+
+Beta 5 coming real soon!! (Jan 26, 2017)
 
 FDLog_SCICSG             Jun 27, 2016      notes on Field Day 2016
 *******************************************************************
 Our group (5A) used the stable version from last year as the 4 beta versions were not completed. This was our fifth year or so 
-using this software, so we learned a few things because we knew what to look for. 
-     * For years we couldn't figure out why the program stops inputing data. Usually rebooting helped. Turns out the program 
-       doesn't allow capital letters. This makes sense for dupes etc. When the caps lock is accidently pushed the program kinda
-       freezes. This will be fixed. (Thanks to WW9A for finding this!)
-     * Edited entries are counting in the operator contact count given by the program. (Thanks to K9JAJ!) 
-     * Really need to place the mouse over data about which operators are on what bands to a temporary pop up.
+using this software, so we learned a few things because we knew what to look for. <br /><br />
+     * For years we couldn't figure out why the program stops inputing data. Usually rebooting helped. Turns out the program
+       doesn't allow capital letters. This makes sense for dupes etc. When the caps lock is accidently pushed the program 
+       freezes. This will be fixed. (Thanks to WW9A for finding this!) <br />
+     * Edited entries are counting in the operator contact count given by the program. (Thanks to K9JAJ!) <br />
+     * Really need to place the mouse over data about which operators are on what bands to a temporary pop up.<br />
      * One operator's firewall started up and blocked outgoing data (receive only). Once corrected his data was sent to others. 
        It didn't seem to be a big deal that his data wasn't synced right away since his time was correct. Should we continue the 
-       "ultra" precise time function in beta? 
+       "ultra" precise time function in beta? <br /><br />
 Anyway, I was ready to use another program for this field day since I wasn't ready with updates, but my group liked the program
 and wanted to use last years edition. I now have renewed excitement to continue adding functionality to this program.
 
