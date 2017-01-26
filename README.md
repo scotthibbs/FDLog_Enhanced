@@ -12,9 +12,9 @@ using this software, so we learned a few things because we knew what to look for
        freezes. This will be fixed. (Thanks to WW9A for finding this!) <br />
      * Edited entries are counting in the operator contact count given by the program. (Thanks to K9JAJ!) <br />
      * Really need to place the mouse over data about which operators are on what bands to a temporary pop up.<br />
-     * One operator's firewall started up and blocked outgoing data (receive only). Once corrected his data was sent to others. 
-       It didn't seem to be a big deal that his data wasn't synced right away since his time was correct. Should we continue the 
-       "ultra" precise time function in beta? <br /><br />
+     * One operator's firewall started up and blocked outgoing data (he was receive only). 
+        Once corrected his data was sent to others. It didn't seem to be a big deal that his data wasn't synced right away 
+        since his time was correct. Should we continue the "ultra" precise time function in beta 4? <br /><br />
 Anyway, I was ready to use another program for this field day since I wasn't ready with updates, but my group liked the program
 and wanted to use last years edition. I now have renewed excitement to continue adding functionality to this program.
 
