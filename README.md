@@ -1,7 +1,37 @@
 # FDLog_Enhanced
 A Stable Field Day Logging program for Amateur (Ham) Radio using a wireless network to distribute the database and coordinate operations. 
 
-Beta 5 coming real soon!! (Jan 26, 2017)
+FDLog_SCICSG             Jan 30, 2017      v2017-beta-1 with bugs
+*******************************************************************
+This is v2017-beta-1
+  Obviously, I never released v2015-beta-5 which is what this is. There were no releases 
+  in 2016, as we used the previous stable version. 
+
+The unreleased 2015Beta4 and 2015Beta4.1 turned out to be a "time" bridge to far. During 
+FD2016 one of the computers was receiving but was not sending. Since that computer had 
+the time within a minute there were no conflicts with the database. This happens a lot, 
+computers in and out of the network and no serious consequences. Which made me think that 
+there was no need for hyper-accurate time devices or synch routines. So, beta 5 will revert
+back to a simple time master like before. Internet time will probably be kept.. 
+but our focus will be on new features.
+
+Working on these items:
+   *  Adding a Dupe check when editing qsos. Thanks to K9JAJ Jeff Jones for the idea.
+        Bug: This will not let you edit details if the call and band are the same.
+   *  At some point I broke the Class updating by one when clicking on an HF band. 
+   *  Added a line in the gui to place the port and users on bands in, but changed my mind.
+        If there are a lot of users it will not fit on this line. popup or back to the bottom. 
+       Still need to remove it. 
+
+ Items that need testing with 2017-beta-1
+   *  Prevented the ability to edit previously deleted log entries. Thanks to K9JAJ Jeff Jones.
+   *  Adding a statement to check for uppercase. Previously unresponsive while capped locked.
+       Thanks to WW9A Brian Smith for pointing out that the program isn't randomly freezing.
+   *  Made the -Call-Class-Sect- persistently above the input line. Thanks to K9MAF Mark Fountain.
+   *  Added the port number to the header. - Requested by K9MAF Mark Fountain.
+   *  "wa6nhc 5/2013 suggests precluding site operators from being logged as Q's"
+       Done. Added the ability to "dupe check" participants outside the dupe log. Thanks WA6NHC
+Please help. Scott KD4SIR
 
 FDLog_SCICSG             Jun 27, 2016      notes on Field Day 2016
 *******************************************************************
