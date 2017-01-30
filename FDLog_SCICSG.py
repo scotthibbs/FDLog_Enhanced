@@ -130,7 +130,7 @@ fingerprint()
 # should make this user configurable. akb. xx
 
 
-version = "v15.5"
+version = "v2017.1" #beta with bugs...
 fontsize = 10
 fontinterval = 2
 typeface = 'Courier'
