@@ -10,15 +10,30 @@ import calendar
 import sqlite3
 from Tkinter import *
 
-# This is v2017-beta-1
-# 
-#   Obviously, I never released v2015-beta-5 which is what this is. 
-#   There were no releases in 2016, as we used the previous stable version. 
+# This is v2017-beta-2 (should be stable)
+# This will be tested to see if it will be our 2017 stable version for field day this year.
+#
+#  * Fixed the Class not updating when clicking on an HF band
+#  * Removed bug that would not allow edits if the call and band are the same.
+#     Now can't edit a deleted log entry, and can't edit unless it is in the log.
+#      -- Need to display the latest log entry if an entry has been edited previously.
+#  * Removed the extra lines or labels in the qui for the port and for the list of nodes on
+#     on each band. - reverted back to the way it was for now but added the port
+#     to the header.
+#
+# Next item to work on will be the popup that will show the station on the band clicked.
+#
+# - Scott Feb, 4, 2017
+#
+#	This is the notes for 2007-beta-1
+#   Obviously, I never released v2015-beta-5 which is what this is.
+#   There were no releases in 2016, as we used the previous stable version.
 #
 #   The unreleased 2015Beta4 and 2015Beta4.1 turned out to be a "time" bridge to far.
 #   During FD2016 one of the computers was receiving but was not sending.
 #   Since that computer had the time within a minute there were no conflicts with the
 #   database. This happens a lot, computers in and out of the network and no serious consequences.
+#   Especially since we don't have more than one person on a band...
 #   Which made me think that there was no need for hyper-accurate time devices or synch routines.
 #   So, beta 5 will revert back to a simple time master like before.
 #   Internet time will probably be kept.. but our focus will be on new features.
@@ -26,10 +41,10 @@ from Tkinter import *
 # Working on these items:
 #   *  Adding a Dupe check when editing qsos. Thanks to K9JAJ Jeff Jones for the idea.
 #        Bug: This will not let you edit details if the call and band are the same.
-#   *  At some point I broke the Class updating by one when clicking on an HF band. 
+#   *  At some point I broke the Class updating by one when clicking on an HF band.
 #   *  Added a line in the gui to place the port and users on bands in, but changed my mind.
-#        If there are a lot of users it will not fit on this line. popup or back to the bottom. 
-#       Still need to remove it. 
+#        If there are a lot of users it will not fit on this line. popup or back to the bottom.
+#       Still need to remove it.
 #
 # Items that need testing with 2017-beta-1
 #   *  Prevented the ability to edit previously deleted log entries. Thanks to K9JAJ Jeff Jones.
@@ -75,7 +90,7 @@ from Tkinter import *
 #               Future: Adding interoperability with other programs such as HRDeluxe Free,
 #               FLDigi, Rigserve etc if we can?
 
-prog = 'FDLog_SCICSG v2017-beta-1 Jan, 30, 2017 \n' \
+prog = 'FDLog_SCICSG v2017-beta-2 Feb, 4, 2017 \n' \
        'Copyright 2017 by South Central Indiana Communications Support Group \n' \
        'FDLog_SCICSG is under the GNU Public License v3 without warranty. \n' \
        'Please see the GPL.txt file for details. \n'
@@ -131,7 +146,7 @@ fingerprint()
 # should make this user configurable. akb. xx
 
 
-version = "v2017.1" #beta with bugs...
+version = "v17b2"
 fontsize = 10
 fontinterval = 2
 typeface = 'Courier'
@@ -1378,7 +1393,7 @@ class node_info:
                 gota += 1
             else:
                 b = ival(s[2])
-                if b < 8 or b > 200: hf += 1
+                if b > 8 or b < 200: hf += 1
                 if b < 8 or b > 200: vhf += 1
         return r, hf, vhf, gota
 
@@ -2580,13 +2595,12 @@ def updatebb():
             del wof['']
         if wof.has_key('off'):
             del wof['off']
-        # Now prints to it's own label on gui - KD4SIR Scott Hibbs Jan/17/2017
-        lblwof.configure(text=wof, background='grey')
+        txtbillb.insert(END,"\n %s\n"%wof)
+        txtbillb.see(END)
 
     def whosonsecond(event):
         global wof
         wof = ""
-        lblwof.configure(text=wof, background='grey')
 
     for i in bands:
         b = 0
@@ -2618,7 +2632,6 @@ def updatebb():
         vht = 0
     ts = cl + max(0, vh-vht)  # total sta = class + excess vhf stations
     # Fixed VHF to reflect a free transmitter and warn if two vhf rigs are used. - Scott Hibbs KD4SIR 5/14/2014
-    print ("this is ts: %s" % ts)
     clc = 'yellow'
     if ts == cltg:
         clc = 'green'
@@ -3177,16 +3190,16 @@ f1b.grid(row=1, columnspan=2, sticky=NSEW)
 # Added port label - KD4SIR Scott Hibbs Jan/19/2017
 # Network window
 lblnet = Label(f1b, text="Network Status", font=fdfont, foreground='blue', background='yellow')
-lblnet.grid(row=3, column=0, columnspan=9, sticky=NSEW)
+lblnet.grid(row=2, column=0, columnspan=9, sticky=NSEW)
 # Node window
 lblnode = Label(f1b, text="My Node: %s" % node, font=fdfont, foreground='blue', background='grey')
 lblnode.grid(row=2, column=9, columnspan=1, sticky=NSEW)
 # Whos on First Window to display operators on bands
-lblwof = Label(f1b, text="", font=fdfont, foreground='blue', background='grey')
-lblwof.grid(row=2, column=0, columnspan=9, sticky=NSEW)
+# lblwof = Label(f1b, text="", font=fdfont, foreground='blue', background='grey')
+# lblwof.grid(row=2, column=0, columnspan=9, sticky=NSEW)
 # Port window
-lblport = Label(f1b, text="Port: %s" % port_base, font=fdfont, foreground='blue', background='grey')
-lblport.grid(row=3, column=9, columnspan=1, sticky=NSEW)
+# lblport = Label(f1b, text="Port: %s" % port_base, font=fdfont, foreground='blue', background='grey')
+# lblport.grid(row=3, column=9, columnspan=1, sticky=NSEW)
 # log window
 logw = Text(root, takefocus=0, height=11, width=80, font=fdmfont,
             background='grey', wrap=NONE, setgrid=1)
@@ -3605,10 +3618,10 @@ def focevent(e):
     return "break"
 
 
-###### BUG : Can't change operator or report or power without dupe showing.
 class Edit_Dialog(Toplevel):
     """edit log entry dialog"""
     """Added functionality to check for dupes and change the title to show the error - Scott Hibbs Jul/02/2016"""
+    # Had to add variables for each text box to know if they changed to do dupe check.
     crazytxt = StringVar()
     crazytxt.set('Edit Log Entry')
     crazyclr = StringVar()
@@ -3641,6 +3654,7 @@ class Edit_Dialog(Toplevel):
         self.de = Entry(top, width=13, font=fdbfont)
         self.de.grid(row=1, column=1, sticky=W, padx=3, pady=2)
         self.de.insert(0, qdb.byid[s].date)
+        self.chodate = qdb.byid[s].date
         # self.de.insert(0,qdb.byid[s].date[:6])
         #             self.src,self.seq,
         #             self.date,self.band,self.call,self.rept,
@@ -3652,27 +3666,33 @@ class Edit_Dialog(Toplevel):
         self.be.grid(row=3, column=1, sticky=W, padx=3, pady=2)
         # self.be.configure(bg='yellow') #test yes works
         self.be.insert(0, qdb.byid[s].band)
+        self.choband = qdb.byid[s].band
         #        self.me = Entry(top,width=1,font=fdbfont)
         #        self.me.grid(row=4,column=1,sticky=W,padx=3,pady=2)
         #        self.me.insert(0,qdb.byid[s].band[-1])
         self.ce = Entry(top, width=11, font=fdbfont)
         self.ce.grid(row=5, column=1, sticky=W, padx=3, pady=2)
         self.ce.insert(0, qdb.byid[s].call)
+        self.chocall = qdb.byid[s].call
         self.re = Entry(top, width=24, font=fdbfont)
         self.re.grid(row=6, column=1, sticky=W, padx=3, pady=2)
         self.re.insert(0, qdb.byid[s].rept)
+        self.chorept = qdb.byid[s].rept
         self.pe = Entry(top, width=5, font=fdbfont)
         self.pe.grid(row=7, column=1, sticky=W, padx=3, pady=2)
         self.pe.insert(0, qdb.byid[s].powr)
+        self.chopowr = qdb.byid[s].powr
         #        self.ne = Entry(top,width=1,font=fdbfont)
         #        self.ne.grid(row=8,column=1,sticky=W,padx=3,pady=2)
         #        self.ne.insert(0,'n')
         self.oe = Entry(top, width=3, font=fdbfont)
         self.oe.grid(row=9, column=1, sticky=W, padx=3, pady=2)
         self.oe.insert(0, qdb.byid[s].oper)
+        self.chooper = qdb.byid[s].oper
         self.le = Entry(top, width=3, font=fdbfont)
         self.le.grid(row=10, column=1, sticky=W, padx=3, pady=2)
         self.le.insert(0, qdb.byid[s].logr)
+        self.chologr = qdb.byid[s].logr
         bf = Frame(top)
         bf.grid(row=11, columnspan=2, sticky=EW, pady=2)
         bf.grid_columnconfigure((0, 1, 2), weight=1)
@@ -3685,10 +3705,14 @@ class Edit_Dialog(Toplevel):
         # self.wait_window(top)
 
     def submit(self):
+
         print 'submit edits'
         error = 0
+        changer = 0 # 0 = no change. 1= change except band and call. 2 = change in call or band
         t = self.de.get().strip()  # date time
-        print t
+        if self.chodate != t:
+            print "The date has changed."
+            changer = 1
         self.de.configure(bg='white')
         m = re.match(r'[0-9]{6}\.[0-9]{4,6}$', t)
         if m:
@@ -3698,6 +3722,9 @@ class Edit_Dialog(Toplevel):
             self.de.configure(bg='yellow')
             error += 1
         t = self.be.get().strip()  # band mode
+        if self.choband != t:
+            print "the band has changed"
+            changer = 2
         self.be.configure(bg='white')
         m = re.match(r'(160|80|40|20|15|10|6|2|220|440|900|1200|sat)[cdp]$', t)
         if m:
@@ -3707,6 +3734,9 @@ class Edit_Dialog(Toplevel):
             self.be.configure(bg='yellow')
             error += 1
         t = self.ce.get().strip()  # call
+        if self.chocall != t:
+            print "the call has changed"
+            changer = 2
         self.ce.configure(bg='white')
         m = re.match(r'[a-z0-9/]{3,11}$', t)
         if m:
@@ -3716,6 +3746,9 @@ class Edit_Dialog(Toplevel):
             self.ce.configure(bg='yellow')
             error += 1
         t = self.re.get().strip()  # report
+        if self.chorept != t:
+            print "the report has changed."
+            changer = 1
         self.re.configure(bg='white')
         m = re.match(r'.{4,24}$', t)
         if m:
@@ -3725,6 +3758,9 @@ class Edit_Dialog(Toplevel):
             self.re.configure(bg='yellow')
             error += 1
         t = self.pe.get().strip().lower()  # power
+        if self.chopowr != t:
+            print "the power has changed."
+            changer = 1
         self.pe.configure(bg='white')
         m = re.match(r'[0-9]{1,4}n?$', t)
         if m:
@@ -3734,6 +3770,9 @@ class Edit_Dialog(Toplevel):
             self.pe.configure(bg='yellow')
             error += 1
         t = self.oe.get().strip().lower()  # operator
+        if self.chooper != t:
+            print "the operator has changed."
+            changer = 1
         self.oe.configure(bg='white')
         if participants.has_key(t):
             newopr = t
@@ -3742,6 +3781,9 @@ class Edit_Dialog(Toplevel):
             self.oe.configure(bg='yellow')
             error += 1
         t = self.le.get().strip().lower()  # logger
+        if self.chologr != t:
+            print "the logger has changed."
+            changer = 1
         self.le.configure(bg='white')
         if participants.has_key(t):
             newlogr = t
@@ -3751,14 +3793,14 @@ class Edit_Dialog(Toplevel):
             error += 1
         if error == 0:
             # There was no dupe check on the edited qso info. This was added. Scott Hibbs Jul/01/2016
-            if qdb.dupck(newcall, newband):  # dup check for new data
-                print 'Edit is a DUPE. No action performed.'
-                self.crazytxt.set("This is a DUPE")
+            if changer == 0:
+                print 'Nothing changed. No action performed.'
+                self.crazytxt.set('nothing changed?')
                 self.crazyclr.set('red')
                 self.crazylbl.configure(bg=self.crazyclr.get(), text=self.crazytxt.get())
                 error += 1
-            else:
-                # delete and enter new data
+            if changer == 1:
+                # delete and enter new data because something other than band or call has changed.
                 # print "no errors, enter data"
                 reason = "edited"
                 qdb.delete(self.node, self.seq, reason)
@@ -3766,6 +3808,24 @@ class Edit_Dialog(Toplevel):
                 self.top.destroy()
                 txtbillb.insert(END, " EDIT Successful\n")
                 topper()
+            if changer == 2:
+                #band or call changed so check for dupe before submitting to log.
+                if qdb.dupck(newcall, newband):  # dup check for new data
+                    print 'Edit is a DUPE. No action performed.'
+                    self.crazytxt.set("This is a DUPE")
+                    self.crazyclr.set('red')
+                    self.crazylbl.configure(bg=self.crazyclr.get(), text=self.crazytxt.get())
+                    error += 1
+                else:
+                    # delete and enter new data
+                    # print "no errors, enter data"
+                    reason = "edited"
+                    qdb.delete(self.node, self.seq, reason)
+                    qdb.postnew(newdate, newcall, newband, newrept, newopr, newlogr, newpowr)
+                    self.top.destroy()
+                    txtbillb.insert(END, " EDIT Successful\n")
+                    topper()
+
 
     def dele(self):
         print "delete entry"
@@ -3787,6 +3847,8 @@ def edit_dialog(node, seq):
     # wait for it
 
 
+#      -- Need to display the latest log entry if an edit has been edited previously. - Scott Hibbs Feb/4/2017
+
 def log_select(e):
     'process mouse left-click on log window'
     #    print e.x,e.y
@@ -3796,26 +3858,31 @@ def log_select(e):
     line = int(line)
     #    print line
     logtext = logw.get('%d.0' % line, '%d.82' % line)
-    #    print logtext
+    # print logtext
     seq = logtext[65:69].strip()
     bxnd = logtext[8:14].strip()
     cxll = logtext[15:22].strip()
+    #  In case user clicks on a deleted log entry Feb/2/2017 Scott Hibbs
+    baddd = logtext[23:24].strip()
+    if baddd == '*':
+        print "Can't edit a delete entry"
+        return 'break'
     if len(seq) == 0: return 'break'
-    #    In case user clicks on tildes - 5/11/2014 Scott Hibbs
+    #    In case user clicks on tildes - May/11/2014 Scott Hibbs
     if seq == '~~~~': return 'break'
     seq = int(seq)
     stn = logtext[69:].strip()
     if len(stn) == 0: return 'break'
     print stn, seq, bxnd, cxll
     if stn == node:  # only edit my own Q's
-        # Also check to make sure the call isn't previously edited. Jul/02/2016 KD4SIR Scott Hibbs
+        # Also check to make sure the call isn't previously deleted. Jul/02/2016 KD4SIR Scott Hibbs
         if qdb.dupck(cxll, bxnd):
-            print 'Log Entry Found..'
+            print 'Log Entry Found.. Check for newer entry in the log'
             edit_dialog(stn, seq)
         else:
             print 'Not in Log...'
     else:
-        print "Cannot Edit other node's Q"
+        print "Cannot Edit another person's Q"
     return 'break'
 updatect = 0
 
@@ -3871,14 +3938,11 @@ exit(1)
 #
 #  add phonetic alphabet display
 #
-#  .st to popup
-#
-#  dupcheck on 0 power not working. ok?
+#  .st to popup   +  Eric suggested show stations on band with bubble dialog
 #
 #  document .set system better
 #
 #  Weo suggested making Control-C text copy/paste work.
-#  Eric suggested show stations on band with bubble dialog
 #
 #  gui
 #    sta/oper/logr/pwr/q dsply in lower rt?
