@@ -1,6 +1,24 @@
 # FDLog_Enhanced
 A Stable Field Day Logging program for Amateur (Ham) Radio using a wireless network to distribute the database and coordinate operations. 
 
+FDLog_SCICSG             Feb 04, 2017               v2017-beta-2
+*******************************************************************
+
+This is v2017-beta-2 (should be stable)
+This will be tested to see if it will be our 2017 stable version for field day this year.
+
+  * Fixed the Class not updating when clicking on an HF band
+  * Removed bug that would not allow edits if the call and band are the same.
+     Now can't edit a deleted log entry, and can't edit unless it is in the log.
+      -- Need to display the latest log entry if an entry has been edited previously.
+  * Removed the extra lines or labels in the qui for the port and for the list of nodes on
+     on each band. - reverted back to the way it was for now but added the port
+     to the header.
+
+Next item to work on will be the popup that will show the station on the band clicked.
+
+- Scott Feb, 4, 2017
+
 FDLog_SCICSG             Jan 30, 2017      v2017-beta-1 with bugs
 *******************************************************************
 This is v2017-beta-1
