@@ -1,10 +1,11 @@
-# mod for machine readability
-#
 # section_abbrev state_abbrev call_area name
 #
-# $Revision: 1.4 $
+# Revision: 2  By Scott Hibbs KD4SIR 
 #
-#		     ARRL/CANADIAN SECTION ABBREVIATIONS
+# Feb, 5, 2017
+#
+# ARRL/CANADIAN SECTION ABBREVIATIONS
+#
 #
 CT  CT 1 Connecticut
 EB  CA 6 East Bay
@@ -59,10 +60,8 @@ IN  IN 9 Indiana
 TN  TN 4 Tennessee
 WI  WI 9 Wisconsin
 VA  VA 4 Virginia
-#
-PR  -- 4? Puerto Rico
-VI  -- 4? Virgin Islands
-#
+PR  -- 4 Puerto Rico
+VI  -- 4 Virgin Islands
 CO  CO 0 Colorado
 IA  IA 0 Iowa
 AR  AR 5 Arkansa
@@ -79,7 +78,6 @@ OK  OK 5 Oklahoma
 SD  SD 0 South Dakota
 STX TX 5 South Texas
 WTX TX 5 West Texas
-#
 MAR -- C Maritime
 SK  -- C Saskatchewan
 NL  -- C Newfoundland/Labrador
@@ -89,24 +87,30 @@ BC  -- C British Columbia
 ON  -- C Ontario
 NWT -- C Northwest Territories/Yukon/Nunavut
 MB  -- C Manitoba
-#
 DX  -- - Foreign
 #
-# info from ARRL web form by Dan Henderson, N1ND, contests@arrl.org  Updated:  08/28/01
+# info from ARRL web form by Dan Henderson, N1ND, contests@arrl.org
+# Updated: 08/28/01
+#
+#
+#
+# Removed this because it doesn't belong in the log 
+#    and keeps W.A.S. report from error. - Scott Hibbs KD4SIR 
 #
 # additional synonyms akb
-WVA  WV 8 West Virginia
-STEX TX 5 South Texas
-MD   MD 3 Maryland-DC
-ORE  OR 7 Oregon
-WYO  WY 7 Wyoming
-WIS  WI 9 Wisconsin
-NMEX NM 5 New Mexico
-NDAK ND 0 North Dakota
-SJC  CA 6 San Joaquin Valley
-NEB  NE 0 Nebraska
-NB   NE 0 Nebraska
-ONT  -- C Ontario
-NT   -- C Northwest Territories/Yukon/Nunavut
-ST   TX 5 South Texas
-SFLA FL 4 Southern Florida
+#
+# WVA  WV 8 West Virginia
+# STEX TX 5 South Texas
+# MD   MD 3 Maryland-DC
+# ORE  OR 7 Oregon
+# WYO  WY 7 Wyoming
+# WIS  WI 9 Wisconsin
+# NMEX NM 5 New Mexico
+# NDAK ND 0 North Dakota
+# SJC  CA 6 San Joaquin Valley
+# NEB  NE 0 Nebraska
+# NB   NE 0 Nebraska
+# ONT  -- C Ontario
+# NT   -- C Northwest Territories/Yukon/Nunavut
+# ST   TX 5 South Texas
+# SFLA FL 4 Southern Florida
