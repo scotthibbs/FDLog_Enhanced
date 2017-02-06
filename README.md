@@ -1,6 +1,22 @@
 # FDLog_Enhanced
 A Stable Field Day Logging program for Amateur (Ham) Radio using a wireless network to distribute the database and coordinate operations. 
 
+
+FDLog_SCICSG             Feb 06, 2017               v2017-beta-3
+*******************************************************************
+
+ This is v2017-beta-3 (stable needs testing)
+
+ Now checks for valid arrl sections.
+     Thanks to Alan Biocca W6AKB
+     this was modified from his 153d version of FDLog.
+
+ Please note the arrl_sect.dat file has been updated for this 
+ version to work correctly. 
+
+ Scott Hibbs KD4SIR Feb/6/2017
+
+
 FDLog_SCICSG             Feb 04, 2017               v2017-beta-2
 *******************************************************************
 
