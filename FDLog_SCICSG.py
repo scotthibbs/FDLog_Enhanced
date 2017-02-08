@@ -9,7 +9,18 @@ import random
 import calendar
 import sqlite3
 from Tkinter import *
+#import tkMessageBox
 
+# v2017-beta-4
+#
+#   Added "WHO" button before operator so that
+#     this can be clicked for whose on bands.
+#     # Determined that this is not needed now that the mouse over report is cleaner.
+#   I added a pop up message box but this turns out to
+#     be very annoying so it was removed.
+#   Mouse over who's on the bands report is super clean now.
+#   Fixed the output of the sections so it prints cleaner as well.
+#
 # This is v2017-beta-3 (stable needs testing)
 #
 # Now checks for valid sections.
@@ -80,8 +91,8 @@ from Tkinter import *
 # "FDLog 1-149-2 2011/07/11\ and v4-1-152i\n"\
 # "Copyright 2002-2013 by Alan Biocca (W6AKB) (www.fdlog.info)\n\n"\
 # "FDLog is distributed under the GNU Public License\n"
-#
 # Additional code included from FDLog v4-1-152i 2014/05/26\n
+# Some code modified from FDLog v4-1-153d
 
 # Forked & Repository Project
 # FDLog_Enhanced on github
@@ -97,7 +108,7 @@ from Tkinter import *
 #               Future: Adding interoperability with other programs such as HRDeluxe Free,
 #               FLDigi, Rigserve etc if we can?
 
-prog = 'FDLog_SCICSG v2017-beta-3 Feb, 6, 2017 \n' \
+prog = 'FDLog_SCICSG v2017-beta-4 Feb, 8, 2017 \n' \
        'Copyright 2017 by South Central Indiana Communications Support Group \n' \
        'FDLog_SCICSG is under the GNU Public License v3 without warranty. \n' \
        'Please see the GPL.txt file for details. \n'
@@ -153,7 +164,7 @@ fingerprint()
 # should make this user configurable. akb. xx
 
 
-version = "v17b3"
+version = "v17b4"
 fontsize = 10
 fontinterval = 2
 typeface = 'Courier'
@@ -2602,12 +2613,28 @@ def updatebb():
             del wof['']
         if wof.has_key('off'):
             del wof['off']
-        txtbillb.insert(END,"\n %s\n"%wof)
+        for k,v in wof.iteritems():
+            v = str(v)
+            v1 = len(v)
+            v2 = len(v) - 2
+            v3 = v[3:v2].strip()
+            #print "%s - %s" % (k,v3)
+            txtbillb.insert(END,"%s - %s\n" % (k,v3))
+        topper()
         txtbillb.see(END)
+            #print v
+        #print('\n'.join("{} : {}".format(k, v) for k, v in wof.items()))
+        #for k,v in wof.iteritems():
+        #   print(k, v)
+        #txtbillb.insert(END,"\n %s\n" % wof)
+        #txtbillb.see(END)
+        #tkMessageBox.showinfo("titlehello", "hello world")
+
 
     def whosonsecond(event):
         global wof
         wof = ""
+		#tkMessageBox.destroy
 
     for i in bands:
         b = 0
@@ -3037,38 +3064,45 @@ def setlog(logr):
     logds.config(text=logger, background=lcolor)
     logmb.config(background='yellow')
     saveglob()
+
+
 f1b = Frame(root, bd=0)  # oper logger power and network windows
 #  Changed the color of the user buttons to red until assigned - KD4SIR Scott Hibbs 7/14/2013
 ocolor = 'red'
 lcolor = 'red'
 pcolor = 'red'
+# Add "who" button to display messagebox with operators on band when clicked.
+# Determined that this is not needed now that the mouse over report is cleaner.
+#opwho = Menubutton(f1b, text='WHO ', font=fdfont, relief='raised',
+#                   background='grey', foreground='blue')
+#opwho.grid(row=0, column=0, sticky=NSEW)
 # Operator
+opds = Menubutton(f1b, text='     <select operator>     ', font=fdfont, relief='raised',
+                  background=ocolor)
+opds.grid(row=0, column=0, sticky=NSEW)
+opdsu = Menu(opds, tearoff=0)
+opds.config(menu=opdsu, direction='below')
 opmb = Menubutton(f1b, text='Operator', font=fdfont, relief='raised',
                   background=ocolor)
 opmb.grid(row=0, column=1, sticky=NSEW)
 opmu = Menu(opmb, tearoff=0)
 opmb.config(menu=opmu, direction='below')
 opmu.add_command(label="Add New Participant", command=newpart.dialog)
-opds = Menubutton(f1b, text='<select operator>', font=fdfont, relief='raised',
-                  background=ocolor)
-opds.grid(row=0, column=0, sticky=NSEW)
-opdsu = Menu(opds, tearoff=0)
-opds.config(menu=opdsu, direction='below')
 f1b.grid_columnconfigure(0, weight=1)
 # Logger
-logmb = Menubutton(f1b, text="Logger", font=fdfont, relief='raised',
+logds = Menubutton(f1b, text='     <Select Logger>     ', font=fdfont, relief='raised',
                    background=lcolor)
-logmb.grid(row=0, column=4, sticky=NSEW)
-logmu = Menu(logmb, tearoff=0)
-logmb.config(menu=logmu, direction='below')
-logmu.add_command(label="Add New Participant", command=newpart.dialog)
-logds = Menubutton(f1b, text='<Select Logger>', font=fdfont, relief='raised',
-                   background=lcolor)
-logds.grid(row=0, column=3, sticky=NSEW)
+logds.grid(row=0, column=2, sticky=NSEW)
 f1b.grid_columnconfigure(3, weight=1)
 logdsu = Menu(logds, tearoff=0)
 logds.config(menu=logdsu, direction='below')
 logdsu.add_command(label="Add New Participant", command=newpart.dialog)
+logmb = Menubutton(f1b, text="Logger", font=fdfont, relief='raised',
+                   background=lcolor)
+logmb.grid(row=0, column=3, sticky=NSEW)
+logmu = Menu(logmb, tearoff=0)
+logmb.config(menu=logmu, direction='below')
+logmu.add_command(label="Add New Participant", command=newpart.dialog)
 
 
 def buildmenus():
@@ -3602,10 +3636,26 @@ def proc_key(ch):
                         if rept2 in secName:
                             pass
                         else:
-                            print "Use one of these for the section:"
-                            print secName
-                            txtbillb.insert(END, "\n section is incorrect\n")
-                            txtbillb.insert(END, "  Please Try Again\n")
+                            print "\n Use one of these for the section:"
+                            kk = ""
+                            nx = 0
+                            ny = 0
+                            for k in sorted(secName):
+                                if ny == 0:
+                                    kk += "\n  "
+                                    ny = ny + 1
+                                kk += str(k) + ", "
+                                nx = nx + 1
+                                if nx == 16:
+                                    ny = ny + 1
+                                    if ny < 6:
+                                        kk += "\n  "
+                                        nx = 0
+                            print kk
+                            #print('\n'.join("{} : {}".format(k, v) for k, v in secName.items()))
+                            txtbillb.insert(END, kk)
+                            txtbillb.insert(END, "\n  Please try one of the sections above.")
+                            topper()
                             return
                         # The entry is good and ready to log
                         txtbillb.insert(END, " - QSL!  May I have another?")
