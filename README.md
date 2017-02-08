@@ -2,6 +2,22 @@
 A Stable Field Day Logging program for Amateur (Ham) Radio using a wireless network to distribute the database and coordinate operations. 
 
 *******************************************************************
+FDLog_SCICSG             Feb 08, 2017               v2017-beta-4
+
+This is v2017-beta-4 (stable needs testing)
+
+This version ends the debate on a popup or another window opening
+the who's on band information. I tried a pop up but it was simply
+annoying. I placed a button to push this information but mousing 
+over was the same thing. I didn't like the raw output of the 
+information so I made it pretty to look at. Now I like it. 
+
+I also cleaned up the wrong section dialogue so that it prints a 
+nice clean list of sections to chose again.
+
+Scott Hibbs KD4SIR Feb/8/2017
+
+*******************************************************************
 FDLog_SCICSG             Feb 06, 2017               v2017-beta-3
 
  This is v2017-beta-3 (stable needs testing)
