@@ -11,6 +11,15 @@ import sqlite3
 from Tkinter import *
 #import tkMessageBox
 
+
+# v2017-beta-5 (needs testing for 2017 release
+#
+#   Added age and visitor tracking for each participant. 
+#   Added participant check after an enter key for a call
+#   Changed clock slew rate to a more odd number (.39571)
+#
+#   * Will work on editing the latest seq in the log automatically.
+#
 # v2017-beta-4
 #
 #   Added "WHO" button before operator so that
@@ -73,17 +82,7 @@ from Tkinter import *
 #   *  "wa6nhc 5/2013 suggests precluding site operators from being logged as Q's"
 #       Done. Added the ability to "dupe check" participants outside the dupe log. Thanks WA6NHC
 #
-#
-# 1. start working on setup routine.
-#         Node id
-#         Event startup:
-#                fd or vhf
-#                group name
-#                fd call
-#                gota call
-#                class
-#                sect
-#                time master?
+
 
 
 # Original code is from:
@@ -108,7 +107,7 @@ from Tkinter import *
 #               Future: Adding interoperability with other programs such as HRDeluxe Free,
 #               FLDigi, Rigserve etc if we can?
 
-prog = 'FDLog_SCICSG v2017-beta-4 Feb, 8, 2017 \n' \
+prog = 'FDLog_SCICSG v2017-beta-5 Feb, 12, 2017 \n' \
        'Copyright 2017 by South Central Indiana Communications Support Group \n' \
        'FDLog_SCICSG is under the GNU Public License v3 without warranty. \n' \
        'Please see the GPL.txt file for details. \n'
@@ -164,7 +163,7 @@ fingerprint()
 # should make this user configurable. akb. xx
 
 
-version = "v17b4"
+version = "v17b5"
 fontsize = 10
 fontinterval = 2
 typeface = 'Courier'
@@ -274,7 +273,7 @@ class clock_class:
 
     def adjust(self):
         "adjust the clock each second as needed"
-        rate = 0.5  # delta seconds per second
+        rate = 0.39571  # delta seconds per second
         adj = self.adjusta
         if abs(adj) < 0.001: return
         if adj > rate:
@@ -450,62 +449,29 @@ def initialize():
                     qdb.globalshare('infob', "0")  # global to db
                     renew_title()
                     print "An information table is easy points"
-                    # Time Master - oh yeah the big question
-                    #     z = ""
-                    #     print "It is recommended that the first computer"
-                    #     print "set up should also be the time master."
-                    #     z = ""
-                    #     print "Will this computer be the time master?"
-                    #     print "Y = yes and N = no"
-                    #     k = string.lower(string.strip(sys.stdin.readline())[:1])
-                    #     if k == "y": z = "1"
-                    #     if k == "n": z = '1'
-                    #     while z != "1":
-                    #         print "Press Y or N please"
-                    #         k = string.lower(string.strip(sys.stdin.readline())[:1])
-                    #         if k == "y": z = "1"
-                    #         if k == "n": z = '1'
-                    #     else:
-                    #         if k == "y":
-                    #             mclock.gpsclockinit()
-                    # xxxxxxxxxx
-                    # print "It is preferred that the time be gathered"
-                    # print "from a gps clock or internet time server."
-                    #
-
-                    #     globDb.put('infob',"1")
-                    #     qdb.globalshare('infob', "1")  # global to db
-                    #     renew_title()
-                    #     print "Love information tables!"
-                    # if k == "n":
-                    #     globDb.put('infob',"0")
-                    #     qdb.globalshare('infob', "0")  # global to db
-                    #     renew_title()
-                    #     print "An information table is easy points"
-
-                    #     print "Is this a field day event?"
-                    #     print "Y = FD and N = VHF"
-                    #     k = string.lower(string.strip(sys.stdin.readline())[:1])
-                    #     if k == "y": z = "1"
-                    #     if k == "n": z = '1'
-                    #     while z != "1":
-                    #         print "Press Y or N please"
-                    #         k = string.lower(string.strip(sys.stdin.readline())[:1])
-                    #         if k == "y": z = "1"
-                    #         if k == "n": z = '1'
-                    #     else:
-                    #         if k == "y":
-                    #             globDb.put('contst',"FD")
-                    #             print "Have a nice Field Day!"
-                    #         if k == "n":
-                    #             globDb.put('contst',"VHF")
-                    #             print "Enjoy the VHF contest!"
-                    #        ('tmast', '<text>
-                    #                time master?
-                    #                     if gps clock then Yes
-                    #                     if online clock then Yes
-                    #                     if no then system set correct?
-
+            #Time Master - oh yeah the big question
+            z = ""
+            print "\n It is recommended that the first computer"
+            print "set up should also be the time master."
+            print "\n IS THIS COMPUTER TIME CORRECT??? \n"
+            print "Will this computer be the time master?"
+            print "Y = yes and N = no"
+            k = string.lower(string.strip(sys.stdin.readline())[:1])
+            if k == "y": z = "1"
+            if k == "n": z = '1'
+            while z != "1":
+                print "Press Y or N please"
+                k = string.lower(string.strip(sys.stdin.readline())[:1])
+                if k == "y": z = "1"
+                if k == "n": z = '1'
+            else:
+                if k == "y":
+                    globDb.put('tmast', node)
+                    qdb.globalshare('tmast', node)  # global to db
+                    renew_title()
+                    print "Time travels to you!"
+                if k == "n":
+                    pass                
     return
 
 
@@ -1140,7 +1106,7 @@ class qsodb:
         l = []
         for i in participants.values():
             l.append(i)
-            ini, name, dcall = string.split(i, ', ')
+            ini, name, dcall, age, vist = string.split(i, ', ')
             if dcall == xcall:
                 # to debug: print ("%s dcall matches %s xcall" % (dcall, xcall))
                 if gd.getv('contst').upper() == "VHF":
@@ -1672,7 +1638,7 @@ class global_data:
             i.val = value
             i.ts = timestamp
             if name[:2] == 'p:':
-                ini, name, call = string.split(value, ', ')
+                ini, name, call, age, vist = string.split(value, ', ')
                 participants[ini] = value
                 if name == 'delete':
                     del (participants[ini])
@@ -2379,7 +2345,7 @@ class NewParticipantDialog:
         s.t.title('SCICSG_FDLOG Add New Participant')
         fr1 = Frame(s.t)
         fr1.grid(row=0, column=0)
-        Label(fr1, text='Initials', font=fdbfont).grid(row=0, column=0, sticky=W)
+        Label(fr1, text='Initials   ', font=fdbfont).grid(row=0, column=0, sticky=W)
         s.initials = Entry(fr1, width=3, font=fdbfont, validate='focusout', validatecommand=s.lookup)
         s.initials.grid(row=0, column=1, sticky=W)
         s.initials.focus()
@@ -2389,6 +2355,12 @@ class NewParticipantDialog:
         Label(fr1, text='Call', font=fdbfont).grid(row=2, column=0, sticky=W)
         s.call = Entry(fr1, width=6, font=fdbfont)
         s.call.grid(row=2, column=1, sticky=W)
+        Label(fr1, text='Age', font=fdbfont).grid(row=3, column=0, sticky=W)
+        s.age = Entry(fr1, width=2, font=fdbfont)
+        s.age.grid(row=3, column=1, sticky=W)
+        Label(fr1, text='Vstr Title', font=fdbfont).grid(row=4, column=0, sticky=W)
+        s.vist = Entry(fr1, width=20, font=fdbfont)
+        s.vist.grid(row=4, column=1, sticky=W)
         fr2 = Frame(s.t)
         fr2.grid(row=1, column=0, sticky=EW, pady=3)
         fr2.grid_columnconfigure((0, 1), weight=1)
@@ -2407,11 +2379,21 @@ class NewParticipantDialog:
             self.initials.focus()
         else:
             self.initials.configure(bg='white')
-            ini, name, call = string.split(participants.get(initials, ', , '), ', ')
+            ini, name, call, age, vist = string.split(participants.get(initials, ', , , , '), ', ')
             self.name.delete(0, END)
             self.name.insert(END, name)
             self.call.delete(0, END)
             self.call.insert(END, call)
+            self.age.delete(0, END)
+            if age == 0:
+                pass
+            else:
+                self.age.insert(END, age)
+            self.vist.delete(0, END)
+            if vist == "":
+                pass
+            else:
+                self.vist.insert(END, vist)
         return 1
 
     def applybtn(self):
@@ -2420,9 +2402,13 @@ class NewParticipantDialog:
         initials = self.initials.get().lower()
         name = self.name.get()
         call = string.lower(self.call.get())
+        age = string.lower(self.age.get())
+        vist = string.lower(self.vist.get())
         self.initials.configure(bg='white')
         self.name.configure(bg='white')
         self.call.configure(bg='white')
+        self.age.configure(bg='white')
+        self.vist.configure(bg='white')
         if not re.match(r'[a-zA-Z]{2,3}$', initials):
             txtbillb.insert(END, "error in initials\n")
             txtbillb.see(END)
@@ -2442,16 +2428,28 @@ class NewParticipantDialog:
             self.call.focus()
             self.call.configure(bg='yellow')
             # self.call.delete(0,END)
+        elif not re.match(r'([0-9]{1,2})?$', age):
+            txtbillb.insert(END, "error in age\n")
+            txtbillb.see(END)
+            self.age.focus()
+            self.age.configure(bg='yellow')
+        elif not re.match(r'([a-zA-Z0-9]{4,20})?$', vist):
+            txtbillb.insert(END, "error in title\n")
+            txtbillb.see(END)
+            self.vist.focus()
+            self.vist.configure(bg='yellow')
         else:
             # Enter the Participant in the dictionary
             initials
             nam = "p:%s" % initials
-            v = "%s, %s, %s" % (initials, name, call)
+            v = "%s, %s, %s, %s, %s" % (initials, name, call, age, vist)
             participants[initials] = v
             n = qdb.globalshare(nam, v)  # store + bcast
             self.initials.delete(0, END)
             self.name.delete(0, END)
             self.call.delete(0, END)
+            self.age.delete(0, END)
+            self.vist.delete(0, END)
             self.initials.focus()
             buildmenus()
 
@@ -2852,6 +2850,8 @@ band = "off"
 power = "0"
 operator = ""
 logger = ""
+age = 0
+vist = ""
 node = ""
 authk = ""
 # tcp_port = 5100                #yahoo webcam. Who uses that?
@@ -3045,8 +3045,8 @@ def setoper(op):
     "set operator"
     global operator
     # print "setoper",op
-    ini, name, call = string.split(op, ', ')
-    operator = "%s: %s, %s" % (ini, name, call)
+    ini, name, call, age, vist = string.split(op, ', ')
+    operator = "%s: %s, %s, %s, %s" % (ini, name, call, age, vist)
     # Adding red to the display - KD4SIR
     ocolor = 'grey'
     opds.config(text=operator, background=ocolor)
@@ -3058,8 +3058,8 @@ def setlog(logr):
     """set logger"""
     global logger
     # print "setlog",logr
-    ini, name, call = string.split(logr, ', ')
-    logger = "%s: %s, %s" % (ini, name, call)
+    ini, name, call, age, vist = string.split(logr, ', ')
+    logger = "%s: %s, %s, %s, %s" % (ini, name, call, age, vist)
     lcolor = 'grey'
     logds.config(text=logger, background=lcolor)
     logmb.config(background='yellow')
@@ -3076,34 +3076,31 @@ pcolor = 'red'
 #opwho = Menubutton(f1b, text='WHO ', font=fdfont, relief='raised',
 #                   background='grey', foreground='blue')
 #opwho.grid(row=0, column=0, sticky=NSEW)
-# Operator
-opds = Menubutton(f1b, text='     <select operator>     ', font=fdfont, relief='raised',
-                  background=ocolor)
-opds.grid(row=0, column=0, sticky=NSEW)
-opdsu = Menu(opds, tearoff=0)
-opds.config(menu=opdsu, direction='below')
-opmb = Menubutton(f1b, text='Operator', font=fdfont, relief='raised',
-                  background=ocolor)
-opmb.grid(row=0, column=1, sticky=NSEW)
-opmu = Menu(opmb, tearoff=0)
-opmb.config(menu=opmu, direction='below')
-opmu.add_command(label="Add New Participant", command=newpart.dialog)
-f1b.grid_columnconfigure(0, weight=1)
-# Logger
-logds = Menubutton(f1b, text='     <Select Logger>     ', font=fdfont, relief='raised',
-                   background=lcolor)
-logds.grid(row=0, column=2, sticky=NSEW)
-f1b.grid_columnconfigure(3, weight=1)
-logdsu = Menu(logds, tearoff=0)
-logds.config(menu=logdsu, direction='below')
-logdsu.add_command(label="Add New Participant", command=newpart.dialog)
-logmb = Menubutton(f1b, text="Logger", font=fdfont, relief='raised',
-                   background=lcolor)
-logmb.grid(row=0, column=3, sticky=NSEW)
-logmu = Menu(logmb, tearoff=0)
-logmb.config(menu=logmu, direction='below')
-logmu.add_command(label="Add New Participant", command=newpart.dialog)
 
+# Operator
+opmb = Menubutton(f1b,text='Operator',font=fdfont,relief='raised',\
+                  background=ocolor)
+opmb.grid(row=0,column=1,sticky=NSEW)
+opmu = Menu(opmb,tearoff=0)
+opmb.config(menu=opmu,direction='below')
+opmu.add_command(label="Add New Participant",command=newpart.dialog)
+opds = Menubutton(f1b, text='<select operator>',font=fdfont,relief='raised',background=ocolor)
+opds.grid(row=0,column=0,sticky=NSEW)
+opdsu = Menu(opds,tearoff=0)
+opds.config(menu=opdsu,direction='below')
+f1b.grid_columnconfigure(0,weight=1)
+# Logger
+logmb = Menubutton(f1b,text="Logger",font=fdfont,relief='raised',background=lcolor)
+logmb.grid(row=0,column=4,sticky=NSEW)
+logmu = Menu(logmb,tearoff=0)
+logmb.config(menu=logmu,direction='below')
+logmu.add_command(label="Add New Participant",command=newpart.dialog)
+logds = Menubutton(f1b,text='<Select Logger>',font=fdfont,relief='raised',background=lcolor)
+logds.grid(row=0,column=3,sticky=NSEW)
+f1b.grid_columnconfigure(3,weight=1)
+logdsu = Menu(logds,tearoff=0)
+logds.config(menu=logdsu,direction='below')
+logdsu.add_command(label="Add New Participant",command=newpart.dialog)
 
 def buildmenus():
     opdsu.delete(0, END)
@@ -3111,8 +3108,8 @@ def buildmenus():
     l = participants.values()
     l.sort()
     for i in l:
-        # if re.match(r'.*, delete,',i): continue
-        m = re.match(r'[a-z0-9]+, [a-zA-Z ]+, ([a-z0-9]+)$', i)
+        # I had to take out the $ which looks for the end of value - Scott Hibbs KD4SIR 2/12/2017
+        m = re.match(r'[a-z0-9]+, [a-zA-Z ]+, ([a-z0-9]+)',i)
         if m: opdsu.add_command(label=i, command=lambda n=i: (setoper(n)))
         logdsu.add_command(label=i, command=lambda n=i: (setlog(n)))
     opdsu.add_command(label="Add New Participant", command=newpart.dialog)
@@ -3123,8 +3120,6 @@ def buildmenus():
 def ckpowr():
     global power
     pwr = ival(pwrnt.get())
-    print "power is this from ckpowr", power
-    print "pwr is this from ckpowr", pwr
     if pwr < 0:
         pwr = "0"
     elif pwr > 1500:
@@ -3340,44 +3335,6 @@ def showthiscall(call):
             txtbillb.insert(END, "%s\n" % i.prlogln())
             findany = 1
     return findany
-
-# Future feature by Alan Biocca W6AKB found in his 153d beta code.
-# This will check sections!!
-# take out tabs and comments to add.
-# check against process key functions..
-#
-                #secName = {} # index by abbrev, contents number, abbreviation, and full state
-                ##secList = []
-                #
-                #def readSections():
-                #    #sectost,stcnt,r,e = {},{},[],[]
-                #    # canum is call area number
-                #
-                #    try:
-                #        fd = file("arrl_sect.dat","r")  # read section data
-                #        while 1:
-                #            ln = fd.readline().strip()          # read a line and put in db
-                #            if not ln: break
-                #            #if ln == "": continue
-                #            if ln[0] == '#': continue
-                #            try:
-                #                sec,st,canum,abbrev,name = string.split(ln,None,4)
-                #                #r = abbrev + ' ' + desc
-                #                #secName[sec] = abbrev
-                #                secName[abbrev] = abbrev + ' ' + name + ' ' + canum
-                #                #sectost[sec] = st
-                #                #stcnt[st] = 0
-                ###                    print sec,st,desc
-                #            except ValueError,e:
-                #                print "rd arrl sec dat err, itm skpd: ",e
-                #        fd.close()
-                #    except IOError,e:
-                #        print "read error during readSections", e
-                #
-                ###    for i in secName: # build list of indexes
-                ###        secList.append(i)
-                #readSections()
-                ##print "sections",secName
 
 
 # added this to take out the keyhelp from the code. - Scott Hibbs
@@ -3667,7 +3624,11 @@ def proc_key(ch):
                         qdb.qsl(tm, xcall, band, rept)
             elif stat == 4:
                 kbuf = ""
-                if showthiscall(call) == 0:
+                # Added participant check here too - Feb/12/2017 -Scott Hibbs 
+                if qdb.partck(xcall): # Participant check
+                    txtbillb.insert(END, "\n Participant - not allowed \n")
+                    topper()
+                elif showthiscall(call) == 0:
                     txtbillb.insert(END, " none found\n")
                     topper()
             return
@@ -3845,83 +3806,83 @@ class Edit_Dialog(Toplevel):
         changer = 0 # 0 = no change. 1= change except band and call. 2 = change in call or band
         t = self.de.get().strip()  # date time
         if self.chodate != t:
-            print "The date has changed."
+            #print "The date has changed."
             changer = 1
         self.de.configure(bg='white')
         m = re.match(r'[0-9]{6}\.[0-9]{4,6}$', t)
         if m:
             newdate = t + '00'[:13 - len(t)]
-            print newdate
+            #print newdate
         else:
             self.de.configure(bg='yellow')
             error += 1
         t = self.be.get().strip()  # band mode
         if self.choband != t:
-            print "the band has changed"
+            #print "the band has changed"
             changer = 2
         self.be.configure(bg='white')
         m = re.match(r'(160|80|40|20|15|10|6|2|220|440|900|1200|sat)[cdp]$', t)
         if m:
             newband = t
-            print newband
+            #print newband
         else:
             self.be.configure(bg='yellow')
             error += 1
         t = self.ce.get().strip()  # call
         if self.chocall != t:
-            print "the call has changed"
+            #print "the call has changed"
             changer = 2
         self.ce.configure(bg='white')
         m = re.match(r'[a-z0-9/]{3,11}$', t)
         if m:
             newcall = t
-            print newcall
+            #print newcall
         else:
             self.ce.configure(bg='yellow')
             error += 1
         t = self.re.get().strip()  # report
         if self.chorept != t:
-            print "the report has changed."
+            print "the section is not verified - please check."
             changer = 1
         self.re.configure(bg='white')
         m = re.match(r'.{4,24}$', t)
         if m:
             newrept = t
-            print newrept
+            #print newrept
         else:
             self.re.configure(bg='yellow')
             error += 1
         t = self.pe.get().strip().lower()  # power
         if self.chopowr != t:
-            print "the power has changed."
+            #print "the power has changed."
             changer = 1
         self.pe.configure(bg='white')
         m = re.match(r'[0-9]{1,4}n?$', t)
         if m:
             newpowr = t
-            print newpowr
+            #print newpowr
         else:
             self.pe.configure(bg='yellow')
             error += 1
         t = self.oe.get().strip().lower()  # operator
         if self.chooper != t:
-            print "the operator has changed."
+            #print "the operator has changed."
             changer = 1
         self.oe.configure(bg='white')
         if participants.has_key(t):
             newopr = t
-            print newopr
+            #print newopr
         else:
             self.oe.configure(bg='yellow')
             error += 1
         t = self.le.get().strip().lower()  # logger
         if self.chologr != t:
-            print "the logger has changed."
+            #print "the logger has changed."
             changer = 1
         self.le.configure(bg='white')
         if participants.has_key(t):
             newlogr = t
-            print newlogr
+            #print newlogr
         else:
             self.le.configure(bg='yellow')
             error += 1
@@ -3993,6 +3954,7 @@ def log_select(e):
     #    print line
     logtext = logw.get('%d.0' % line, '%d.82' % line)
     # print logtext
+    timx = logtext[0:8].strip()
     seq = logtext[65:69].strip()
     bxnd = logtext[8:14].strip()
     cxll = logtext[15:22].strip()
@@ -4004,17 +3966,25 @@ def log_select(e):
     if len(seq) == 0: return 'break'
     #    In case user clicks on tildes - May/11/2014 Scott Hibbs
     if seq == '~~~~': return 'break'
-    seq = int(seq)
-    stn = logtext[69:].strip()
-    if len(stn) == 0: return 'break'
+    # fixed clicking on the copywrite line gave a valueerror - Feb/12/2017 Scott Hibbs
+    try:
+        seq = int(seq)
+        stn = logtext[69:].strip()
+        if len(stn) == 0: return 'break'
+    except ValueError:
+        return 'break'
+    #if len(stn) == 0: return 'break'
     print stn, seq, bxnd, cxll
     if stn == node:  # only edit my own Q's
         # Also check to make sure the call isn't previously deleted. Jul/02/2016 KD4SIR Scott Hibbs
         if qdb.dupck(cxll, bxnd):
+            # check for latest entry in the log  #### to work on next. 
+            # rlg = sqdb.readlog()
+            # print rlg
             print 'Log Entry Found.. Check for newer entry in the log'
             edit_dialog(stn, seq)
         else:
-            print 'Not in Log...'
+            print '...'
     else:
         print "Cannot Edit another person's Q"
     return 'break'
@@ -4031,8 +4001,8 @@ def update():
     updatebb()
     net.si.age_data()
     mclock.adjust()
-    if mclock.level == 0:  # time master broadcasts time more frequently
-        net.bcast_time()
+    #   if mclock.level == 0:  # time master broadcasts time more frequently
+    #   net.bcast_time()
     updatect += 1
     # if (updatect % 5) == 0:         # 5 sec
     # net.bcast_now()
