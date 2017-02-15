@@ -4,11 +4,11 @@ A Stable Field Day Logging program for Amateur (Ham) Radio using a wireless netw
 *******************************************************************
 FDLog_SCICSG             Feb 15, 2017               v2017-beta-5
 
-  Added age and visitor tracking for each participant. 
-  Added participant check after an enter key for a call
-  Changed clock slew rate to a more odd number (.39571)
+ * Added age and visitor tracking for each participant. 
+ * Added participant check after an enter key for a call
+ * Changed clock slew rate to a more odd number (.39571)
 
-  * Will work on making sure the latest log entry is populated
+  ^ Will work on making sure the latest log entry is populated
   when editing the database. 
 
 Scott Hibbs KD4SIR Feb/15/2017
