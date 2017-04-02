@@ -1,0 +1,39 @@
+2017 W1AW FIELD DAY BULLETIN SCHEDULE
+Revised: 1/2017
+
+Day Mode Pacific Mountain Central Eastern UTC
+FRIDAY CW 5:00 PM 6:00 PM 7:00 PM 8:00 PM 0000 (Sat)
+Digital 6:00 PM 7:00 PM 8:00 PM 9:00 PM 0100
+ Phone 6:45 PM 7:45 PM 8:45 PM 9:45 PM 0145
+CW 8:00 PM 9:00 PM 10:00 PM 11:00 PM 0300
+SATURDAY CW 7:00 AM 8:00 AM 9:00 AM 10:00 AM 1400
+Phone 8:00 AM 9:00 AM 10:00 AM 11:00 AM 1500
+CW 5:00 PM 6:00 PM 7:00 PM 8:00 PM 0000 (Sun)
+Digital 6:00 PM 7:00 PM 8:00 PM 9:00 PM 0100
+Phone 6:45 PM 7:45 PM 8:45 PM 9:45 PM 0145
+SUNDAY CW 7:00 AM 8:00 AM 9:00 AM 10:00 AM 1400
+Phone 8:00 AM 9:00 AM 10:00 AM 11:00 AM 1500
+Digital 9:00 AM 10:00 AM 11:00 AM 12:00 PM 1600
+K6KPH Field Day Bulletin Schedule
+SATURDAY CW 7:30 AM 8:30 AM 9:30 AM 10:30 AM 1430
+CW 5:30 PM 6:30 PM 7:30 PM 8:30 PM 0030 (Sun)
+Digital 6:30 PM 7:30 PM 8:30 PM 9:30 PM 0130
+SUNDAY CW 7:30 AM 8:30 AM 9:30 AM 10:30 AM 1430
+Digital 9:30 AM 10:30 AM 11:30 AM 12:30 PM 1630
+W1AW will operate on the regularly published frequencies. The special PSK31
+bulletin will be transmitted on the regular W1AW frequencies.
+CW frequencies are 1.8025, 3.5815, 7.0475, 14.0475, 18.0975, 21.0675, 28.0675
+and 147.555 MHz.
+Digital frequencies are 3597.5, 7.095, 14.095, 18.1025, 21.095, 28.095 and
+147.555 MHz. (Note: PSK31 and MFSK16 are now included in the regular Digital
+runs.)
+Phone frequencies are 1.855, 3.990, 7.290, 14.290, 18.160, 21.390, 28.590 and
+147.555 MHz.
+-------------------------------------------
+The Maritime Radio Historical Society's station K6KPH will transmit the "W1AW"
+Field Day message for the benefit of West Coast stations on 3.5815, 7.0475,
+14.0475, 18.0975 and 21.0675 MHz. The frequencies for K6KPH Teleprinter (RTTY,
+PSK31 and MFSK16.) will be 7.095 and 14.095 MHz.
+At the time of publishing this packet but be sure to check the ARRL Main News
+page (www.arrl.org) if case of any last-minute changes.
+Revised: 1/2017
