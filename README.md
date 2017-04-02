@@ -1,5 +1,45 @@
 # FDLog_Enhanced
-A Stable Field Day Logging program for Amateur (Ham) Radio using a wireless network to distribute the database and coordinate operations. 
+A multi-platform stable Field Day logging program for Amateur (Ham) Radio clubs/groups. It distributes a database via wireless and tracks operations (whose on which band/station, individual scoring for the contestor and logger with live dupe checking etc).   
+
+
+*******************************************************************
+FDLog_SCICSG             Apr 1, 2017               v2017-beta-7
+
+This will become our stable 2017 Field Day Release. 
+
+I am in need of someone to double check that it works correctly
+using a Mac and/or a Linux pc. I have checked it with Windows 10,
+Windows 7 and using various versions of python from 2.7.5 to the 
+current release of 2.7.13. 
+
+I'm proud and excited to see it in action this field day. Hope
+you like it. 
+
+Scott Hibbs KD4SIR Apr/1/2017
+
+*******************************************************************
+FDLog_SCICSG             Apr 1, 2017               v2017-beta-6
+
+2017-beta-6 (unreleased)
+  + Fixed who's on the bands reporting - now nice print out (from .ba report). 
+  + Fixed freezing for the gota station.. gota is now gotanode.
+  + Changed clock slew to a bigger number (0.75931) 
+  + Class reporting should be correct now. Free VHF too. (reworked)
+  + Protected against putting the fdcall and gota call in the log. 
+  + Fixed the .node command - discovered it was broken.
+  + Updated all the documentation files. 
+  + Removed the wireless information menu - no longer needed.
+  + Removed the propagation report. (Anyone use it?)
+  + Removed duplicate arrl_sect.txt file needed by program. 
+  + Removed frequency.txt file needed by program - arrl band chart gives same info.
+  + Changed names of some of the files for simplicity 
+  + Created a W1AW menu with the schedule and the NTS message file.
+  + Operator now called Contestant. This allows non-hams to operate with a control operator.
+  + Contestant or Logger needs a license to enter a QSO.
+  + "Add New Participant" window uses the Enter key to save.
+  + Can not edit previously EDITED log entries. 
+
+Scott Hibbs KD4SIR Apr/1/2017
 
 *******************************************************************
 FDLog_SCICSG             Feb 15, 2017               v2017-beta-5
