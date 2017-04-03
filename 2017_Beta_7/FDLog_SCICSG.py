@@ -403,7 +403,7 @@ def initialize():
 
 
 def exin(op):
-    """extract operator or logger initials"""
+    """extract Contestant or logger initials"""
     r = ""
     m = re.match(r'([a-z0-9]{2,3})', op)
     if m:
@@ -1965,7 +1965,7 @@ def contestlog(pr):
     print
     print
     if gota_call:
-        print "18. Callsigns and QSO counts of GOTA Operators"
+        print "18. Callsigns and QSO counts of GOTA Contestants"
         print
         print "      Call  QSOs"
         for i in qpgop.keys():
@@ -2116,7 +2116,7 @@ def contestlog(pr):
         print "  %4s %s" % (qpst[i], i)
     print
     print
-    print "QSO breakdown by Operator"
+    print "QSO breakdown by Contestant"
     print
     for i in qpop.keys():
         print "  %4s %s" % (qpop[i], i)
@@ -2185,7 +2185,7 @@ def bandset(b):
         txtbillb.insert(END, "err - no node\n")
     if operator == "":
         b = 'off'
-        txtbillb.insert(END, "err - no operator\n")
+        txtbillb.insert(END, "err - no Contestant\n")
     if b != 'off':
         s = net.si.nod_on_band(b)
         if s: txtbillb.insert(END, " Already on [%s]: %s\n" % (b, s))
@@ -2774,7 +2774,7 @@ print "Enter Authentication Key (Return to re-use previous '%s')" % authk
 print "  (use 'tst' for testing, two digit year for contest):"
 k = string.strip(sys.stdin.readline())
 if k != "":
-    print "New Key entered, operator and logger cleared"
+    print "New Key entered, Contestant and logger cleared"
     authk = k
     operator = ""
     logger = ""
@@ -3173,7 +3173,7 @@ renew_title()
 txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", ("b"))
 txtbillb.insert(END, "                              Dialogue Window\n", ("b"))
 txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", ("b"))
-txtbillb.insert(END, "Please select the Operator, Logger, Power and Band/Mode in red above.\n\n")
+txtbillb.insert(END, "Please select the Contestant, Logger, Power and Band/Mode in red above.\n\n")
 txtbillb.insert(END, "-Call-Class-Sect- \n")
 txtbillb.config(insertwidth=3)
 txtbillb.focus_set()
@@ -3378,7 +3378,7 @@ def proc_key(ch):
             print "FD Report %s %s" % (string.upper(gd.getv('class')), gd.getv('sect'))
             print "Band      %s" % band
             print "Power     %s" % power
-            print "Operator  %s" % operator
+            print "Contestnt %s" % operator
             print "Logger    %s" % logger
             print "Node      %s" % node
             if authk != "" and node != "":
@@ -3630,7 +3630,7 @@ class Edit_Dialog(Toplevel):
         Label(top, text='Report', font=fdbfont).grid(row=6, sticky=W)
         Label(top, text='Power', font=fdbfont).grid(row=7, sticky=W)
         # Label(top,text='Natural',font=fdbfont).grid(row=8,sticky=W)
-        Label(top, text='Operator', font=fdbfont).grid(row=9, sticky=W)
+        Label(top, text='Contestant', font=fdbfont).grid(row=9, sticky=W)
         Label(top, text='Logger', font=fdbfont).grid(row=10, sticky=W)
         self.de = Entry(top, width=13, font=fdbfont)
         self.de.grid(row=1, column=1, sticky=W, padx=3, pady=2)
@@ -3752,7 +3752,7 @@ class Edit_Dialog(Toplevel):
             error += 1
         t = self.oe.get().strip().lower()  # operator
         if self.chooper != t:
-            #print "the operator has changed."
+            #print "the Contestant has changed."
             changer = 1
         self.oe.configure(bg='white')
         if participants.has_key(t):
