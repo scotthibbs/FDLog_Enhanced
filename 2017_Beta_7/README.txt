@@ -23,13 +23,15 @@ GITHUB README:
 
 ITEMS WE ARE WORKING ON NEXT:
 
-	Future Updates:
+	Future Enhancements:
 		* Add more scoring: 
 			complex gota points, youth, information table, official visitors, 
 			max 20 radios, power multipliers, educational activity... 
-		* An Information Table node that will allow sign in, show our group score, 
+		* An Information Table node that will allow sign ins, show our group score, 
 			the top 5 operators, the top 5 visitors, Worked All States etc.
 		* Phonetics at the bottom of the screen for our call exchange (gota too)
+		* Be nice if the entry is rejected for non-dupes (bad section etc) that the 
+			up arrow will repopulate the entry. 
 	Future Fixes: 
 		# Dupe check for requested fills - 2 UNconnected nodes can dupe and both count
 				when connected. (currently dupe checking is at entry - not on fills)
