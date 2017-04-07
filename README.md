@@ -8,9 +8,10 @@ FDLog_SCICSG             Apr 1, 2017               v2017-beta-7
 This will become our stable 2017 Field Day Release. 
 
 I am in need of someone to double check that it works correctly
-using a Mac and/or a Linux pc. I have checked it with Windows 10,
-Windows 7 and using various versions of python from 2.7.5 to the 
-current release of 2.7.13. 
+using a Mac and/or a Linux pc. 
+
+I have checked it with Windows 10, Windows 7 and using various 
+versions of python from 2.7.5 to the current release of 2.7.13. 
 
 I'm proud and excited to see it in action this field day. Hope
 you like it. 
