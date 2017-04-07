@@ -46,18 +46,16 @@ from Tkinter import *
 
 prog = 'FDLog_SCICSG v2017 Field Day Release April 01, 2017 \n' \
        'Copyright 2017 by South Central Indiana Communications Support Group \n' \
-       'FDLog_SCICSG is under the latest GNU Public License without warranty. \n' \
-       'The original license file (GPL.txt) is in the folder. \n'
+       'FDLog_SCICSG is under the GNU Public License v2 without warranty. \n' \
+       'The original license file is in the folder. \n'
 print prog
 
 about = """
 
-FDLog_Enhanced found on www.github.com
-
+FDLog_Enhanced can be found on www.github.com
+GNU Public License V2 - in program folder.
 Copyright 2017 South Central Indiana Communications Support Group
-
-www.scicsg.org
-
+Visit us at www.scicsg.org
 Your donations are appreciated to support Amateur Radio.
 
 """
