@@ -1,0 +1,35 @@
+You can type ? for help: 
+
+In a Nutshell:
+	The Contestant is the one making contacts.
+	The Logger is the one entering data.
+	One of them needs to have a license.
+	If you see red, select something.
+	Bands are vertical. Modes are horizontal.
+	The modes are (C)ode, (D)igital, and (P)hone.
+	Don't hit enter until after the contact is made.
+	Without "QSL - May I have another?" it didn't work.
+	Hit <Escape> to start over 
+       
+
+-Call-Class-Sect- is seperated by spaces so  
+kd4sir 1d ky <Enter> (Will log a contact)
+
+Optionally you can: 
+<suffix><space>                 will look up dups by suffix
+<ESC>                           to abort the entry or continue with 
+<prefix><space>                 to add prefix to previous suffix
+
+#<message>                      send a message to everyone using the program.
+
+To place an entry from a paper log use
+:<dd.hhmm><space><call><space><report><return>   
+
+Commands starting with dot: 
+.band 160c      Will set the band using the keyboard.
+.off            Will set the station to off. 
+.pow 100        Will change the power. 1500n also works.
+.st             Will list this station's status. 
+.re             Will list a summary of the bands.
+.ba             Will list the stations on bands.
+.pr             Will Create a report for after field day.

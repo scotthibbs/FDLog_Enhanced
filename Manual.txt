@@ -1,0 +1,267 @@
+Field Day Log Program Manual
+
+Last updated Mar/30/2017 by Scott Hibbs KD4SIR
+If you have any questions or suggestions for the program please email me. 
+
+Thanks for using the program,
+Scott Hibbs KD4SIR
+scotthibbs at gmail.com 
+
+In a Nutshell:
+	The Contestant is the one making contacts.
+	The Logger is the one entering data.
+	One of them needs to have a license.
+	If you see red, select something.
+	Bands are vertical. Modes are horizontal.
+	The modes are (C)ode, (D)igital, and (P)hone.
+	-Call-Class-Sect- is seperated by spaces. 
+	An example is kd4sir 1d ky <Enter>
+	Don't hit enter until after the contact is made.
+	Without "QSL - May I have another?" it didn't work.
+	Hit <Escape> to start over.
+	Type ? for help. 
+
+
+SHORT HISTORY AND INTRODUCTION: 
+
+	This program is 33 years old!! 
+
+	Alan K Biocca W6AKB (Formerly WB6ZQZ) Wrote this in 1984 using small c 
+	and it was titled "WB6ZQZ's Field Day Logging Program". In 2002, Mr Biocca 
+	rewrote the program in Python and renamed it FDLog. That year, FDLog was 
+	released as open source with the GNU License. FDLog is still in use by the High Sierra 
+	Field Day Group and maintained by Mr Biocca at www.fdlog.info. 
+
+	My name is Scott Hibbs KD4SIR. I found FDLog on the internet and started using it
+	for Field Day 2012. After using FDLog for Field Day 2013, the South Central Indiana 
+	Communications Support Group (SCICSG - we pronounce it scuzzy) wanted to know their 
+	individual scores and wanted a better way to see who was on what bands. When our 
+	upgrades were not acted on, we decided to modify the program for ourselves for 2014. 
+	It was eventually renamed FDLog_Enhanced and made a repository on www.github.com. 
+	We have enhanced the original program and occasionally will pick up some of Mr Biocca's 
+	new ideas too.  
+
+	We hope you fall in love with the program (like we have) and can help us improve it. 
+
+	
+WHY LOVE FDLOG_ENHANCED?: 
+
+	Simply, "It is a free networked logging program with a distributed database." If you 
+	need more let me explain. Since it is networked, everyone can see the band and mode you 
+	are on. Since the data is distributed, your contacts get sent to all the other users 
+	in real time. No one can dupe and non-dupe contacts are displayed as you log. You can 
+	send messages to all users. You can see how many contacts you have made, how many contacts
+	you have logged and see the combined phone and digital contacts for the group. It tracks 
+	who is the control operator (logger) for non-hams (as Contestant). The GOTA station log is 
+	maintained WITH the regular log without conflicting with dupes. It is simple to use. Really.
+
+	The greatest thing is how it is not dependant on one computer! A computer can go down, bad
+	crash - like Zed is dead baby - and Field Day goes on. Add a new computer to 
+	the network and all the other computers will catch the new one up very quickly. 
+
+	Because it is Python 2.7, all you need is a PC - Linux, Mac, any Windoze, RaspberryPi - 
+	we don't care - doesn't matter. 
+	
+	Oh... Did you notice that it is HALF THE SIZE of a one page pdf file? (the ARRL Band Chart)?
+	
+	If I didn't HAVE you when I said, "free", "Zed is dead", and "I really don't care what 
+	kind you have", maybe this program isn't for you. :)
+
+	
+PROGRAM SETUP:
+
+	So you are the ham and or computer guru in charge of logging Field Day.. 
+	Here's all you have to do. 
+
+	Before Field Day:
+	
+	Find a router to bring to field day. I set the SSID to "Field Day" and
+	leave it open without a password. This will be what everyone will connect
+	to on field day. Test it to make sure it works. And don't leave it home. 
+	I've had to buy cheap routers the morning of - I got a collection.
+
+	Find a blank USB Flash Drive. You will need this program folder, and a 
+	copy of python 2.7 from python.org for windows, mac, & linux on a flash drive.
+	Python because someone will not have python installed and you may be 
+	offline - without internet. Once the USB flash drive is created, copy 
+	the program folder to your desktop. It is a good habit to check the time
+	before starting the program, because this program can not change the 
+	computer's clock. We start habits now. Check the clock. Now. 
+	 
+	Start FDLog_SCICSG.py. It will ask you some questions. Enter your name
+	or the name of your station (others will see this) and the last two digits
+	of the contest year like 17. Next it will ask if you need to set up for
+	Field Day. Say yes and answer the questions. Don't worry if you don't know 
+	the class or other things as this can be set later too. Importantly,
+	it will ask if this computer is the time master. Select yes. Don't add 
+	anything to the log that you don't want in your contest log at this point.
+
+	At Field Day:
+	
+	Set up the new router because you left yours at home. Also note many
+	public guest router networks will not allow computers to talk to each other. 
+	Start YOUR computer (Time Master) before the others and using an accurate 
+	time source - your cell phone, gps clock, atomic clock, change the time on the 
+	computer to match this time source to within a second or two. Connect to
+	the router network if wireless (you could also be wired). Start the 
+	program. If you need to change the class or other information you added
+	earlier, this can be done with the .set commands found in the help menu. 
+
+	Next you want a copy of the program on every computer. Using the USB Flash
+	Drive, copy the program folder to the desktop. Before starting the program, 
+	set the time on the computer with your accurate time source within a second 
+	or two. If you forget this step, the program will spend time adjusting it's 
+	time to the others. Start the program and set the name and year's digits. 
+	Answer NO to the setup question. If connected to the network, it should see 
+	your computer and grab all it's information. Rinse and Repeat for the others. 
+
+	Before field day ends, make sure your computer is the last to be turned off. 
+	This is so you have the most accurate log entries in case someone is editing 
+	thier log after the contest. 
+	
+	After Field Day:
+	
+	Look through the .set menu to set any missing information. Don't forget to
+	use .pr to make a "fdlog.txt" file that summerizes the contacts etc. 
+	Using the program's info, you can submit your results. You're a hero and 
+	everyone loves ya. At the recap meeting give everyone funny certificates 
+	such as most contacts, least contacts, most points, prettiest radio, 
+	and the most important one - most logged which means they helped others.
+	This person should be your best friend. Ask them for ideas for me. 
+
+
+USING THE PROGRAM:	
+	
+	The Contestant is the person using the radio. The Logger is the one using the
+	program. The Contestant or the Logger needs a license. When non-hams are using 
+	a radio, they will be listed as the Contestant and a ham (preferably the control 
+	operator) must be listed as the Logger. Non-hams can only be listed as the 
+	Logger for hams.   
+	
+	
+LOGGING LIKE A PRO: 
+
+	If you are seeing red, you need to select something before trying to log 
+	an entry. You need to select the Contestant, the Logger, the power (natural
+	does not mean a gas generator), and which band and mode you will be using. 
+
+	Entry has been straight forward since 1984. That's before pretty pictures.
+	Enter the call and hit <space>. If this is a dupe it will show all the entries
+	for that call and be erased. If the call has been worked on a different band 
+	those will populate and the call will remain for more entry. Next enter the 
+	Class and the Section. Once confirmed hit enter to add this entry to the log. 
+	
+	If you're feeling fancy: You can also just enter the suffix and hit space.
+	It will show you those who might have been worked with that suffix on this
+	band. If correct continue with the Class and Section. If incorrect type the
+	correct prefix and hit space. Then continue with the call and Section. Hit
+	Enter to add the call to the log.
+	
+	Many times the logging program will think you are getting fancy and try to be
+	fancy itself. If either of you are confused, just hit Escape to clear the 
+	entry and start over - try not to get to fancy. 
+	
+
+COMMANDS: 
+
+	Adding Participants:
+	
+	Each participant has to have a unique set of initials. If you enter initials 
+	and a name pops up you will be correcting that participant - in effect erasing
+	them and adding your name. So make sure to enter a set of initials until  
+	a name does not appear. 
+	
+	The age and visitor title are used to track official visitors and any youth 
+	participants that may attend. The program doesn't automatically count these yet
+	in it's summary. But one day it will. 
+	
+	Once you have unique initials, a name, call, age or title, simply hit enter
+	to add the participant to the logbook.  
+
+	Editing:
+	
+	Simply click on the entry you want to edit. In the log window the entries made 
+	by this node will be dark blue while others are black. You can only edit your 
+	own blue entries.  
+	
+	Adding Entries from a paper log:
+	
+	Set the operator, logger, power and band/mode then type the entry with this format. 
+	:dd.hhmm <call> <report>
+	
+	Commands:
+	
+	#<message> will send a message (QST) to all the other users. 
+	.st     this station's status
+	.ba     station and band status
+	.re     log summary report
+	.pr     print contest entry to file
+	.band	<space>40p<enter> will change your band to 40p. 
+	.off 	Will change your band to off.
+	.pow 	<space>ddddn<enter> will change your power. (ddddn could equal 100 or 1500n)
+	.testq	<space><number> Will create fake number of entries in tst mode only.
+
+	
+	The .set Commands are listed in the help menu. They should be used by the person 
+	setting up the program. 
+
+
+TROUBLESHOOTING:
+
+	  A new label for FDLog_Enhanced is the Network section. This label will now 
+	discribe your current network status with different colors. Grey shows if everything
+	is ok, Yellow will ask you if there is a problem, and Red displays if there IS a problem. 
+	The messages in FDLog_Enhanced have been renamed to be more discriptive but the issues below
+	are the same. 
+
+	  NO NODE    The node identification is missing. This is necessary
+				 to identify the database records when they are shared.
+				 It is recommended to set this to the name of the owner
+				 of the station radio or computer. THIS MUST BE UNIQUE. 
+				 DO NOT GIVE TWO NODES THE SAME NODE ID at the same time. 
+				 Restart the program to reset this.
+
+	  NO AUTHKEY The authentication key is missing. Restart the program
+				 and answer the query during initialization to set it.
+				 It must match the other nodes you are sharing data with.
+				 This is usually the last two digits of the year. 
+				 
+	  SNDP FAIL  The Packet Sender has received an error from the operating
+				 sytem. This may occur when there is a network problem.
+				 Restarting the program or rebooting may cure it.
+				 
+	  RCVP FAIL  In FDLog_Enhanced this is called "alone?" Ten seconds have 
+				 passed without receiving any packets. This indicates that no 
+				 other packets from a FDLOG program are being received within 
+				 the time window. This could indicate a problem with the network 
+				 or auth key, or it could be normal if this is the only computer 
+				 on this network running the program. It will occur occasionally 
+				 if there are only two computers on the network running FDLog. 
+				 Try restarting the program after the network is known to be working.
+
+	  AUTH FAIL  A packet has been received (on the port) that has the incorrect
+				 authentication code. It will not be processed. All nodes
+				 participating must use the same authentication key. Refer to
+				 the command window for more information about this error. It
+				 is best if test and production modes use different ports to
+				 avoid seeing each others packets which have differing
+				 authentication codes.
+
+	  NEED FILL  A node status broadcast has been received, and one or more
+				 of these nodes have data that this node's database does
+				 not have. This node will request the missing data until
+				 it is caught up. The new database items will be displayed in
+				 the upper display as they come in. If the NEED FILL is
+				 indicated, and no data is flowing into the upper display,
+				 the requests for data are not being answered.
+
+
+ 
+	
+If you have any questions or suggestions for the program please email me. 
+
+Thanks for using the program,
+Scott Hibbs KD4SIR
+scotthibbs at gmail.com 
+
+eof
