@@ -3,6 +3,19 @@ A multi-platform stable Field Day logging program for Amateur (Ham) Radio clubs/
 
 
 *******************************************************************
+FDLog_SCICSG             Apr 9, 2017               v2017-FD
+
+This is our stable 2017 Field Day Release. 
+
+Found this didn't work on many versions of Linux. 
+Ubuntu (including Mint, Desbian, Raspian etc) all gave the
+loopback address in the program. This is fixed - You can now 
+use your Raspberry Pi on Field Day! 
+
+Please send your feedback to scotthibbs at gmail. 
+Scott Hibbs KD4SIR Apr/9/2017
+
+*******************************************************************
 FDLog_SCICSG             Apr 1, 2017               v2017-beta-7
 
 This will become our stable 2017 Field Day Release. 
