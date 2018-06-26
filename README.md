@@ -1,6 +1,25 @@
 # FDLog_Enhanced
-A multi-platform stable Field Day logging program for Amateur (Ham) Radio clubs/groups. It distributes a database via wireless and tracks operations (whose on which band/station, individual scoring for the contestor and logger with live dupe checking etc).   
+This is a complete Field Day group logging solution!
 
+Download, read the manual, place this on all computers (Windows, Mac, Linux including Raspberry Pis) and start logging. Have everyone sign in when they visit. We have our visitors log for us because it is so simple.
+
+Log entry is just three simple things : KD4SIR 1D IN
+
+Tracks Dupes, shows previous contacts, see who is on which radio and which band, who is contesting and who is logging, how many contacts they have made etc. It shares the database to all computers and tracks operations so everyone can see and co-operate.   
+
+Simple Easy Setup and use. Enjoy!
+
+*******************************************************************
+FDLog_SCICSG             Jun 25, 2018               v2017-FD              
+
+There were no changes made in 2018. I fully intended to use N1MM 
+and give up on this project since most of the programming is over my head. 
+However, N1MM setup was harder than this program and I ran out of 
+time to set up all the computers with radio control and voice 
+keying, plus setup like time settings etc... So the night before, 
+we used this FDLOG_Enhanced from 2017. 
+
+So, I'M BACK!!! And I got a list of more enhancements! I can't wait!
 
 *******************************************************************
 FDLog_SCICSG             Apr 9, 2017               v2017-FD
