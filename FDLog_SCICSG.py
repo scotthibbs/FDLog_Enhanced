@@ -14,6 +14,10 @@ from Tkinter import Tk, END, NORMAL, DISABLED, re, sys, Toplevel, Frame, Label, 
 W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, Checkbutton, RAISED, IntVar
 
 
+#  Working on re-printing the log section (logw) so that it will change the color or remove the edited entry so that it
+#  looks like it isn't still part of the log and editable (when it isn't anymore)
+
+
 # 2019_Beta_1
 #
 # + added 172. private network fix for the correct netmask (untested)
