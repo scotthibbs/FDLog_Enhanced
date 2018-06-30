@@ -1,3 +1,5 @@
+#!/usr/bin/python 
+# Added by nouse4anick/FDLog at https://github.com/nouse4anick/FDLog May/5/2017
 import os
 import time
 import string
@@ -8,14 +10,18 @@ import hashlib
 import random
 import calendar
 import sqlite3
-from Tkinter import *
-#import tkMessageBox
+from Tkinter import Tk, END, NORMAL, DISABLED, re, sys, Toplevel, Frame, Label, Entry, Button, \
+W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, Checkbutton, RAISED, IntVar
 
 
-#
-# 2017_FD2
+# 2019_Beta_1
 #
 # + added 172. private network fix for the correct netmask (untested)
+# + added python path shebang so program can run from command line
+# + Corrected code as suggested by pylint Scott Hibbs Jun/28/2018
+# + 
+
+
 
 
 # Originally "WB6ZQZ's Field Day Logging Program" written in 1984.
@@ -29,7 +35,7 @@ from Tkinter import *
 
 # Forked & Repository Project
 # FDLog_Enhanced at Github.com
-# Copyright 2014-2017 South Central Indiana Communications Support Group
+# Copyright 2014-2018 South Central Indiana Communications Support Group
 # 
 # Our Goals are twofold:
 #       1: Improve on fdlog faster with open and directed collaboration.
@@ -48,13 +54,13 @@ about = """
 
 FDLog_Enhanced can be found on www.github.com
 GNU Public License V2 - in program folder.
-Copyright 2017 South Central Indiana Communications Support Group
+Copyright 2018 South Central Indiana Communications Support Group
 Visit us at www.scicsg.org
 Your donations are appreciated to support Amateur Radio.
 
 """
 
-version = "v17"
+version = "v18"
 fontsize = 10
 fontinterval = 2
 typeface = 'Courier'
@@ -494,9 +500,9 @@ class qsodb:
         self.lock.release()
 
     def ldrec(self, line):  # load log entry fm text
-        (typ, self.src, self.seq,
+        (dummy, self.src, self.seq,
          self.date, self.band, self.call, self.rept,
-         self.powr, self.oper, self.logr, eol) = string.split(line, '|')
+         self.powr, self.oper, self.logr, dummy) = string.split(line, '|')
         self.seq = int(self.seq)
         self.dispatch('logf')
 
@@ -507,7 +513,7 @@ class qsodb:
         sqdb = SQDB()
         log = sqdb.readlog()  # read the database
         for ln in log:
-            if ln[0] == 'q':  # qso db line
+            if ln[0] == 'q':  # qso db line                                                                     ##############################
                 r = qdb.new(0)
                 try:
                     r.ldrec(ln)
@@ -520,7 +526,7 @@ class qsodb:
                     #  push a copy from the file into the
                     # database (temporary for transition)
         if i == 0 and s == 1:
-            print "  Log file not found, must be new"
+            print "Log file not found, must be new"
             initialize()  # Set up routine - Scott Hibbs 7/26/2015
         else:
             print "  ", i, "Records Loaded,", s, "Errors"
@@ -540,7 +546,7 @@ class qsodb:
             if d.has_key(i):
                 iv = d[i]
                 if iv.rept[:5] == "*del:":
-                    j, st, sn, r = iv.rept.split(':')  # extract deleted id
+                    dummy, st, sn, dummy = iv.rept.split(':')  # extract deleted id
                     k = "%s|%s" % (st, sn)
                     if k in d.keys():
                         #  print iv.rept,; iv.pr()
@@ -553,7 +559,7 @@ class qsodb:
                 # print "discarding out of date range",iv.date,iv.src,iv.seq
                 del (d[i])
         for i in d.values():  # re-index by call-band
-            s, t, p, x, call, x, r = self.qparse(i.call)  # extract call (not /...)
+            dummy, dummy, dummy, dummy, call, dummy, dummy = self.qparse(i.call)  # extract call (not /...)
             k = "%s-%s" % (call, i.band)
             # filter out noncontest entries
             if ival(i.powr) == 0 and i.band[0] != '*': continue
@@ -566,7 +572,7 @@ class qsodb:
         return (d, c, g)  # Deletes processed, fully Cleaned
         # by id, call-bnd, gota by call-bnd
 
-    def prlogln(s):
+    def prlogln(self, s):
         "convert log item to print format"
         # note that edit and color read data from the editor so
         # changing columns matters to these other functions.
@@ -613,7 +619,7 @@ class qsodb:
         "print clean log in adif format"
         pgm = "FDLog_SCICSG (https://github.com/scotthibbs/FDLog_Enhanced)"
         print "<PROGRAMID:%d>%s" % (len(pgm), pgm)
-        m, n, g = self.cleanlog()
+        dummy, n, g = self.cleanlog()
         for i in n.values() + g.values():
             dat = "20%s" % i.date[0:6]
             tim = i.date[7:11]
@@ -644,7 +650,7 @@ class qsodb:
     def vhf_cabrillo(self):
         "output VHF contest cabrillo QSO data"
         band_map = {'6': '50', '2': '144', '220': '222', '440': '432', '900': '902', '1200': '1.2G'}
-        m, n, g = self.cleanlog()
+        dummy, n, dummy = self.cleanlog()
         mycall = string.upper(gd.getv('fdcall'))
         mygrid = gd.getv('grid')
         l = []
@@ -670,7 +676,7 @@ class qsodb:
     def filterlog(self, filt):
         """list filtered (by bandm) log in time order, nondup valid q's only"""
         l = []
-        m, n, g = self.cleanlog()
+        dummy, n, g = self.cleanlog()
         for i in n.values() + g.values():
             if filt == "" or re.match('%s$' % filt, i.band):
                 l.append(i.prlogln())
@@ -680,7 +686,7 @@ class qsodb:
     def filterlog2(self, filt):
         "list filtered (by bandm) log in time order, including special msgs"
         l = []
-        m, n, g = self.cleanlog()
+        m, dummy, dummy = self.cleanlog()
         for i in m.values():
             if filt == "" or re.match('%s$' % filt, i.band):
                 l.append(i.prlogln())
@@ -690,7 +696,7 @@ class qsodb:
     def filterlogst(self, filt):
         "list filtered (by nod) log in time order, including special msgs"
         l = []
-        m, n, g = self.cleanlog()
+        m, dummy, dummy = self.cleanlog()
         for i in m.values():
             if re.match('%s$' % filt, i.src):
                 l.append(i.prlogln())
@@ -727,9 +733,9 @@ class qsodb:
         return s.dispatch('user')
 
     def delete(self, nod, seq, reason):
-        "rm a Q by creating a delete record"
+        "remove a Q by creating a delete record"
         #        print "del",nod,seq
-        a, b, c = self.cleanlog()
+        a, dummy, dummy = self.cleanlog()
         k = "%s|%s" % (nod, seq)
         if a.has_key(k) and a[k].band[0] != '*':  # only visible q
             tm, call, bandmod = a[k].date, a[k].call, a[k].band
@@ -740,6 +746,17 @@ class qsodb:
             s.seq = -1
             s.dispatch('user')
             txtbillb.insert(END, " DELETE Successful %s %s %s\n" % (tm, call, bandmod))
+            ##################################################################################################################################################################
+            logw.configure(state=NORMAL)
+            logw.delete(0.1,END)
+            logw.insert(END, "\n")
+            log = sqdb.readlog()  # read the database
+            for ln in log:
+                if ln[0] == 'q':  # qso db line 
+                    logw.insert(END, "\n")
+                self.prlogln(ln)    
+                logw.insert(END, ln)
+            logw.configure(state=DISABLED)
             topper()
         else:
             txtbillb.insert(END, " DELETE Ignored [%s,%s] Not Found\n" % (nod, seq))
@@ -765,7 +782,7 @@ class qsodb:
 
     def pr(self):
         """"print Q record object"""
-        sms.prmsg(self.prlogln())
+        sms.prmsg(self.prlogln(self))
 
     def dispatch(self, src):
         """"process new db rec (fm logf,user,net) to where it goes"""
@@ -791,7 +808,7 @@ class qsodb:
         qpb, ppb, qpop, qplg, qpst, tq, score, maxp = {}, {}, {}, {}, {}, 0, 0, 0
         cwq, digq, fonq = 0, 0, 0
         qpgop, gotaq, nat, sat = {}, 0, [], []
-        x, c, g = self.cleanlog()
+        dummy, c, g = self.cleanlog()
         for i in c.values() + g.values():
             if re.search('sat', i.band): sat.append(i)
             if 'n' in i.powr: nat.append(i)
@@ -842,7 +859,7 @@ class qsodb:
     def bands(self):
         """ .ba command band status station on, q/band, xx needs upgd"""
         # This function from 152i
-        qpb, tmlq, nod = {}, {}, {}
+        qpb, tmlq, dummy = {}, {}, {}
         self.lock.acquire()
         for i in self.byid.values():
             if ival(i.powr) < 1: continue
@@ -867,7 +884,7 @@ class qsodb:
         print "Node Info"
         print "--node-- band --opr lgr pwr----- last"
         for t in net.si.nodinfo.values():
-            x1, x2, age = d.get(t.nod, ('', '', 9999))
+            dummy, dummy, age = d.get(t.nod, ('', '', 9999))
             if age > t.age: d[t.nod] = (t.bnd, t.msc, t.age)
         for t in d:
             print "%8s %4s %-18s %4s" % (t, d[t][0], d[t][1], d[t][2])  # t.bnd,t.msc,t.age)
@@ -977,7 +994,7 @@ class qsodb:
 
     def dupck(self, wcall, band):
         """check for duplicate call on this band"""
-        stat, tm, pfx, sfx, call, xcall, rept = self.qparse(wcall)
+        dummy, dummy, dummy, sfx, call, xcall, dummy = self.qparse(wcall)
         if gd.getv('contst').upper() == "VHF":
             return xcall in self.sfx2call(sfx, band)  # vhf contest
         return call in self.sfx2call(sfx, band)  # field day
@@ -986,11 +1003,11 @@ class qsodb:
     # Added function to test against call and gota call like dupes Scott Hibbs KD4SIR Mar/23/2017
     def partck(self, wcall):
         """ check for participants to act as dupes in this event"""
-        stat, tm, pfx, sfx, call, xcall, rept = self.qparse(wcall)
+        dummy, dummy, dummy, dummy, call, xcall, dummy = self.qparse(wcall)
         l = []
         for i in participants.values():
             l.append(i)
-            ini, name, dcall, age, vist = string.split(i, ', ')
+            dummy, dummy, dcall, dummy, dummy = string.split(i, ', ')
             if dcall == xcall:
                 # to debug: print ("%s dcall matches %s xcall" % (dcall, xcall))
                 if gd.getv('contst').upper() == "VHF":
@@ -1004,7 +1021,7 @@ class qsodb:
 
     def logdup(self):
         """enter into dup log"""
-        stat, tm, pfx, sfx, call, xcall, rept = self.qparse(self.call)
+        dummy, dummy, dummy, sfx, dummy, xcall, dummy = self.qparse(self.call)
         #        print call,sfx,self.band
         key = sfx + '.' + self.band
         self.lock.acquire()
@@ -1030,7 +1047,7 @@ class qsodb:
 
     def redup(self):
         """rebuild dup db"""
-        d, c, g = self.cleanlog()
+        dummy, c, g = self.cleanlog()
         self.lock.acquire()
         #        print self.bysfx
         qsodb.bysfx = {}
@@ -1051,7 +1068,7 @@ class qsodb:
                 # if ln == "": continue
                 if ln[0] == '#': continue
                 try:
-                    sec, st, canum, desc = string.split(ln, None, 3)
+                    sec, st, dummy, dummy = string.split(ln, None, 3)
                     sectost[sec] = st
                     stcnt[st] = 0
                 #                    print sec,st,desc
@@ -1060,7 +1077,7 @@ class qsodb:
             fd.close()
         except IOError, e:
             print "io error during arrl section data file load", e
-        a, b, c = self.cleanlog()
+        a, dummy, dummy = self.cleanlog()
         for i in a.values():
             sect, state = "", ""
             if i.rept[:1] == '*': continue
@@ -1348,11 +1365,12 @@ class netsync:
     elif my_addr[:3] == '10.':
         bc_addr = '10.255.255.255'
         netmask = '255.0.0.0'
-    # proposed fix for 172 networks that need 255.255.0.0 netmask
+    # proposed fix for 172 networks that need 255.240.0.0 netmask
     # This is untested - Scott Hibbs KD4SIR Apr/9/2017
+    # Found netmask for 172 is 255.240.0.0 not 255.255.0.0 Scott Hibbs June 2018
     elif my_addr[:3] == '172':
         bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
-        netmask = '255.255.0.0'
+        netmask = '255.240.0.0'
     else:
         bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
     si = node_info()  # node info
@@ -1543,7 +1561,7 @@ class global_data:
             i.val = value
             i.ts = timestamp
             if name[:2] == 'p:':
-                ini, name, call, age, vist = string.split(value, ', ')
+                ini, name, dummy, dummy, dummy = string.split(value, ', ')
                 participants[ini] = value
                 if name == 'delete':
                     del (participants[ini])
@@ -1607,18 +1625,27 @@ class syncmsg:
 
     def prout(self):
         """get message from queue for printing"""
+        # Check to see if the log window has been deleted
+
+            
+        
         self.lock.acquire()
         while self.msgs:
-            # print self.msgs[0]
             logw.configure(state=NORMAL)
             logw.see(END)
-            nod = self.msgs[0][70:81]  # color local entries
-            #            print nod,node
+            nod = self.msgs[0][70:81]  # color local entries  
+            #############################################################################################################################################################
+            seq = self.msgs[0][65:69].strip()
+            seq = int(seq)
+            stn = self.msgs[0][69:].strip()
             if nod == node:
-                logw.insert(END, "%s\n" % self.msgs[0], "b")
-            # print "blue '%s' '%s'\n"%(nod,node)
-            else:
-                logw.insert(END, "%s\n" % self.msgs[0])
+                # Added a check to see if in the log to print blue or not - Scott Hibbs June 26, 2018
+                bid, dummy, dummy = qdb.cleanlog()  # get a clean log
+                stnseq = stn +"|"+str(seq)
+                if stnseq in bid:
+                    logw.insert(END, "%s\n" % self.msgs[0], "b")
+                else:
+                    logw.insert(END, "%s\n" % self.msgs[0])
             logw.configure(state=DISABLED)
             del self.msgs[0]
         self.lock.release()
@@ -1658,19 +1685,6 @@ def tmtofl(a):
 def tmsub(a, b):
     """time subtract in seconds"""
     return tmtofl(a) - tmtofl(b)
-
-
-def testcmd(name, rex, value):
-    """set global from command, return value and change status"""
-    global kbuf
-    value = default  # added in 152i
-    s = "%s +(%s)$" % (name, rex)
-    m = re.match(s, kbuf)
-    if m:
-        value = m.group(1)
-        txtbillb.insert(END, "\n%s set to %s\n" % (name, value))
-        kbuf = ""
-    return value, default != value
 
 
 # new sqlite globals database fdlog.sq3 replacing globals file
@@ -1803,8 +1817,8 @@ def contestlog(pr):
         return  # only define variables return
     # output the entry, adif & cabrillo log file
     datime = now()
-    byid, bycall, gotabycall = qdb.cleanlog()  # get a clean log
-    qpb, ppb, qpop, qplg, qpst, tq, score, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
+    dummy, bycall, gotabycall = qdb.cleanlog()  # get a clean log
+    qpb, ppb, qpop, qplg, qpst, dummy, dummy, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
         qdb.bandrpt()  # and count it
     print "..",
     sys.stdout = file(logfile, "w")  # redirect output to file
@@ -2262,7 +2276,7 @@ class NewParticipantDialog():
             self.initials.focus()
         else:
             self.initials.configure(bg='white')
-            ini, name, call, age, vist = string.split(participants.get(initials, ', , , , '), ', ')
+            dummy, name, call, age, vist = string.split(participants.get(initials, ', , , , '), ', ')
             self.name.delete(0, END)
             self.name.insert(END, name)
             self.call.delete(0, END)
@@ -2329,7 +2343,7 @@ class NewParticipantDialog():
             nam = "p:%s" % initials
             v = "%s, %s, %s, %s, %s" % (initials, name, call, age, vist)
             participants[initials] = v
-            n = qdb.globalshare(nam, v)  # store + bcast
+            dummy = qdb.globalshare(nam, v)  # store + bcast
             txtbillb.insert(END, "\a New Participant Entered.")
             print "\a"
             txtbillb.see(END)
@@ -2502,7 +2516,7 @@ def updatebb():
         d = {}
         txtbillb.insert(END,"\n--node-- band opr lgr pwr  ----- last\n")
         for t in net.si.nodinfo.values():
-            x1, x2, age = d.get(t.nod, ('', '', 9999))
+            dummy, dummy, age = d.get(t.nod, ('', '', 9999))
             if age > t.age: d[t.nod] = (t.bnd, t.msc, t.age)
         for t in d:
             txtbillb.insert(END,"%8s %4s %-18s %4s\n" % (t, d[t][0], d[t][1], d[t][2]))  # t.bnd,t.msc,t.age)
@@ -2516,7 +2530,7 @@ def updatebb():
         #tkMessageBox.destroy
 
     for i in bands:
-        b = 0
+        dummy = 0
         for j in modes:
             bm = "%s%s" % (i, j)
             if i == 'off':
@@ -2587,7 +2601,7 @@ def updatebb():
 def updateqct():
     "update contact count"
     #function reworked in time for field day 2014. - Scott Hibbs KD4SIR
-    qpb, ppb, qpop, qplg, qpst, tq, score, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
+    dummy, dummy, qpop, qplg, dummy, dummy, dummy, dummy, cwq, digq, fonq, dummy, gotaq, dummy, dummy = \
         qdb.bandrpt()  # xx reduce processing here
     for i, j in (('FonQ', 'Phone %5s' % fonq),
                  ('CW/D', 'CW&Dig %4s' % (cwq + digq)),
@@ -2679,7 +2693,7 @@ def BandButtons(w):
             bandb[bm].grid(row=b, column=a, sticky=NSEW)
             b += 1
         a += 1
-    for i, j, px in (('Class', 0, 5),
+    for i, j, dummy in (('Class', 0, 5),
                      ('VHF', 1, 13),
                      ('GOTA', 2, 9)):
         bandb[i] = Button(w, text=i, font=fdfont)
@@ -2915,6 +2929,18 @@ f1 = Frame(root, bd=1)
 BandButtons(f1)
 f1.grid(row=0, columnspan=2, sticky=NSEW)
 
+
+def testcmd(name, rex, value):
+    """set global from command, return value and change status"""
+    global kbuf
+    value = default  # added in 152i
+    s = "%s +(%s)$" % (name, rex)
+    m = re.match(s, kbuf)
+    if m:
+        value = m.group(1)
+        txtbillb.insert(END, "\n%s set to %s\n" % (name, value))
+        kbuf = ""
+    return value, default != value
 
 def setoper(op):
     "set operator"
@@ -3205,7 +3231,7 @@ def showthiscall(call):
     p = call.split('/')
     #    print p[0]
     findany = 0
-    m, n, g = qdb.cleanlog()
+    m, dummy, dummy = qdb.cleanlog()
     #    print m.values()
     for i in m.values():
         #        print i.call
@@ -3233,7 +3259,7 @@ def readSections():
             if not ln: break
             if ln[0] == '#': continue
             try:
-                sec,st,canum,name = string.split(ln,None,3)
+                sec, dummy, dummy, dummy = string.split(ln,None,3)
                 secName[sec] = sec
             except ValueError,e:
                 print "rd arrl sec dat err, itm skpd: ",e
@@ -3408,7 +3434,7 @@ def proc_key(ch):
         if re.match(r'[.]re$', kbuf):  # report  xx mv to gui
             print
             print "  band  cw q   pwr dig q   pwr fon q   pwr"
-            qpb, ppb, qpop, qplg, qpst, tq, score, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = qdb.bandrpt()
+            qpb, ppb, dummy, dummy, dummy, tq, score, maxp, dummy, dummy, dummy, dummy, dummy, dummy, dummy = qdb.bandrpt()
             for b in (160, 80, 40, 20, 15, 10, 6, 2, 220, 440, 1200, 'sat', 'gota'):
                 print "%6s" % b,
                 for m in 'cdp':
@@ -3430,14 +3456,14 @@ def proc_key(ch):
             return
         # check for valid contact
         if (ch == '\r'):
-            stat, ftm, pfx, sfx, call, xcall, rept = qdb.qparse(kbuf)
+            stat, ftm, dummy, sfx, call, xcall, rept = qdb.qparse(kbuf)
             if stat == 5:  # whole qso parsed
                 kbuf = ""
                 if len(node) < 3:
                     txtbillb.insert(END, " ERROR, set .node <call> before logging\n")
                     topper()
                 elif qdb.dupck(xcall, band):  # dup check
-                    txtbillb.insert("\n\n DUPE on band %s\n" % band)
+                    txtbillb.insert(END, "\n\n DUPE on band %s\n" % band)
                     topper()
                 elif qdb.partck(xcall): # Participant check
                     txtbillb.insert(END, "\n Participant - not allowed \n")
@@ -3545,7 +3571,7 @@ def proc_key(ch):
             txtbillb.delete('end - 2 chars')
         return
     if ch == ' ':  # space, check for prefix/suffix/call
-        stat, tm, pfx, sfx, call, xcall, rept = qdb.qparse(kbuf)
+        stat, tm, dummy, sfx, call, xcall, rept = qdb.qparse(kbuf)
         if stat == 2:  # suffix, dup check
             suffix = kbuf
             kbuf = ""
@@ -3554,7 +3580,7 @@ def proc_key(ch):
             txtbillb.insert(END, ": %s on band '%s'\n" % (r, band))
             return
         if stat == 3:  # prefix, combine w suffix
-            stat, tm, pfx, sfx, call, xcall, rept = qdb.qparse(kbuf + suffix)
+            stat, tm, dummy, sfx, call, xcall, rept = qdb.qparse(kbuf + suffix)
             if stat == 4:  # whole call
                 kbuf += suffix
                 txtbillb.insert(END, sfx)  # fall into call dup ck
@@ -3586,7 +3612,7 @@ def proc_key(ch):
                 kbuf = buf
                 txtbillb.insert(END, ch)
         else:
-            stat, tm, pfx, sfx, call, xcall, rept = qdb.qparse(buf)
+            stat, tm, dummy, sfx, call, xcall, rept = qdb.qparse(buf)
             if stat > 0 and len(buf) < 50:
                 kbuf = buf
                 txtbillb.insert(END, ch)
@@ -3617,6 +3643,8 @@ class Edit_Dialog(Toplevel):
     """edit log entry dialog"""
     """Added functionality to check for dupes and change the title to show the error - Scott Hibbs Jul/02/2016"""
     # Had to add variables for each text box to know if they changed to do dupe check.
+    global editedornot 
+    editedornot = StringVar
     crazytxt = StringVar()
     crazytxt.set('Edit Log Entry')
     crazyclr = StringVar()
@@ -3703,7 +3731,8 @@ class Edit_Dialog(Toplevel):
 
     def submit(self):
 
-        print 'submit edits'
+        #print 'submit edits'
+        global editedornot
         error = 0
         changer = 0 # 0 = no change. 1= change except band and call. 2 = change in call or band
         t = self.de.get().strip()  # date time
@@ -3820,6 +3849,7 @@ class Edit_Dialog(Toplevel):
                     qdb.delete(self.node, self.seq, reason)
                     qdb.postnew(newdate, newcall, newband, newrept, newopr, newlogr, newpowr)
                     self.top.destroy()
+                    editedornot = "1"
                     txtbillb.insert(END, " EDIT Successful\n")
                     topper()
 
@@ -3836,7 +3866,7 @@ class Edit_Dialog(Toplevel):
 
 def edit_dialog(node, seq):
     'edit log entry'
-    ed = Edit_Dialog(root, node, seq)
+    dummy = Edit_Dialog(root, node, seq)
 
     
 def log_select(e):
@@ -3844,12 +3874,13 @@ def log_select(e):
     #    print e.x,e.y
     t = logw.index("@%d,%d" % (e.x, e.y))
     #    print t
-    line, col = t.split('.')
+    line, dummy = t.split('.')
     line = int(line)
     #    print line
     logtext = logw.get('%d.0' % line, '%d.82' % line)
+    print "this is the line:", line
     # print logtext
-    timx = logtext[0:8].strip()
+    dummy = logtext[0:8].strip()
     seq = logtext[65:69].strip()
     bxnd = logtext[8:14].strip()
     cxll = logtext[15:22].strip()
@@ -3873,10 +3904,18 @@ def log_select(e):
         # Also check to make sure the call isn't previously deleted. Jul/02/2016 KD4SIR Scott Hibbs
         if qdb.dupck(cxll, bxnd):
             # Now we check to see if the entry is still in the log. Mar/31/2017 KD4SIR Scott Hibbs
-            bid, bcl, gcl = qdb.cleanlog()  # get a clean log
+            bid, dummy, dummy = qdb.cleanlog()  # get a clean log
             stnseq = stn +"|"+str(seq)
             if stnseq in bid:
                 edit_dialog(stn, seq)
+                # if editedornot == "1":
+                #     logw.configure(state=NORMAL)
+                #     logw.tag_add("start", "'%d.0' % line", "'%d.82' % line")
+                #     #text.tag_add("start", "1.8", "1.13")
+                #     logw.tag_config("start", background="black", foreground="black")
+                #     #text.tag_config("start", background="black", foreground="yellow")
+                #     logw.configure(state=DISABLED)
+                #     editedornot = "0"
             else:
                 print "Previously edited contact - Not in the log."
                 return

@@ -1,81 +1,78 @@
 Release Log for FDLog_Enhanced
 From the present back to 1984. 
 
-Last updated Apr/09/2017 Scott Hibbs KD4SIR
+Last updated Mar/30/2017 Scott Hibbs KD4SIR
 scotthibbs at gmail.com
 
 2017_Field_Day Release 
 
 SCICSG will be at The Rock Church for our third year. 
 
- + Port is now populated in the header (if needed for firewall rules) (thanks K9MAF)
- + Added a dupe check when editing entries. (thanks K9JAJ)
- + Can no longer edit previously DELETED log entries (thanks K9JAJ)
- + Program no longer counts edited entries toward individual scores. (thanks K9JAJ)
- + Made "-Call-Class-Sect-" persistently above the input line. (thanks K9MAF)
- + Checks for uppercase to fix huge bug where caplock froze the program. (thanks WW9A)
- + Can now "dupe check" participants without entering them in the dupe log. (thanks WA6NHC)
- + Checks for valid sections! (thanks W6AKB)
- + Updated the arrl sections to be current - removed made up sections from FDLog.
- + The mouse over bands reports a more readable output now. (no popup needed)
- + Clock slew rate is faster and more odd for accuracy.
- + Can enter official visitors and youth! (not the points yet)
- + Fixed the .node command - found it was broken. 
- + Class reporting should be correct now. Free VHF too. (reworked)
- + Protected against putting ourselves (fdcall and gota call) in the log.
- + Updated all the documentation. 
- + Removed the propagation report. (Anyone use it?)
- + Removed the wireless information menu - no longer needed.
- + Removed duplicate arrl_sect.txt file. Program just uses one now. 
- + Removed frequency.txt file needed by program - arrl band chart gives same info.
- + Changed names of some of the files for simplicity 
- + Created a W1AW menu with the schedule and the NTS message file.
- + Operator now called Contestant. This allows non-hams to operate with a control operator.
- + Contestant or Logger needs a license to enter a QSO.
- + "Add New Participant" window uses the Enter key to save.
- + Removed ability to edit the original EDITED log entry. 
- + Linux Ubuntu, Raspian etc give loopback as ip address. This is fixed! 
+ 80 Port is now populated in the header (if needed for firewall rules) (thanks K9MAF)
+ 79 Added a dupe check when editing entries. (thanks K9JAJ)
+ 78 Can no longer edit previously DELETED log entries (thanks K9JAJ)
+ 77 Program no longer counts edited entries toward individual scores. (thanks K9JAJ)
+ 76 Made "-Call-Class-Sect-" persistently above the input line. (thanks K9MAF)
+ 75 Checks for uppercase to fix huge bug where caplock froze the program. (thanks WW9A)
+ 74 Can now "dupe check" participants without entering them in the dupe log. (thanks WA6NHC)
+ 73 Checks for valid sections! (thanks W6AKB)
+ 72 Updated the arrl sections to be current - removed made up sections from FDLog.
+ 71 The mouse over bands reports a more readable output now. (no popup needed)
+ 70 Clock slew rate is faster and more odd for accuracy.
+ 69 Can enter official visitors and youth! (not the points yet)
+ 68 Fixed the .node command - found it was broken. 
+ 67 Class reporting should be correct now. Free VHF too. (reworked)
+ 66 Protected against putting ourselves (fdcall and gota call) in the log.
+ 65 Updated all the documentation. 
+ 64 Removed the propagation report. (Anyone use it?)
+ 63 Removed the wireless information menu - no longer needed.
+ 62 Removed duplicate arrl_sect.txt file needed by program. 
+ 61 Removed frequency.txt file needed by program - arrl band chart gives same info.
+ 60 Changed names of some of the files for simplicity 
+ 59 Created a W1AW menu with the schedule and the NTS message file.
+ 58 Operator now called Contestant. This allows non-hams to operate with a control operator.
+ 57 Contestant or Logger needs a license to enter a QSO.
+ 56 "Add New Participant" window uses the Enter key to save.
+ 55 Can not edit previously EDITED log entries. 
  
-2017-beta-7 (testing for release)
-	+ Linux Ubuntu, Raspian etc give loopback as ip address. This is fixed! 
-2017-beta-6 (unreleased - tested by SCICSG)
-	+ Fixed who's on the bands reporting - now nice print out (from .ba report). 
-	+ Fixed freezing for the gota station.. gota is now gotanode.
-	+ Changed clock slew to a bigger number (0.75931) 
-	+ Class reporting should be correct now. Free VHF too. (reworked)
-	+ Protected against putting the fdcall and gota call in the log. 
-	+ Fixed the .node command - discovered it was broken.
-	+ Updated all the documentation files. 
-	+ Removed the wireless information menu - no longer needed.
-	+ Removed the propagation report. (Anyone use it?)
-	+ Removed duplicate arrl_sect.txt file needed by program. 
-	+ Removed frequency.txt file needed by program - arrl band chart gives same info.
-	+ Changed names of some of the files for simplicity 
-	+ Created a W1AW menu with the schedule and the NTS message file.
-	+ Operator now called Contestant. This allows non-hams to operate with a control operator.
-        + Contestant or Logger needs a license to enter a QSO.
-        + "Add New Participant" window uses the Enter key to save.
-	+ Removed ability to edit the original EDITED log entry. 
+2017-beta-6 (unreleased - tested)
+	54 Fixed who's on the bands reporting - now nice print out (from .ba report). 
+	53 Fixed freezing for the gota station.. gota is now gotanode.
+	52 Changed clock slew to a bigger number (0.75931) 
+	51 Class reporting should be correct now. Free VHF too. (reworked)
+	50 Protected against putting the fdcall and gota call in the log. 
+	49 Fixed the .node command - discovered it was broken.
+	48 Updated all the documentation files. 
+	47 Removed the wireless information menu - no longer needed.
+	46 Removed the propagation report. (Anyone use it?)
+	45 Removed duplicate arrl_sect.txt file needed by program. 
+	44 Removed frequency.txt file needed by program - arrl band chart gives same info.
+	43 Changed names of some of the files for simplicity 
+	42 Created a W1AW menu with the schedule and the NTS message file.
+	41 Operator now called Contestant. This allows non-hams to operate with a control operator.
+    	40 Contestant or Logger needs a license to enter a QSO.
+    	39 "Add New Participant" window uses the Enter key to save.
+	38 Can not edit previously EDITED log entries. 
 2017-beta-5 (stable needs testing)
-	+ Added age and official visitor entry - tracking and scoring soon. 
-	+ Added participant check after an enter key for a call
-	+ slowed clock slew rate and to a more odd number 
+	37 Added age and official visitor entry - tracking and scoring soon. 
+	36 Added participant check after an enter key for a call
+	35 slowed clock slew rate and to a more odd number 
 2017-beta-4 (unreleased)
-	+ Added "WHO" button before operator so that this can be clicked for whose on bands.
+	- Added "WHO" button before operator so that this can be clicked for whose on bands.
      # Determined that this is not needed now that the mouse over report is cleaner.
-	+ I added a mouse over pop up 
+	- I added a mouse over pop up 
 	 # but this turns out to be very annoying so it was removed.
-	+ Mouse over who's on the bands report is super clean now.
-	+ Fixed the output of the sections so it prints cleaner as well.
+	34 Mouse over who's on the bands report is super clean now.
+	33 Fixed the output of the sections so it prints cleaner as well.
 2017-beta-3 (stable needs testing)
-	+ Now checks for valid sections. Thanks W6AKB
+	32 Now checks for valid sections. Thanks W6AKB
 		(this was modified from 153d version of FDLog) 
 2017-beta-2 (stable needs testing)
-	+ Fixed the Class not updating when clicking on an HF band 
-	+ Removed bug that would not allow edits if the call and band are the same.
+	31 Fixed the Class not updating when clicking on an HF band 
+	30 Removed bug that would not allow edits if the call and band are the same.
       Now can't edit a deleted log entry, and can't edit unless it is in the log.
        -- Need to display the latest log entry if an entry has been edited previously.
-	+ Removed the extra lines in the gui for the port and for the list of nodes on on each band. 
+	29 Removed the extra lines in the gui for the port and for the list of nodes on on each band. 
 	- reverted back to the way it was for now but added the port to the header.
     Next item to work on will be the popup that will show the station on the band clicked.
 2017-Beta-1
@@ -89,12 +86,12 @@ SCICSG will be at The Rock Church for our third year.
    Which made me think that there was no need for hyper-accurate time devices or synch routines. 
    So, beta 5 will revert back to a simple time master like before.
    Internet time may be kept but Internet distracts operators so our focus will be on new features.
-	+ Prevented the ability to edit previously DELETED log entries. Thanks K9JAJ
-	+ Adding a statement to check for uppercase. Previously unresponsive while capped locked. 
+	28 Prevented the ability to edit previously DELETED log entries. Thanks K9JAJ
+	27 Adding a statement to check for uppercase. Previously unresponsive while capped locked. 
 	Thanks WW9A for pointing out that the program isn't randomly freezing.
-	+ Made the -Call-Class-Sect- persistently above the input line. Thanks K9MAF
-	+ Added the port number to the header. Thanks K9MAF
-	+ "wa6nhc 5/2013 suggests precluding site operators from being logged as Q's"
+	26 Made the -Call-Class-Sect- persistently above the input line. Thanks K9MAF
+	25 Added the port number to the header. Thanks K9MAF
+	24 "wa6nhc 5/2013 suggests precluding site operators from being logged as Q's"
 	Done. Added the ability to "dupe check" participants outside the dupe log. Thanks WA6NHC
 
 
@@ -117,11 +114,11 @@ SCICSG held field day in a field next to "The Rock" Rocky Ford Free Methodist Ch
 in Columbus IN. We had 9 members in the log with many more visitors. We only used 
 natural power. 6A with a total of 1644 points. 
 
- + Now a Repository on Github called FDLog_Enhanced July 2015
- + File is renamed FDLog_SCICSG.py
- + Versions also renamed. v2015 is the first stable release on Github.
- + Code rework from Biocca's fdlog (time functions and sql updates abandoned). 
- + Made initialize setup routine for FD setup. 
+ 23 Now a Repository on Github called FDLog_Enhanced July 2015
+ 22 File is renamed FDLog_SCICSG.py
+ 21 Versions also renamed. v2015 is the first stable release on Github.
+ 20 Code rework from Biocca's fdlog (time functions and sql updates abandoned). 
+ 19 Made initialize setup routine for FD setup. 
 
 2015_beta-3
 	This is actually stable but it isn't 100% working. Now we 
@@ -143,14 +140,14 @@ SCICSG held field day at CERA Land in Columbus Indiana. This was the year we
 were visited by Columbus IN Mayor Kristen Brown. We had 19 participants in the 
 log but way more than that. We were 5A with 2168 points. 
 
- + Project was brought into Github when Google Code closed - I forked that. 
- + Renamed SCICSG_FDLog.py
- + Fixed VHF to reflect a free transmitter
- + Now warns if two vhf rigs are used
- + Nodes now require 8 characters in length so the log lines up nicely.
- + Added a Resources Menu Item to clean up the menu.
- + added tildes to make the gui look nicer - input area is bigger.
- + Additional code included from FDLog v4-1-152i
+ 18 Project was brought into Github when Google Code closed - I forked that. 
+ 17 Renamed SCICSG_FDLog.py
+ 16 Fixed VHF to reflect a free transmitter
+ 15 Now warns if two vhf rigs are used
+ 14 Nodes now require 8 characters in length so the log lines up nicely.
+ 13 Added a Resources Menu Item to clean up the menu.
+ 12 added tildes to make the gui look nicer - input area is bigger.
+ 11 Additional code included from FDLog v4-1-152i
 
 
 2013 updates
@@ -164,16 +161,16 @@ in Columbus Indiana. (This is the year we lost a blimp holding a wire antenna
 from a suprisingly quick storm.) The following updates were added for the next 
 field day. 4A with 23 attendies, 6 computers, and 1330 points.
 
- + Gui rearranged so that individual scores can be given, not just group score.
- + Individual score displayed for the operator!
- + Individual score displayed for the logger!  
- + removed the text within the program to the gui menu and into another file.
- + Can see who is on what bands with a mouse over! 
- + .testqgen only operates with a 'tst' database.
- + made color of the user buttons red until operator, band, power etc are assigned
- + added and expanded the network label to explain network status.
- + Added database protection against no band, no power, no op, and no logger
- + Added warning against 1D to 1D contacts being logged but not counting points
+ 10 Gui rearranged so that individual scores can be given, not just group score.
+ 9 Individual score displayed for the operator!
+ 8 Individual score displayed for the logger!  
+ 7 removed the text within the program to the gui menu and into another file.
+ 6 Can see who is on what bands with a mouse over! 
+ 5 .testqgen only operates with a 'tst' database.
+ 4 made color of the user buttons red until operator, band, power etc are assigned
+ 3 added and expanded the network label to explain network status.
+ 2 Added database protection against no band, no power, no op, and no logger
+ 1 Added warning against 1D to 1D contacts being logged but not counting points
  
 
 2012 updates

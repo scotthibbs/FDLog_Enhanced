@@ -1,13 +1,22 @@
 # FDLog_Enhanced
 This is a complete Field Day group logging solution!
-
-Download, read the manual, place this on all computers (Windows, Mac, Linux including Raspberry Pis) and start logging. Have everyone sign in when they visit. We have our visitors log for us because it is so simple.
+Download this on all computers (Windows, Mac, Linux including Raspberry Pis) and start logging. 
+Have everyone sign in when they visit. We have our visitors log for us because it is so simple.
 
 Log entry is just three simple things : KD4SIR 1D IN
 
-Tracks Dupes, shows previous contacts, see who is on which radio and which band, who is contesting and who is logging, how many contacts they have made etc. It shares the database to all computers and tracks operations so everyone can see and co-operate.   
+Tracks Dupes, shows previous contacts, see who is on which radio and which band, 
+who is contesting and who is logging, how many contacts they have made etc. 
+It shares the database to all computers and tracks operations so everyone can see and co-operate.   
 
-Simple Easy Setup and use. Enjoy!
+Download a stable release from the release section to enjoy! 
+
+The code here is what is in progress and not stable for release yet. 
+
+Currently working on: 
+
+    Redrawing the log window after a log edit so that an edited contact is no longer blue.
+
 
 *******************************************************************
 FDLog_SCICSG             Jun 25, 2018               v2017-FD              

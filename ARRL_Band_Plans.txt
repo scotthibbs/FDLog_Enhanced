@@ -1,6 +1,20 @@
-2017
-A band  plan refers to a voluntary division of a band to avoid interference between incompatible modes.
+2018
+A band plan refers to a voluntary division of a band to avoid interference between incompatible modes.
 
+Resources
+Sharing arrangements
+Detailed packet frequencies [PDF]
+Phone patch, autopatch and HF/VHF/UHF operating guidelines
+"Considerate Operator's Frequency Guide"
+ 2200 and 600 - meter bands
+
+General, Advanced and Amateur Extra class licensees are authorized to use these Amateur Bands
+
+Amateurs wishing to operate on either 2,200 or 630 meters must first register with the Utilities Technology Council online at https://utc.org/plc-database-amateur-notification-process/. You need only register once for each band.
+
+135.7 – 137.8 1 W EIRP maximum
+
+472 - 479 KHz:  5 W EIRP maximum, except in Alaska within 496 miles of Russia where the power limit is 1 W EIRP.
 
 160 Meters (1.8-2.0 MHz)
 1.800 - 2.000	CW
@@ -20,11 +34,31 @@ A band  plan refers to a voluntary division of a band to avoid interference betw
 3.885	AM calling frequency
  
 
+60 Meters (5 MHz channels)
+*Only one signal at a time is permitted on any channel
+
+*Maximum effective radiated output is 100 W PEP
+
+5330.5	USB phone1 and CW/RTTY/data2
+5346.5	USB phone1 and CW/RTTY/data2
+5357.0	USB phone1 and CW/RTTY/data2
+5371.5	USB phone1 and CW/RTTY/data2
+5403.5	USB phone1 and CW/RTTY/data2
+ 
+1. USB is limited to 2.8 kHz
+
+2. CW and digital emissions must be centered 1.5 kHz above the channel frequencies indicated in the above chart
+
 40 Meters (7.0-7.3 MHz)
 7.040	RTTY/Data DX
 7.080-7.125	RTTY/Data
 7.171	SSTV
 7.290	AM calling frequency
+ 
+
+30 Meters (10.1-10.15 MHz)
+10.130-10.140	RTTY
+10.140-10.150	Packet
  
 
 20 Meters (14.0-14.35 MHz)
@@ -36,9 +70,19 @@ A band  plan refers to a voluntary division of a band to avoid interference betw
 14.286	AM calling frequency
  
 
+17 Meters (18.068-18.168 MHz)
+18.100-18.105	RTTY
+18.105-18.110	Packet
+ 
+
 15 Meters (21.0-21.45 MHz)
 21.070-21.110	RTTY/Data
 21.340	SSTV
+ 
+
+12 Meters (24.89-24.99 MHz)
+24.920-24.925	RTTY
+24.925-24.930	Packet
  
 
 10 Meters (28-29.7 MHz)
@@ -111,10 +155,10 @@ Simplex (six channels)
 147.00-147.39	Repeater outputs
 147.42-147.57	Simplex
 147.60-147.99	Repeater inputs
-Notes: The frequency 146.40 MHz is used in some areas as a repeater input. 
-This band plan has been proposed by the ARRL VHF-UHF Advisory Committee.
+Notes: The frequency 146.40 MHz is used in some areas as a repeater input. This band plan has been proposed by the ARRL VHF-UHF Advisory Committee.
 
  
+
 1.25 Meters (222-225 MHz)
 222.0-222.150	Weak-signal modes
 222.0-222.025	EME
@@ -131,6 +175,7 @@ This band plan has been proposed by the ARRL VHF-UHF Advisory Committee.
 Note: The 222 MHz band plan was adopted by the ARRL Board of Directors in July 1991.
 
  
+
 70 Centimeters (420-450 MHz)
 420.00-426.00	ATV repeater or simplex with 421.25 MHz video carrier control links and experimental
 426.00-432.00	ATV simplex with 427.250-MHz video carrier frequency
@@ -147,4 +192,3 @@ Note: The 222 MHz band plan was adopted by the ARRL Board of Directors in July 1
 445.00-447.00	Shared by auxiliary and control links, repeaters and simplex (local option)
 446.00	National simplex frequency
 447.00-450.00	Repeater inputs and outputs (local option)
-
