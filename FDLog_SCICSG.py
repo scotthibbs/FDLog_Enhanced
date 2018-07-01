@@ -1352,16 +1352,16 @@ class netsync:
     pkts_rcvd, fills, badauth_rcvd, send_errs = 0, 0, 0, 0
     hostname = socket.gethostname()
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	try:
-		s.connect(("8.8.8.8", 53))
-		my_ip = s.getsockname()[0]
-	except:
-		my_ip = '127.0.0.1'
-	finally:
-		s.close()
-	
-	print "\n IP address is:  %s\n" % my_addr
-	bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
+    try:
+            s.connect(("8.8.8.8", 53))
+            my_addr = s.getsockname()[0]
+    except:
+            my_addr = '127.0.0.1'
+    finally:
+            s.close()
+    
+    print "\n IP address is:  %s\n" % my_addr
+    bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
 	
 	# kc7sda - all commented code below this can be removed
     #my_addr = socket.gethostbyname(hostname)  # fails on some systems
@@ -1577,7 +1577,7 @@ class global_data:
             if len(value) > i.maxl:  # too long
                 return "error - value too long: %s = %s" % (name, value)
             if name == 'grid':
-				value = value.upper() # kc7sda - added to properly format grid (ie CN88 not cn88)
+                value = value.upper() # kc7sda - added to properly format grid (ie CN88 not cn88)
             if not re.match(i.okg, value):  # bad grammar
                 return "set error - invalid value: %s = %s" % (name, value)
         if timestamp > i.ts:  # timestamp later?
