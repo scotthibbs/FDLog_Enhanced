@@ -329,6 +329,7 @@ def initialize():
                 while k == "":
                     print "Please type the grid square. (For FD type none)"
                     k = string.strip(sys.stdin.readline())
+                    k.upper()
                 else:
                     globDb.put('grid', k)
                     qdb.globalshare('grid', k)  # global to db
@@ -1342,41 +1343,57 @@ class netsync:
     """network database synchronization"""
     # This is being reworked in 152i but not all is being
     # implemented here just yet. Scott Hibbs 7/12/2015
-
-    netmask = '255.255.255.0'
+	#kc7sda : Heavly edited this section to do the following:
+	# removed netmask - it isn't used anywhere in the program from what I can tell (do a search for 'netmask' this is the only place you find it)
+	# re-coded the ip address calculation to smooth it out and make it cross platform compatible
+    #netmask = '255.255.255.0'
     rem_adr = ""  # remote bc address
     authkey = hashlib.md5()
     pkts_rcvd, fills, badauth_rcvd, send_errs = 0, 0, 0, 0
     hostname = socket.gethostname()
-    my_addr = socket.gethostbyname(hostname)  # fails on some systems
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	try:
+		s.connect(("8.8.8.8", 53))
+		my_ip = s.getsockname()[0]
+	except:
+		my_ip = '127.0.0.1'
+	finally:
+		s.close()
+	
+	print "\n IP address is:  %s\n" % my_addr
+	bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
+	
+	# kc7sda - all commented code below this can be removed
+    #my_addr = socket.gethostbyname(hostname)  # fails on some systems
     # Fixes Ubuntu based linux distros Scott Hibbs KD4SIR Apr/8/2017
     # modified from www.stackoverflow.com/questions/166506/ by Jamieson Becker
     # *this also works in python3 and other operating systems 
-    if my_addr[:3] == '127':   
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
+    #if my_addr[:3] == '127':   
+    #    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #    try:
             # doesn't even have to be reachable
-            s.connect(('10.255.255.255', 0))
-            IP = s.getsockname()[0]
-        except:
-            IP = '127.0.0.1'
-        finally:
-            s.close()
-            my_addr = IP    
-            print "\n Linux Loopback fix worked ip is:  %s\n" % my_addr
-            bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
+    #        s.connect(('10.255.255.255', 0))
+    #        IP = s.getsockname()[0]
+    #    except:
+    #        IP = '127.0.0.1'
+    #    finally:
+    #        s.close()
+    #        my_addr = IP    
+    #        print "\n Linux Loopback fix worked ip is:  %s\n" % my_addr
+    #        bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
     # moved this under the linux fix in case our linux is on 10. network - Scott Hibbs Apr/9/2017
-    elif my_addr[:3] == '10.':
-        bc_addr = '10.255.255.255'
-        netmask = '255.0.0.0'
+    #elif my_addr[:3] == '10.':
+    #    bc_addr = '10.255.255.255'
+        #netmask = '255.0.0.0'
     # proposed fix for 172 networks that need 255.240.0.0 netmask
     # This is untested - Scott Hibbs KD4SIR Apr/9/2017
     # Found netmask for 172 is 255.240.0.0 not 255.255.0.0 Scott Hibbs June 2018
-    elif my_addr[:3] == '172':
-        bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
-        netmask = '255.240.0.0'
-    else:
-        bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
+    #elif my_addr[:3] == '172':
+    #    bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
+        #netmask = '255.240.0.0'
+    #else:
+    #    bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
+    
     si = node_info()  # node info
 
     def setport(self, useport):
@@ -1559,6 +1576,8 @@ class global_data:
             i = self.byname[name]
             if len(value) > i.maxl:  # too long
                 return "error - value too long: %s = %s" % (name, value)
+            if name == 'grid':
+				value = value.upper() # kc7sda - added to properly format grid (ie CN88 not cn88)
             if not re.match(i.okg, value):  # bad grammar
                 return "set error - invalid value: %s = %s" % (name, value)
         if timestamp > i.ts:  # timestamp later?
@@ -1585,14 +1604,14 @@ class global_data:
         l.sort()
         viewtextl(l)
 
-
+# kc7sda - modifed  the sect setting regex to accept both lower and upper case
 gd = global_data()
 for name, desc, default, okre, maxlen in (
         ('class', '<n><A-F>       FD class (eg 2A)', '2A', r'[1-9][0-9]?[a-fA-F]$', 3),
         ('contst', '<text>         Contest (FD,VHF)', 'FD', r'fd|FD|vhf|VHF$', 3),
         ('fdcall', '<CALL>         FD call', '', r'[a-zA-Z0-9]{3,6}$', 6),
         ('gcall', '<CALL>         GOTA call', '', r'[a-zA-Z0-9]{3,6}$', 6),
-        ('sect', '<CC-Ccccc...>  ARRL section', '<section>', r'[A-Z]{2,3}-[a-zA-Z ]{2,20}$', 24),
+        ('sect', '<CC-Ccccc...>  ARRL section', '<section>', r'[a-zA-Z]{2,3}-[a-zA-Z ]{2,20}$', 24),
         ('grid', '<grid>         VHF grid square', '', r'[A-Z]{2}[0-9]{2}$', 4),
         ('grpnam', '<text>         group name', '', r'[A-Za-z0-9 #.:-]{4,35}$', 35),
         ('fmcall', '<CALL>         entry from call', '', r'[a-zA-Z0-9]{3,6}$', 6),
