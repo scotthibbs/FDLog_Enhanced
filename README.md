@@ -15,7 +15,8 @@ The code here is what is in progress and not stable for release yet.
 
 Currently working on: 
 
-    Redrawing the log window after a log edit so that an edited contact is no longer blue.
+    KD4SIR - Redrawing the log window after a log edit so that an edited contact is no longer blue.
+    KC7SDA - reworking the network section and fixing the upper and lower case bug.
 
 
 *******************************************************************
