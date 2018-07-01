@@ -329,7 +329,7 @@ def initialize():
                 while k == "":
                     print "Please type the grid square. (For FD type none)"
                     k = string.strip(sys.stdin.readline())
-                    k.upper()
+                    k = k.upper() # kc7sda = changed the init so the grid square will be cap
                 else:
                     globDb.put('grid', k)
                     qdb.globalshare('grid', k)  # global to db
