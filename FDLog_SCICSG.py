@@ -1,5 +1,5 @@
 #!/usr/bin/python 
-# Added by nouse4anick/FDLog at https://github.com/nouse4anick/FDLog May/5/2017
+# Added by kc7sda nouse4anick/FDLog at https://github.com/nouse4anick/FDLog May/5/2017
 import os
 import time
 import string
@@ -14,16 +14,20 @@ from Tkinter import Tk, END, NORMAL, DISABLED, re, sys, Toplevel, Frame, Label, 
 W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, Checkbutton, RAISED, IntVar
 
 
-#  Working on re-printing the log section (logw) so that it will change the color or remove the edited entry so that it
-#  looks like it isn't still part of the log and editable (when it isn't anymore)
+# This needs to be tested on different networks and cross platform before released.
+# 
+# KD4SIR - Will work on up arrow feature. It will retype the last entry. 
+
 
 
 # 2019_Beta_1
 #
-# + added 172. private network fix for the correct netmask (untested)
-# + added python path shebang so program can run from command line
-# + Corrected code as suggested by pylint Scott Hibbs Jun/28/2018
-# + 
+# + added python path shebang so program can run from command line - KC7SDA Art Miller Jul/1/2018
+# + Corrected code as suggested by pylint - KD4SIR Scott Hibbs Jun/28/2018
+# + Streamlined the networking section of the code - netmask removed. KC7SDA Art Miller Jul/1/2018
+# + Allowed upper case entry for several settings. KC7SDA Art Miller Jul/1/2018
+# + After an edit, the log window is redrawn to show only valid log entries. KD4SIR Scott Hibbs Jul/3/2018
+# + Removed unused code and comments - KD4SIR Scott Hibbs Jul/3/2018
 
 
 
@@ -114,35 +118,6 @@ def ival(s):
             r = int(mm.group(1))
     return r
 
-
-#
-# master is designated. marks time as level '0'
-#
-#
-# master has zero correction factor - broadcasts system time
-#
-# local clock adjust procedure is - shutdown fdlog, change, start fdlog
-#
-# at broadcast reception:
-#   if at level then average
-#   if above level then restart average with this
-#
-# every minute:
-#   look at what we know and do time correction
-#
-# time quality levels (0..9)
-#   0 = designated master
-#   1 = sync'd to master
-#   2 = sync'd to level 2
-#   ..
-#   9 = not sync'd
-#
-#   consider self synchronized when error <= 2s?
-#     then set level to src+1
-#
-#   new and other nodes will go to level 9
-#
-# may need a semaphore around these variables..
 
 class clock_class:
     level = 9  # my time quality level
@@ -417,14 +392,9 @@ def exin(op):
 
 
 # sqlite database upgrade
-#
 # sqlite3.connect(":memory:", check_same_thread = False)
-# I found this online to correct thread errors
-# with sql locking to one thread only.
-#
-# I'm pretty sure I emailed this fix to Alan Biocca
-# over a year ago. :(
-#
+# I found this online to correct thread errors with sql locking to one thread only.
+# I'm pretty sure I emailed this fix to Alan Biocca over a year ago. :(
 # Scott Hibbs 7/5/2015
 
 
@@ -440,10 +410,6 @@ class SQDB:
               "text,call text,rept text,powr text,oper text,logr text,primary key (src,seq))"
         self.curs.execute(sql)
         self.sqdb.commit()
-        # create table qsos, index by call,band,mode (varies by contest)
-        # create table score phone, cw, data
-        # create table station, operator, logger, power,
-        # return self
 
     def readlog(self):  # ,srcId,srcIdx):            # returns list of log journal items
         print "Loading log journal from sqlite database"
@@ -518,7 +484,7 @@ class qsodb:
         sqdb = SQDB()
         log = sqdb.readlog()  # read the database
         for ln in log:
-            if ln[0] == 'q':  # qso db line                                                                     ##############################
+            if ln[0] == 'q':  # qso db line 
                 r = qdb.new(0)
                 try:
                     r.ldrec(ln)
@@ -602,24 +568,6 @@ class qsodb:
         for i in l:
             print i
 
-    # adif specs for eqsl.org   http://www.eqsl.cc/qslcard/adifcontentspecs.cfm ver 2.27
-    #
-    # problems - adif digital modes and satellite modes don't fit the fd model
-    #   even voice.. need 'real' mode field. pulldown menu.
-    #     add outgoing report to comments in parens
-    #
-    # <QSO_DATE:8> YYYYMMDD
-    # <TIME_ON:4> HHMM only HH and MM are used
-    # <CALL:6> up to 13 chars
-    # <BAND:3>
-    # <MODE:3>
-    # <SAT_MODE:>
-    # <LOG_PGM:15>FDLog by WB6ZQZ
-    # <COMMENT:> up to 240 chars
-    # <EOR>
-    #
-    # .ADI extension
-
     def pradif(self):
         "print clean log in adif format"
         pgm = "FDLog_SCICSG (https://github.com/scotthibbs/FDLog_Enhanced)"
@@ -646,11 +594,6 @@ class qsodb:
             print "<QSLMSG:%d>%s" % (len(com), com)
             print "<EOR>"
             print
-
-    # vhf contest cabrillo qso output
-    #
-    # QSO: freq  mo date       time call              grid   call              grid
-    # QSO: ***** ** yyyy-mm-dd nnnn *************     ****** *************     ******
 
     def vhf_cabrillo(self):
         "output VHF contest cabrillo QSO data"
@@ -751,18 +694,24 @@ class qsodb:
             s.seq = -1
             s.dispatch('user')
             txtbillb.insert(END, " DELETE Successful %s %s %s\n" % (tm, call, bandmod))
-            ##################################################################################################################################################################
             logw.configure(state=NORMAL)
             logw.delete(0.1,END)
             logw.insert(END, "\n")
-            log = sqdb.readlog()  # read the database
-            for ln in log:
-                if ln[0] == 'q':  # qso db line 
-                    logw.insert(END, "\n")
-                self.prlogln(ln)    
-                logw.insert(END, ln)
+            # Redraw the logw text window (on delete) to only show valid calls in the log. This avoids confusion by only listing items in the log to edit in the future.
+            # Scott Hibbs KD4SIR - July 3, 2018
+            l = []
+            for i in sorted(a.values()):
+                if i.seq == seq:
+                    continue
+                else:
+                    l.append(logw.insert(END, "\n"))
+                    if nod == node:
+                        l.append(logw.insert(END, i.prlogln(i), "b"))    
+                    else:
+                        l.append(logw.insert(END, i.prlogln(i)))
+                        l.append(logw.insert(END, "\n"))
+            logw.insert(END, "\n")
             logw.configure(state=DISABLED)
-            topper()
         else:
             txtbillb.insert(END, " DELETE Ignored [%s,%s] Not Found\n" % (nod, seq))
             topper()
@@ -1121,16 +1070,13 @@ class qsodb:
                 r.append(i)
         return r
 
-# threads and networking section
-
 class node_info:
+    """Threads and networking section"""
     nodes = {}
     nodinfo = {}
     # rembcast = {}
-    #
     #  This was not remarked out of the 2015_stable version
     #  Scott Hibbs 7/3/2015
-    #
     lock = threading.RLock()  # reentrant sharing lock
 
     def sqd(self, src, seq, t, b, c, rp, p, o, l):
@@ -1170,9 +1116,7 @@ class node_info:
         #                print "new remote bcast registered",host,sip
         #            else:
         #                print "remote bcast rcvd",host,sip
-        #
         #            self.rembcast[sip] = 60          # seconds
-        #
         # xx need to: bcast to them, add remote directed to bc list
         self.lock.release()
         #   if debug:
@@ -1288,61 +1232,8 @@ class node_info:
         return r, hf, vhf, gotanode
 
 
-# new message class found in 152i
-# needed for filler to work with tcp
-##
-##class MESSAGE:
-##    def __init__(self,host,port,mode,mesg):
-##        "construct a message"
-##        self.time = now()               # arrival/creation time
-##        self.host = host                # remote host dotted ip text
-##        self.port = port                # remote port text
-##        self.mode = mode                # tcp or udp or bcast text
-##        self.mesg = mesg                # message content text
-##        self.authok = self.ckauth(mesg) # authorization check boolean
-##
-##        if mode == 'udp': self.adr_str = host
-##        else:             self.adr_str = "%s:%s"%(host,port)
-##
-##        # might want a processing status indicating where the meesage came from, what has been
-##        # done to it, what needs to be done; has it been broadcast, has it been logged to the journal,
-##        # etc.
-##
-##    def reply(self,reply_mesg):
-##        "construct a reply message"
-##        reply = MESSAGE(self.host,self.port,self.mode,reply_mesg)
-##        return reply
-##    def send(self):
-##        net.send_msg(self)
-##    def bcast(self):
-##        self.mode = 'bcast'
-##        self.send()
-##
-# copied the auth methods here, probably will move them
-# or set up a relationship between message and network classes
-##    def setauth(self,newauth):
-##        "set authentication key code base, copy on use"
-##        global authk
-##        authk = newauth
-##        seed = "2004070511111akb"               # change when protocol changes
-##        self.authkey = hashlib.md5(newauth+seed)
-##
-##    def auth(self,msg):
-##        "calc authentication hash"
-##        h = net.authkey.copy()
-##        h.update(msg)
-##        return h.hexdigest()
-##
-##    def ckauth(self,msg):
-##        "check authentication hash"
-##        h,m = msg.split('\n',1)
-##        ## print h; print self.auth(m); print
-##        return h == self.auth(m)
-
 class netsync:
     """network database synchronization"""
-    # This is being reworked in 152i but not all is being
-    # implemented here just yet. Scott Hibbs 7/12/2015
 	#kc7sda : Heavly edited this section to do the following:
 	# removed netmask - it isn't used anywhere in the program from what I can tell (do a search for 'netmask' this is the only place you find it)
 	# re-coded the ip address calculation to smooth it out and make it cross platform compatible
@@ -1359,41 +1250,8 @@ class netsync:
             my_addr = '127.0.0.1'
     finally:
             s.close()
-    
     print "\n IP address is:  %s\n" % my_addr
     bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
-	
-	# kc7sda - all commented code below this can be removed
-    #my_addr = socket.gethostbyname(hostname)  # fails on some systems
-    # Fixes Ubuntu based linux distros Scott Hibbs KD4SIR Apr/8/2017
-    # modified from www.stackoverflow.com/questions/166506/ by Jamieson Becker
-    # *this also works in python3 and other operating systems 
-    #if my_addr[:3] == '127':   
-    #    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    #    try:
-            # doesn't even have to be reachable
-    #        s.connect(('10.255.255.255', 0))
-    #        IP = s.getsockname()[0]
-    #    except:
-    #        IP = '127.0.0.1'
-    #    finally:
-    #        s.close()
-    #        my_addr = IP    
-    #        print "\n Linux Loopback fix worked ip is:  %s\n" % my_addr
-    #        bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
-    # moved this under the linux fix in case our linux is on 10. network - Scott Hibbs Apr/9/2017
-    #elif my_addr[:3] == '10.':
-    #    bc_addr = '10.255.255.255'
-        #netmask = '255.0.0.0'
-    # proposed fix for 172 networks that need 255.240.0.0 netmask
-    # This is untested - Scott Hibbs KD4SIR Apr/9/2017
-    # Found netmask for 172 is 255.240.0.0 not 255.255.0.0 Scott Hibbs June 2018
-    #elif my_addr[:3] == '172':
-    #    bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
-        #netmask = '255.240.0.0'
-    #else:
-    #    bc_addr = re.sub(r'[0-9]+$', '255', my_addr)  # calc bcast addr
-    
     si = node_info()  # node info
 
     def setport(self, useport):
@@ -1431,11 +1289,6 @@ class netsync:
             addrlst = []
             if addr == 'bcast':
                 addrlst.append(self.bc_addr)
-                #  rembcast was removed in the latest beta release without explaination. - sah 7/3/2015
-                #                addrlst.append(self.rem_adr)
-                #                for a in node_info.rembcast.keys():
-                #                    if debug: print "adding dyn remaddr",a
-                #                    addrlst.append(a)
             else:
                 addrlst.append(addr)
             for a in addrlst:
@@ -1648,16 +1501,12 @@ class syncmsg:
 
     def prout(self):
         """get message from queue for printing"""
-        # Check to see if the log window has been deleted
-
-            
-        
+        # Check to see if the log window has been deleted           
         self.lock.acquire()
         while self.msgs:
             logw.configure(state=NORMAL)
             logw.see(END)
             nod = self.msgs[0][70:81]  # color local entries  
-            #############################################################################################################################################################
             seq = self.msgs[0][65:69].strip()
             seq = int(seq)
             stn = self.msgs[0][69:].strip()
@@ -1684,18 +1533,6 @@ def now():
     t = time.strftime("%y%m%d.%H%M%S", n)  # compact version YY
     return t
 
-
-# This function is never called... ??? Removed Scott Hibbs 7/26/2015
-# def nowms():
-#     "return current time in standard string format yymmdd.hhmmss.mmm with milliseconds"
-#     ## New function from 152i
-#     x = time.time() + mclock.offset  # offset to correct to master/gps clock
-#     n = time.gmtime(x)  # time in gmt utc
-#     t = time.strftime("%y%m%d.%H%M%S", n)  # compact version YY
-#     f, i = math.modf(x)
-#     t2 = "%s.%03d" % (t, f * 1000)
-#     return t2
-
 def tmtofl(a):
     """time to float in seconds, allow milliseconds"""
     # Reworked in 152i
@@ -1704,16 +1541,13 @@ def tmtofl(a):
     return calendar.timegm((2000 + int(a[0:2]), int(a[2:4]), int(a[4:6]),
                             int(a[7:9]), int(a[9:11]), float(a[11:]), 0, 0, 0))
 
-
 def tmsub(a, b):
     """time subtract in seconds"""
     return tmtofl(a) - tmtofl(b)
 
 
-# new sqlite globals database fdlog.sq3 replacing globals file
-
 class GlobalDb:
-
+    """new sqlite globals database fdlog.sq3 replacing globals file"""
     def __init__(self):
         self.dbPath = globf[0:-4] + '.sq3'
         print "  Using local value database", self.dbPath
@@ -1764,24 +1598,6 @@ def loadglob():
     debug = int(globDb.get('debug', 0))
     timeok = int(globDb.get('timeok', 0))
     netsync.rem_host = globDb.get('remip', '0.0.0.0')
-
-    # removed Scott Hibbs 7/26/2015
-    # 
-    # mclock.offsetinit()
-    #    try:
-    #        fd = file(globf,"r")
-    #        line = fd.readline()
-    #        fd.close()
-    #        d1,node,operator,logger,power,auth,tdwin,debug,d2 = string.split(line,'|')
-    #        debug = int(debug)
-    #        tdwin = int(tdwin)
-    #        authk = auth
-    #        print "Loaded persistent configuration data file: %s"%globf
-    #        print "  Node ID: %s\n  Operator: %s\n  Logger: %s\n  Power: %s"%\
-    #          (node,operator,logger,power)
-    #    except:
-    #        print "Persistent configuration data file not found, using default values"
-    #        authk = "tst"
     if debug: print "  debug:", debug
 
 
@@ -1816,7 +1632,9 @@ def getfile(fn):
         # print data
     return data
 
+
 participants = {}
+
 
 def contestlog(pr):
     """generate contest entry and log forms"""
@@ -2382,9 +2200,10 @@ class NewParticipantDialog():
     def quitbtn(self):
         self.t.destroy()
 
-newpart = NewParticipantDialog()
 
+newpart = NewParticipantDialog()
 # property dialogs
+
 
 cf = {}
 
@@ -2458,7 +2277,6 @@ def pdiag(label, value, valid_re, wid):
 
 def noddiag():
     pdiag('Node', node, r'[A-Za-z0-9-]{1,8}$', 8)
-
     #def authdiag():
     #    pdiag('AuthKey',authk,r'.{3,12}$',12)
 
@@ -2526,7 +2344,7 @@ def viewwasrpt():
 
 
 def updatebb():
-    "update band buttons"
+    """update band buttons"""
     # Added Who's on the bands functionality with a mouse over event - KD4SIR Scott A Hibbs Oct/13/2013
     # Tried and tried to get wof to return only one result for the mouse over. If you can, you're awesome! -Scott
     global wof
@@ -2547,10 +2365,11 @@ def updatebb():
         txtbillb.see(END)
 
 
+
     def whosonsecond(event):
         global wof
         wof = ""
-        #tkMessageBox.destroy
+		#tkMessageBox.destroy
 
     for i in bands:
         dummy = 0
@@ -2620,7 +2439,6 @@ def updatebb():
     if go > gotatg: goc = 'red'
     bandb['GOTA'].configure(text='GOTA %s/%s' % (go, gotatg), background=goc)
 
-
 def updateqct():
     "update contact count"
     #function reworked in time for field day 2014. - Scott Hibbs KD4SIR
@@ -2660,7 +2478,6 @@ def updateqct():
                 coil2 = "0"
                 logmb.config(text='LogQ %2s' % coil2, background='grey')
                 logds.config(text=logger, background='grey')
-
     t = ""  # check for net config trouble
     if net.fills: t = "NEED FILL"
     if net.badauth_rcvd:
@@ -2685,9 +2502,6 @@ def updateqct():
         lblnet.configure(text=t, background='yellow')
     else:
         lblnet.configure(text="Network OK", background='grey')
-        ## The following line is in 152i
-        ## if t: bandb['GOTAq'].configure(text=t,background='yellow')
-
 
 def BandButtons(w):
     "create band buttons"
@@ -2702,10 +2516,8 @@ def BandButtons(w):
             bm = "%s%s" % (i, j)
             if i == 'off':
                 bm = 'off'
-                # indicatoron = 0 makes square button with text inside but
-                # doesn't work well on mac, with value 1 it makes a
-                # circle alongside the text and works on both
-                # so detect mac and change it for mac only
+                # indicatoron = 0 makes square button with text inside but doesn't work well on mac, with value 1 it makes a
+                # circle alongside the text and works on both so detect mac and change it for mac only
                 bandb[bm] = Radiobutton(master=w, text=bm, font=fdfont, background='grey', indicatoron=mac, \
                                         variable=sv, value=bm, selectcolor='red',
                                         command=lambda b=bm: (bandset(b)))
@@ -2754,8 +2566,8 @@ def testqgen(n):
     else:
         txtbillb.insert(END, "This command only available while testing with tst.")
 
-# global section, main program
 
+# global section, main program
 # setup persistent globals before GUI
 
 suffix = ""
@@ -2884,16 +2696,6 @@ for j in modes:
         if i == 'off': continue
         bm = "%s%s" % (i, j)
         m.add_command(label=bm, command=lambda x=bm: (viewlogf(x)))
-# menu.add_command(label="Status",command=exit)
-# toolsmenu = Menu(menu,tearoff=0)
-# menu.add_cascade(label="Tools",menu=toolsmenu)
-# toolsmenu.add_command(label="Status",command=exit)
-# toolsmenu.add_command(label="Properties",command=propbox)
-# toolsmenu.add_command(label="Network",command=exit)
-# toolsmenu.add_command(label="Node",command=exit)
-# toolsmenu.add_command(label="Authentication",command=exit)
-# toolsmenu.add_command(label="Notes",command=exit)
-# toolsmenu.add_command(label="Delete Log Entry",command=exit)
 #  Added Resources Menu Item to clean up the menu. - Apr/16/2014 Scott Hibbs
 resourcemenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Resources", menu=resourcemenu)
@@ -2914,10 +2716,8 @@ W1AWmenu.add_command(label="W1AW Schedule", command=lambda: viewtextf('w1aw.txt'
 W1AWmenu.add_command(label="NTS Message", command=lambda: os.startfile('NTS_eg.txt'))
 
 
-
 # Time Conversion Chart
-# 000 0000 0000 0000 0000
-# 000  -8   -7   -6   -5
+
 tzchart = """
  UTC       PDT  CDT  EDT
  GMT  PST  CST  EST
@@ -3337,24 +3137,6 @@ def proc_key(ch):
             setpwr(power)
         netsync.rem_host, s = testcmd('.remip', r'([0-9]{1,3}[.]){3}[0-9]{1,3}', netsync.rem_host)
         if s: globDb.put('remip', netsync.rem_host)
-        #        v,s = testcmd('.remcli',r'[0-1]',netsync.rem_cli)
-        #        if s and v == 1:
-        #            pass # start client thread
-        #        v,s = testcmd('.remsrv',r'[0-1]',netsync.rem_srv)
-        #        if s and v == 1:
-        #            pass # start server thread
-        #
-        # .timeok command was removed because it isn't prudent
-        # to give users the ability to circumvent the time function.
-        #
-        # This code does not work since it's now a tuple: str vs int
-        #   v,s = testcmd(".timeok", r"[0-1]", str(timeok))
-        #   timeok = int(v)
-        #
-        # The correction is:
-        #   v,s = testcmd(".timeok", r"[0-1]", timeok)
-        #   timeok = int(s)
-        #
         # This change was made below for debug, tdwin, and testq
         # Scott Hibbs 7/16/2015
         v, s = testcmd(".debug", r"[0-9]+", debug)
@@ -3402,16 +3184,6 @@ def proc_key(ch):
             txtbillb.insert(END, "\n")
             kbuf = ""
             return
-        # Removed to see if this was used (It probably shouldn't be used) Scott Hibbs Jul/01/2016
-        # p = r'[.]delete ([a-z0-9-]{1,9}) ([0-9]+) (.+)'
-        # if re.match(p, kbuf):
-        #     m = re.match(p, kbuf)
-        #     nod, seq, reason = m.group(1, 2, 3)
-        #     qdb.delete(nod, seq, reason)
-        #     kbuf = ""
-        #     txtbillb.insert(END, "\n")
-
-        #     return
         p = r'[.]edit ([a-z0-9]{1,6})'
         if re.match(p, kbuf):
             m = re.match(p, kbuf)
@@ -3534,9 +3306,7 @@ def proc_key(ch):
                             if clas in rept1:
                                 txtbillb.insert(END, "\n 1D to 1D contacts are logged, but zero points! \n")
                                 topper()
-                        # Check for valid section in report
-                        # Added by Scott Hibbs Feb/6/2017
-                        #print "rept1 is %s" % rept1
+                        # Check for valid section in report added by Scott Hibbs Feb/6/2017
                         aaaaa = len(rept1)
                         #print "aaaaa is %s" % aaaaa
                         rept2 = rept1[3:aaaaa].strip()
@@ -3677,8 +3447,6 @@ class Edit_Dialog(Toplevel):
     def __init__(self, parent, node, seq):
         s = '%s.%s' % (node, seq)
         self.node, self.seq = node, seq
-        
-
         if qdb.byid[s].band[0] == '*': return
         top = self.top = Toplevel(parent)
         # Toplevel.__init__(self,parent)
@@ -3703,21 +3471,11 @@ class Edit_Dialog(Toplevel):
         self.de.grid(row=1, column=1, sticky=W, padx=3, pady=2)
         self.de.insert(0, qdb.byid[s].date)
         self.chodate = qdb.byid[s].date
-        # self.de.insert(0,qdb.byid[s].date[:6])
-        #             self.src,self.seq,
-        #             self.date,self.band,self.call,self.rept,
-        #             self.powr,self.oper,self.logr
-        #        self.te = Entry(top,width=6,font=fdbfont)
-        #        self.te.grid(row=2,column=1,sticky=W,padx=3,pady=2)
-        #        self.te.insert(0,qdb.byid[s].date[-6:])
         self.be = Entry(top, width=5, font=fdbfont)
         self.be.grid(row=3, column=1, sticky=W, padx=3, pady=2)
         # self.be.configure(bg='yellow') #test yes works
         self.be.insert(0, qdb.byid[s].band)
         self.choband = qdb.byid[s].band
-        #        self.me = Entry(top,width=1,font=fdbfont)
-        #        self.me.grid(row=4,column=1,sticky=W,padx=3,pady=2)
-        #        self.me.insert(0,qdb.byid[s].band[-1])
         self.ce = Entry(top, width=11, font=fdbfont)
         self.ce.grid(row=5, column=1, sticky=W, padx=3, pady=2)
         self.ce.insert(0, qdb.byid[s].call)
@@ -3730,9 +3488,6 @@ class Edit_Dialog(Toplevel):
         self.pe.grid(row=7, column=1, sticky=W, padx=3, pady=2)
         self.pe.insert(0, qdb.byid[s].powr)
         self.chopowr = qdb.byid[s].powr
-        #        self.ne = Entry(top,width=1,font=fdbfont)
-        #        self.ne.grid(row=8,column=1,sticky=W,padx=3,pady=2)
-        #        self.ne.insert(0,'n')
         self.oe = Entry(top, width=3, font=fdbfont)
         self.oe.grid(row=9, column=1, sticky=W, padx=3, pady=2)
         self.oe.insert(0, qdb.byid[s].oper)
@@ -3753,8 +3508,7 @@ class Edit_Dialog(Toplevel):
         # self.wait_window(top)
 
     def submit(self):
-
-        #print 'submit edits'
+        """submit edits"""
         global editedornot
         error = 0
         changer = 0 # 0 = no change. 1= change except band and call. 2 = change in call or band
@@ -3849,7 +3603,7 @@ class Edit_Dialog(Toplevel):
                 self.crazylbl.configure(bg=self.crazyclr.get(), text=self.crazytxt.get())
                 error += 1
             if changer == 1:
-                # delete and enter new data because something other than band or call has changed.
+                # delete and enter new data because something other than band or call has changed. 
                 # print "no errors, enter data"
                 reason = "edited"
                 qdb.delete(self.node, self.seq, reason)
@@ -3901,7 +3655,6 @@ def log_select(e):
     line = int(line)
     #    print line
     logtext = logw.get('%d.0' % line, '%d.82' % line)
-    print "this is the line:", line
     # print logtext
     dummy = logtext[0:8].strip()
     seq = logtext[65:69].strip()
@@ -3931,14 +3684,6 @@ def log_select(e):
             stnseq = stn +"|"+str(seq)
             if stnseq in bid:
                 edit_dialog(stn, seq)
-                # if editedornot == "1":
-                #     logw.configure(state=NORMAL)
-                #     logw.tag_add("start", "'%d.0' % line", "'%d.82' % line")
-                #     #text.tag_add("start", "1.8", "1.13")
-                #     logw.tag_config("start", background="black", foreground="black")
-                #     #text.tag_config("start", background="black", foreground="yellow")
-                #     logw.configure(state=DISABLED)
-                #     editedornot = "0"
             else:
                 print "Previously edited contact - Not in the log."
                 return
