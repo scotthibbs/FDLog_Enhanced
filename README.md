@@ -13,10 +13,25 @@ Download a stable release from the release section to enjoy!
 
 The code here is what is in progress and not stable for release yet. 
 
-Currently working on: 
 
-    KD4SIR - working on up arrow feature. It will repopulate the last entry.
-    KC7SDA - reworking the network section and fixing the upper and lower case bug.
+
+ This needs to be tested on different networks and cross platform before released.
+ 
+ KD4SIR - Will probably work on copy/paste functionality
+ 
+ KC7SDA - Will check network and platform compatibility and upper/lower case entry 
+
+
+
+ 2019_Beta_1 So far...
+
+ + added python path shebang so program can run from command line - Art Miller KC7SDA Jul/1/2018
+ + Corrected code as suggested by pylint - Scott Hibbs KD4SIR Jun/28/2018
+ + Streamlined the networking section of the code - netmask removed. Art Miller KC7SDA Jul/1/2018
+ + Allowed upper case entry for several settings. Art Miller KC7SDA Jul/1/2018
+ + After an edit, the log window is redrawn to show only valid log entries. Scott Hibbs KD4SIR Jul/3/2018
+ + Removed unused code and comments - Scott Hibbs KD4SIR Jul/3/2018
+ + Up arrow will now retype the last entry (just in case enter was hit instead of space) - Scott Hibbs KD4SIR Jul/06/2018
 
 
 *******************************************************************
