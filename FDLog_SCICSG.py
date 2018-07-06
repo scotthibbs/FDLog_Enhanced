@@ -1,5 +1,5 @@
 #!/usr/bin/python 
-# Added by kc7sda nouse4anick/FDLog at https://github.com/nouse4anick/FDLog May/5/2017
+# Added by Art Miller KC7SDA May/5/2017
 import os
 import time
 import string
@@ -16,18 +16,20 @@ W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Sc
 
 # This needs to be tested on different networks and cross platform before released.
 # 
-# KD4SIR - Will work on up arrow feature. It will retype the last entry. 
+# KD4SIR - Will probably work on copy/paste functionality
+# KC7SDA - Will check network and platform compatibility and upper/lower case entry 
 
 
 
 # 2019_Beta_1
 #
-# + added python path shebang so program can run from command line - KC7SDA Art Miller Jul/1/2018
-# + Corrected code as suggested by pylint - KD4SIR Scott Hibbs Jun/28/2018
-# + Streamlined the networking section of the code - netmask removed. KC7SDA Art Miller Jul/1/2018
-# + Allowed upper case entry for several settings. KC7SDA Art Miller Jul/1/2018
-# + After an edit, the log window is redrawn to show only valid log entries. KD4SIR Scott Hibbs Jul/3/2018
-# + Removed unused code and comments - KD4SIR Scott Hibbs Jul/3/2018
+# + added python path shebang so program can run from command line - Art Miller KC7SDA Jul/1/2018
+# + Corrected code as suggested by pylint - Scott Hibbs KD4SIR Jun/28/2018
+# + Streamlined the networking section of the code - netmask removed. Art Miller KC7SDA Jul/1/2018
+# + Allowed upper case entry for several settings. Art Miller KC7SDA Jul/1/2018
+# + After an edit, the log window is redrawn to show only valid log entries. Scott Hibbs KD4SIR Jul/3/2018
+# + Removed unused code and comments - Scott Hibbs KD4SIR Jul/3/2018
+# + Up arrow will now retype the last entry (just in case enter was hit instead of space) - Scott Hibbs KD4SIR Jul/06/2018
 
 
 
@@ -627,7 +629,7 @@ class qsodb:
         dummy, n, g = self.cleanlog()
         for i in n.values() + g.values():
             if filt == "" or re.match('%s$' % filt, i.band):
-                l.append(i.prlogln())
+                l.append(i.prlogln(i))
         l.sort()
         return l
 
@@ -637,7 +639,7 @@ class qsodb:
         m, dummy, dummy = self.cleanlog()
         for i in m.values():
             if filt == "" or re.match('%s$' % filt, i.band):
-                l.append(i.prlogln())
+                l.append(i.prlogln(i))
         l.sort()
         return l
 
@@ -647,7 +649,7 @@ class qsodb:
         m, dummy, dummy = self.cleanlog()
         for i in m.values():
             if re.match('%s$' % filt, i.src):
-                l.append(i.prlogln())
+                l.append(i.prlogln(i))
         l.sort()
         return l
 
@@ -697,7 +699,8 @@ class qsodb:
             logw.configure(state=NORMAL)
             logw.delete(0.1,END)
             logw.insert(END, "\n")
-            # Redraw the logw text window (on delete) to only show valid calls in the log. This avoids confusion by only listing items in the log to edit in the future.
+            # Redraw the logw text window (on delete) to only show valid calls in the log. 
+            # This avoids confusion by only listing items in the log to edit in the future.
             # Scott Hibbs KD4SIR - July 3, 2018
             l = []
             for i in sorted(a.values()):
@@ -981,12 +984,6 @@ class qsodb:
         self.lock.acquire()
         if self.rept[:5] == "*del:":
             self.redup()
-            #            print "proc del",self.rept,self.call,self.band
-            #            try:
-            #                self.bysfx[key].remove(call)
-            #            except:
-            #                pass
-            #                print " rm fm dupdb failed -%s-%s-%s-"%(call,sfx,band)
         else:
             # duplog everything with nonzero power, or on band off (test)
             if (self.band == 'off') | (ival(self.powr) > 0):
@@ -1048,7 +1045,7 @@ class qsodb:
             if not state:
                 #                print "section not recognized in:\n  %s"%i.prlogln()
                 #                print "sec",sect,"state",state
-                e.append(i.prlogln())
+                e.append(i.prlogln(i))
         h, n = [], []  # make have and need lists
         for i in stcnt.keys():
             if i != "--":
@@ -1106,18 +1103,6 @@ class node_info:
         #        if debug: print "ssb before assign",i.nod,i.stm,i.bnd
         i.ptm, i.nod, i.host, i.ip, i.stm, i.age = \
             pkt_tm, nod, host, sip, stm, 0
-        # This section of comments removed from 152i
-        #        self.lock.release()
-        #        if debug: print "ssb after",i.nod,i.stm
-        #        # check for remote connection
-        #        if self.netnum(sip,netsync.netmask) != \
-        #           self.netnum(netsync.my_addr,netsync.netmask):
-        #            if not self.rembcast.has_key(sip):
-        #                print "new remote bcast registered",host,sip
-        #            else:
-        #                print "remote bcast rcvd",host,sip
-        #            self.rembcast[sip] = 60          # seconds
-        # xx need to: bcast to them, add remote directed to bc list
         self.lock.release()
         #   if debug:
         #  print "ssb:",pkt_tm,host,sip,nod,stm,stml,ver,td
@@ -1140,12 +1125,6 @@ class node_info:
         # updates from 152i
         t = now()[7:]  # time hhmmss
         self.lock.acquire()
-        # These comments removed in 152i
-        #        for i in self.rembcast.keys():
-        #            self.rembcast[i] -= 1
-        #            if self.rembcast[i] < 0:
-        #                print "age out remote bcast adr",i
-        #                del(self.rembcast[i])
         for i in self.nodinfo.values():
             if i.age < 999:
                 i.age += 1
@@ -1234,9 +1213,8 @@ class node_info:
 
 class netsync:
     """network database synchronization"""
-	#kc7sda : Heavly edited this section to do the following:
 	# removed netmask - it isn't used anywhere in the program from what I can tell (do a search for 'netmask' this is the only place you find it)
-	# re-coded the ip address calculation to smooth it out and make it cross platform compatible
+	# re-coded the ip address calculation to smooth it out and make it cross platform compatible. - Art Miller KC7SDA Jul/01/2018
     #netmask = '255.255.255.0'
     rem_adr = ""  # remote bc address
     authkey = hashlib.md5()
@@ -2483,11 +2461,6 @@ def updateqct():
     if net.badauth_rcvd:
         net.badauth_rcvd = 0
         t = "AUTH FAIL"
-    # These changes in 152i
-    # if net.pkts_prev == 0 and net.pkts_rcvd == 0:
-    #    t = "RCVP FAIL"
-    # net.pkts_prev = net.pkts_rcvd
-    # net.pkts_rcvd = 0
     if net.pkts_rcvd:
         net.pkts_rcvd = 0
     else:
@@ -2589,6 +2562,7 @@ logdbf = "fdlog.fdd"  # persistent file copy of log database
 logfile = "fdlog.log"  # printable log file (contest entry)
 globf = "fdlog.dat"  # persistent global file
 kbuf = ""  # keyboard line buffer
+goBack = "" # needed to print the last line entered with up arrow - Scott Hibbs KD4SIR Jul/05/2018
 loadglob()  # load persistent globals from file
 print
 if node == "":
@@ -3061,7 +3035,7 @@ def showthiscall(call):
         q = i.call.split('/')
         if p[0] == q[0]:
             if findany == 0: txtbillb.insert(END, "\n")
-            txtbillb.insert(END, "%s\n" % i.prlogln())
+            txtbillb.insert(END, "%s\n" % i.prlogln(i))
             findany = 1
     return findany
 
@@ -3095,7 +3069,7 @@ readSections()
 
 def proc_key(ch):
     "process keystroke"
-    global kbuf, power, operator, logger, debug, band, node, suffix, tdwin  # timeok
+    global kbuf, power, operator, logger, debug, band, node, suffix, tdwin, goBack  # timeok
     testq = 0
     if ch == '?' and (kbuf == "" or kbuf[0] != '#'):  # ? for help
         mhelp()
@@ -3252,6 +3226,7 @@ def proc_key(ch):
         # check for valid contact
         if (ch == '\r'):
             stat, ftm, dummy, sfx, call, xcall, rept = qdb.qparse(kbuf)
+            goBack = "%s %s" % (call, rept)# for the up arrow enhancement - Scott Hibbs KD4SIR Jul/5/2018
             if stat == 5:  # whole qso parsed
                 kbuf = ""
                 if len(node) < 3:
@@ -3293,7 +3268,7 @@ def proc_key(ch):
                     if power == 0: em += " Power "
                     if len(operator) < 2: em += " Contestant "
                     if len(logger) < 2: em += " Logger "
-                    if em <> '':
+                    if em != '':
                         txtbillb.insert(END, " - WARNING: ( %s ) NOT SET" % em)
                         txtbillb.insert(END, "  Please Try Again\n")
                         topper()
@@ -3363,6 +3338,16 @@ def proc_key(ch):
             kbuf = kbuf[0:-1]
             txtbillb.delete('end - 2 chars')
         return
+    if ch == '\u1p':  # up arrow reprints the input line - Scott Hibbs KD4SIR Jul/5/2018
+        if goBack != "":
+            if kbuf == "":
+                txtbillb.insert(END, goBack) #print goBack info
+                kbuf = goBack
+            else: 
+                return
+        else:
+            kbuf = ""
+        return
     if ch == ' ':  # space, check for prefix/suffix/call
         stat, tm, dummy, sfx, call, xcall, rept = qdb.qparse(kbuf)
         if stat == 2:  # suffix, dup check
@@ -3391,7 +3376,7 @@ def proc_key(ch):
             else:
                 kbuf += ' '
                 txtbillb.insert(END, ch)
-                if showthiscall(call):  # may want to make this optional due to speed issues
+                if showthiscall(call):  # shows the previous contacts with this station
                     txtbillb.insert(END, "%s " % xcall)
             return
     buf = kbuf + ch  # echo & add legal char to kbd buf
@@ -3413,10 +3398,13 @@ def proc_key(ch):
 
 def kevent(event):
     "keyboard event handler"
+    global goBack
     ##    print "event '%s' '%s' '%s'"%(event.type,event.keysym,event.keysym_num)
     k = event.keysym_num
     if 31 < k < 123:  # space to z
         proc_key(chr(event.keysym_num))
+    elif k == 65362:  # up arrow
+        proc_key('\u1p')
     elif k == 65288:  # backspace
         proc_key('\b')
     elif k == 65307:  # ESC
@@ -3735,13 +3723,25 @@ time.sleep(0.5)
 # os._exit(1)  # kill the process somehow?
 exit(1)
 
-# Suggestions
+# Suggestions/To Do:
+#
+#  Grab out of order entry from Alan Biocca's FDLog. 
+#
+#  Change Participant entry so the name is on top. (It's odd to ask their initials first.) Scott 2018 Field Day notes
+#
+#  Would love another file to use for the "InfoNode" computer. Scott 2017 Field Day notes
+        # It will allow visitors/participants to log in
+        # It will show top 5 operators and top 5 loggers
+        # It will show worked all states
+        # Provide info on Amateur Radio (video and/or short articles to print?)
+        # Provide info on the local club
+        # fool-proof - no logging from this node.
 #
 #  add node list display after db read during startup?
 #
-#  add phonetic alphabet display
+#  add phonetic alphabet display (started: some code commented out) 2016 Field Day notes
 #
-#  Weo suggested making Control-C text copy/paste work.
+#  Weo suggested making Control-C text copy/paste work. (suggestion from original group - FDLog)
 #
 #  Tried and tried to get wof (whoseonfirst) to return only one value for the mouse over.
 #    I don't have the python skilz... If you can awesome!!! -Scott Mar/18/2017
