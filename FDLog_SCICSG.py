@@ -1035,7 +1035,7 @@ class qsodb:
             if i.band[0] == '*': continue
             if i.band == 'off': continue
             if i.powr == '0': continue
-            m = re.match(r' *[0-9]+[a-fA-F] +([A-Za-z]{2,4})', i.rept)
+            m = re.match(r' *[0-9]+[a-fiohA-FIOH] +([A-Za-z]{2,4})', i.rept)
             if m:
                 sect = m.group(1)
                 sect = string.upper(sect)
