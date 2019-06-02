@@ -1,5 +1,6 @@
 #!/usr/bin/python 
 # Added by Art Miller KC7SDA May/5/2017
+# NOTE for Linux users: you must convert the line endings from windows to linux
 import os
 import time
 import string

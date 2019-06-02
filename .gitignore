@@ -1,3 +1,4 @@
 *.fdd
 *.sq3
 .vscode
+*.log
