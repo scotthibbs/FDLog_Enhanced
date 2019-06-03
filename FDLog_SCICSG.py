@@ -1,5 +1,6 @@
 #!/usr/bin/python 
 # Added by Art Miller KC7SDA May/5/2017
+# NOTE for Linux users: you must convert the line endings from windows to linux
 import os
 import time
 import string
@@ -189,7 +190,7 @@ class clock_class:
 
 mclock = clock_class()
 
-
+# kc7sda - code cleanup and modify (refactor), added wfd support
 def initialize():
     k = "" # keyboard input
     z = "" # answer counter
@@ -199,188 +200,165 @@ def initialize():
     print "*** ONLY ONE PERSON CAN DO THIS ***"
     print "Do you need to set up the event? Y or N"    
     print "       if in doubt select N"
-    k = string.lower(string.strip(sys.stdin.readline())[:1])
-    if k == "y":
-        z = "1"
-    if k == "n":
-        z = '1'
     while z != "1":
-        print "Press Y or N please"
         k = string.lower(string.strip(sys.stdin.readline())[:1])
-        if k == "y":
-            z = "1"
-        if k == "n":
-            z = '1'
-    else:
-        if k == "y":
-            # Field Day or VHF contest
-            z = ""
-            print "Is this a field day event?"
-            print "F = FD and V = VHF"
+        if k == "y": z = "1"
+        if k == "n": z = '1'
+        if z != "1": print "Press Y or N please"    
+    if k == "y":
+        # Field Day or VHF contest
+        z = ""
+        print "Which contest is this?"
+        print "F = FD, W = WFD, and V = VHF"
+        while z != "1":
             k = string.lower(string.strip(sys.stdin.readline())[:1])
-            if k == "f":
-                z = "1"
-            if k == "v":
-                z = '1'
-            while z != "1":
-                print "Press F or V please"
-                k = string.lower(string.strip(sys.stdin.readline())[:1])
-                if k == "f":
-                    z = "1"
-                if k == "v":
-                    z = '1'
-            else:
-                if k == "f":
-                    kfd = 1 #used later to skip grid square question.SAH
-                    globDb.put('contst', "FD")
-                    qdb.globalshare('contst', "FD")  # global to db
-                    renew_title()
-
-
-                    print "Have a nice Field Day!"
-                if k == "v":
-                    globDb.put('contst', "VHF")
-                    qdb.globalshare('contst', "VHF")  # global to db
-                    renew_title()
-                    print "Enjoy the VHF contest!"
-            # Name of the club or group
-            print "What is the name of your club or group?"
+            if k == "f": z = "1"
+            if k == "w": z = "1"
+            if k == "v": z = '1'
+            if z != "1": print "Press F, W or V please"
+        if k == "f":
+            kfd = 1 #used later to skip grid square question.SAH
+            globDb.put('contst', "FD")
+            qdb.globalshare('contst', "FD")  # global to db
+            renew_title()
+            print "Have a nice Field Day!"
+        if k == "w":
+            kfd = 2 #used later to skip grid square question.SAH
+            globDb.put('contst', "WFD")
+            qdb.globalshare('contst', "WFD")  # global to db
+            renew_title()
+            print "Have a nice Field Day!"
+        if k == "v":
+            globDb.put('contst', "VHF")
+            qdb.globalshare('contst', "VHF")  # global to db
+            renew_title()
+            print "Enjoy the VHF contest!"
+        # Name of the club or group
+        print "What is the name of your club or group?"
+        k = string.strip(sys.stdin.readline())
+        while k == "":
+            print "Please type the name of your club or group"
+            k = string.strip(sys.stdin.readline())
+        globDb.put('grpnam', k)
+        qdb.globalshare('grpnam', k)  # global to db
+        renew_title()
+        print k, "is a nice name."
+        # Club Call
+        print "What will be your club call?"
+        k = string.strip(sys.stdin.readline())
+        while k == "":
+            print "Please type the club call."
+            k = string.strip(sys.stdin.readline())
+        globDb.put('fdcall', k)
+        qdb.globalshare('fdcall', k)  # global to db
+        renew_title()
+        print k, "will be the club call."
+        # Gota Call
+        if kfd == 1:
+            print "What will be your GOTA call?"
             k = string.strip(sys.stdin.readline())
             while k == "":
-                print "Please type the name of your club or group"
+                print "Please type the GOTA call. (if none type none)"
                 k = string.strip(sys.stdin.readline())
             else:
-                globDb.put('grpnam', k)
-                qdb.globalshare('grpnam', k)  # global to db
+                globDb.put('gcall', k)
+                qdb.globalshare('gcall', k)  # global to db
                 renew_title()
-                print k, "is a nice name."
-            # Club Call
-            print "What will be your club call?"
+                print k, "will be the GOTA call."
+        # Class
+        print "What will be your class? (like 2A)"
+        k = string.strip(sys.stdin.readline())
+        while k == "":
+            print "Please type the class."
+            k = string.strip(sys.stdin.readline())
+        else:
+            globDb.put('class', k)
+            qdb.globalshare('class', k)  # global to db
+            renew_title()
+            print k, "will be the class."
+        # Section
+        print "What will be your section? (like IN-Indiana)"
+        k = string.strip(sys.stdin.readline())
+        while k == "":
+            print "Please type the section (like KY-Kentucky)."
+            k = string.strip(sys.stdin.readline())
+        else:
+            globDb.put('sect', k)
+            qdb.globalshare('sect', k)  # global to db
+            renew_title()
+            print k, "will be the section."
+        if kfd == 0:
+            # grid square
+            print "What will be your grid square? (if none type none)"
             k = string.strip(sys.stdin.readline())
             while k == "":
-                print "Please type the club call."
+                print "Please type the grid square. (For FD type none)"
                 k = string.strip(sys.stdin.readline())
+                k = k.upper() # kc7sda = changed the init so the grid square will be cap
             else:
-                globDb.put('fdcall', k)
-                qdb.globalshare('fdcall', k)  # global to db
+                globDb.put('grid', k)
+                qdb.globalshare('grid', k)  # global to db
                 renew_title()
-                print k, "will be the club call."
-            # Gota Call
-            if kfd == 1:
-                print "What will be your GOTA call?"
-                k = string.strip(sys.stdin.readline())
-                while k == "":
-                    print "Please type the GOTA call. (if none type none)"
-                    k = string.strip(sys.stdin.readline())
-                else:
-                    globDb.put('gcall', k)
-                    qdb.globalshare('gcall', k)  # global to db
-                    renew_title()
-                    print k, "will be the GOTA call."
-            # Class
-            print "What will be your class? (like 2A)"
-            k = string.strip(sys.stdin.readline())
-            while k == "":
-                print "Please type the class."
-                k = string.strip(sys.stdin.readline())
-            else:
-                globDb.put('class', k)
-                qdb.globalshare('class', k)  # global to db
-                renew_title()
-                print k, "will be the class."
-            # Section
-            print "What will be your section? (like IN-Indiana)"
-            k = string.strip(sys.stdin.readline())
-            while k == "":
-                print "Please type the section (like KY-Kentucky)."
-                k = string.strip(sys.stdin.readline())
-            else:
-                globDb.put('sect', k)
-                qdb.globalshare('sect', k)  # global to db
-                renew_title()
-                print k, "will be the section."
-            if kfd == 0:
-                # grid square
-                print "What will be your grid square? (if none type none)"
-                k = string.strip(sys.stdin.readline())
-                while k == "":
-                    print "Please type the grid square. (For FD type none)"
-                    k = string.strip(sys.stdin.readline())
-                    k = k.upper() # kc7sda = changed the init so the grid square will be cap
-                else:
-                    globDb.put('grid', k)
-                    qdb.globalshare('grid', k)  # global to db
-                    renew_title()
-                    print k, "will be the grid."
+                print k, "will be the grid."
+        if kfd !=2:
+            #questions for vhf and fd, skip for wfd
             # Public Place
             z = ""
             print "Will the location be in a public place?"
             print "Y = yes and N = no"
-            k = string.lower(string.strip(sys.stdin.readline())[:1])
-            if k == "y": z = "1"
-            if k == "n": z = '1'
             while z != "1":
-                print "Press Y or N please"
                 k = string.lower(string.strip(sys.stdin.readline())[:1])
                 if k == "y": z = "1"
                 if k == "n": z = '1'
-            else:
-                if k == "y":
-                    globDb.put('public', "A public location")
-                    qdb.globalshare('public', "A public location")  # global to db
-                    renew_title()
-                    print "Enjoy the public place."
-                if k == "n":
-                    globDb.put('public', "")
-                    qdb.globalshare('public', "")  # global to db
-                    renew_title()
-                    print "maybe next year..."
-                    # Info Booth
+                if z == "" : print "Press Y or N please"
+            if k == "y":
+                globDb.put('public', "A public location")
+                qdb.globalshare('public', "A public location")  # global to db
+                renew_title()
+                print "Enjoy the public place."
+            if k == "n":
+                globDb.put('public', "")
+                qdb.globalshare('public', "")  # global to db
+                renew_title()
+                print "maybe next year..."
+            # Info Booth
             z = ""
             print "Will you have an info booth?"
             print "Y = yes and N = no"
-            k = string.lower(string.strip(sys.stdin.readline())[:1])
-            if k == "y": z = "1"
-            if k == "n": z = '1'
             while z != "1":
-                print "Press Y or N please"
                 k = string.lower(string.strip(sys.stdin.readline())[:1])
                 if k == "y": z = "1"
                 if k == "n": z = '1'
-            else:
-                if k == "y":
-                    globDb.put('infob', "1")
-                    qdb.globalshare('infob', "1")  # global to db
-                    renew_title()
-                    print "Love information tables!"
-                if k == "n":
-                    globDb.put('infob', "0")
-                    qdb.globalshare('infob', "0")  # global to db
-                    renew_title()
-                    print "An information table is easy points"
-            #Time Master - oh yeah the big question
-            z = ""
-            print "\n It is recommended that the first computer"
-            print "set up should also be the time master."
-            print "\n IS THIS COMPUTER TIME CORRECT??? \n"
-            print "Will this computer be the time master?"
-            print "Y = yes and N = no"
+                if z == "" : print "Press Y or N please"
+            if k == "y":
+                globDb.put('infob', "1")
+                qdb.globalshare('infob', "1")  # global to db
+                renew_title()
+                print "Love information tables!"
+            if k == "n":
+                globDb.put('infob', "0")
+                qdb.globalshare('infob', "0")  # global to db
+                renew_title()
+                print "An information table is easy points"
+        #Time Master - oh yeah the big question
+        z = ""
+        print "\n It is recommended that the first computer"
+        print "set up should also be the time master."
+        print "\n IS THIS COMPUTER TIME CORRECT??? \n"
+        print "Will this computer be the time master?"
+        print "Y = yes and N = no"
+        while z != "1":
             k = string.lower(string.strip(sys.stdin.readline())[:1])
             if k == "y": z = "1"
             if k == "n": z = '1'
-            while z != "1":
-                print "Press Y or N please"
-                k = string.lower(string.strip(sys.stdin.readline())[:1])
-                if k == "y": z = "1"
-                if k == "n": z = '1'
-            else:
-                if k == "y":
-                    globDb.put('tmast', node)
-                    qdb.globalshare('tmast', node)  # global to db
-                    renew_title()
-                    print "Time travels to you!"
-                if k == "n":
-                    pass                
+            if z == "" : print "Press Y or N please"
+        if k == "y":
+            globDb.put('tmast', node)
+            qdb.globalshare('tmast', node)  # global to db
+            renew_title()
+            print "Time travels to you!"
+        if k == "n":
+            pass                
     return
 
 
@@ -622,6 +600,89 @@ class qsodb:
                 i.date, freq, mod, date, tim, mycall, mygrid, call, grid))
         l.sort()  # sort data with prepended date.time
         for i in l: print i[13:]  # rm sort key date.time
+# kc7sda - added support for winter field day, this outputs the cabrillo format that is posted on their website. 
+    def winter_fd(self):
+        "output Winter Field day QSO data in cabrillo format:"
+        #vars:
+        band_map = {'160': '1800', '80': '3500', '40': '7000', '20': '14000','15': '21000','10': '28000','6': '50', '2': '144', '220': '222', '440': '432', '900': '902', '1200': '1.2G'}
+        dummy, n, dummy = self.cleanlog()
+        l = []
+        mycall = string.upper(gd.getv('fdcall'))
+        mycat = gd.getv('class')
+        mystate, mysect = gd.getv('sect').split("-")
+        #number of tx
+        txnum = mycat[:-1]
+        #data crunching:
+        
+        #QSO log generation:
+        for i in n.values():
+            freq = "%s" % i.band[:-1]  # band
+            #if freq in band_map: freq = band_map[freq]
+            mod = i.band[-1:]  # mode
+            if mod == "c": mod = "CW"
+            if mod == "p": mod = "PH"
+            if mod == "d": mod = "DI" # per 2019 rules
+            date = "20%2s-%2s-%2s" % (i.date[0:2], i.date[2:4], i.date[4:6])
+            #date = "%2s-%2s-20%2s" % (i.date[2:4], i.date[4:6], i.date[0:2])
+            tim = i.date[7:11]
+            call = i.call
+            cat, sect = i.rept.split(" ")
+            if '/' in call:  # split off grid from call
+                call, grid = call.split('/')
+            #cabrillo example: QSO:  40 DI 2019-01-19 1641 KC7SDA        1H  WWA    KZ9ZZZ        1H  NFL   
+            l.append("%sQSO:  %-5s %-2s %-10s %4s %-10s %-2s  %-5s %-10s %-2s  %-5s" % (
+                i.date,freq, mod, date, tim, mycall, mycat, mysect, call, cat, sect))
+        l.sort()  # sort data with prepended date.time
+        
+        #check operator (single or multi op):
+        cat_op = ""
+        if len(participants) > 1:
+            cat_op = "MULTI-OP"
+        else:
+            cat_op = "SINGLE-OP"
+            
+        #check fixed or portable?
+        
+        #tx power:
+        
+        #calls for ops:
+        ops_calls_list = []
+        #print(participants)
+        #participants: {u'am': u'am, art miller, kc7sda, 37, '}
+        for i in participants.values():
+            dummy, dummy, cs, dummy, dummy = i.split(", ")
+            ops_calls_list.append(string.upper(cs))
+        ops_calls = ', '.join(ops_calls_list)
+        
+        #output
+        print "Winter field day Cabrillo output"
+        print "START-OF-LOG: 3.0"
+        print "Created-By: FDLog_SCICSG (https://github.com/scotthibbs/FDLog_Enhanced)"
+        print "CONTEST: WFD "
+        print "CALLSIGN: " + mycall
+        print "LOCATION: " + mystate
+        print "ARRL-SECTION: " + mysect
+        print "CATEGORY-OPERATOR: " + cat_op
+        print "CATEGORY-STATION: " #fixed or portable
+        print "CATEGORY_TRANSMITTER: " + txnum # how many transmitters
+        print "CATEGORY_POWER: LOW" #qrp low or high
+        print "CATEGORY_ASSISTED: NON-ASSISTED" #assisted or non-assisted
+        print "CATEGORY-BAND: ALL" # leave for wfd
+        print "CATEGORY-MODE: MIXED" #leave for wfd
+        print "CATEGORY-OVERLAY: OVER-50" # leave for wfd
+        print "SOAPBOX: " #fill in?
+        print "CLAIMED-SCORE: " #figure out score and add
+        print "OPERATORS: " + ops_calls #agregate the ops
+        print "NAME: " + gd.getv('fmname')
+        print "ADDRESS: " + gd.getv('fmad1')
+        print "ADDRESS-CITY: " + gd.getv('fmcity')
+        print "ADDRESS-STATE: " + gd.getv('fmst')
+        print "ADDRES-POSTALCODE: " + gd.getv('fmzip') #zip
+        print "ADDRESS-COUNTRY: USA" # hard coded for now, possibly change later
+        print "EMAIL: " + gd.getv('fmem') #email address
+        #print log:
+        for i in l: print i[13:]  # rm sort key date.time
+        print "END-OF-LOG:"
 
     def filterlog(self, filt):
         """list filtered (by bandm) log in time order, nondup valid q's only"""
@@ -1035,7 +1096,7 @@ class qsodb:
             if i.band[0] == '*': continue
             if i.band == 'off': continue
             if i.powr == '0': continue
-            m = re.match(r' *[0-9]+[a-fA-F] +([A-Za-z]{2,4})', i.rept)
+            m = re.match(r' *[0-9]+[a-fiohA-FIOH] +([A-Za-z]{2,4})', i.rept)
             if m:
                 sect = m.group(1)
                 sect = string.upper(sect)
@@ -1436,20 +1497,24 @@ class global_data:
         viewtextl(l)
 
 # kc7sda - modifed  the sect setting regex to accept both lower and upper case
+# kc7sda - added additional form fields (also fixed 'from' to 'form') for wfd NOTE: set commands have a max length of 6!
 gd = global_data()
 for name, desc, default, okre, maxlen in (
-        ('class', '<n><A-F>       FD class (eg 2A)', '2A', r'[1-9][0-9]?[a-fA-F]$', 3),
-        ('contst', '<text>         Contest (FD,VHF)', 'FD', r'fd|FD|vhf|VHF$', 3),
+        ('class', '<n><A-F>       FD class (eg 2A)', '2A', r'[1-9][0-9]?[a-fihoA-FIHO]$', 3),
+        ('contst', '<text>         Contest (FD,WFD,VHF)', 'FD', r'fd|FD|wfd|WFD|vhf|VHF$', 3),
         ('fdcall', '<CALL>         FD call', '', r'[a-zA-Z0-9]{3,6}$', 6),
         ('gcall', '<CALL>         GOTA call', '', r'[a-zA-Z0-9]{3,6}$', 6),
         ('sect', '<CC-Ccccc...>  ARRL section', '<section>', r'[a-zA-Z]{2,3}-[a-zA-Z ]{2,20}$', 24),
         ('grid', '<grid>         VHF grid square', '', r'[A-Z]{2}[0-9]{2}$', 4),
         ('grpnam', '<text>         group name', '', r'[A-Za-z0-9 #.:-]{4,35}$', 35),
-        ('fmcall', '<CALL>         entry from call', '', r'[a-zA-Z0-9]{3,6}$', 6),
-        ('fmnam', '<name>         entry from name', '', r'[A-Za-z0-9 .:-]{0,35}$', 35),
-        ('fmad1', '<text>         entry from address line 1', '', r'[A-Za-z0-9 #.,:-]{0,35}$', 35),
-        ('fmad2', '<text>         entry from address line 2', '', r'[A-Za-z0-9 #.,:-]{0,35}$', 35),
-        ('fmem', '<text>         entry from email', '', r'[A-Za-z0-9@.:-]{0,35}$', 35),
+        ('fmcall', '<CALL>         entry form call', '', r'[a-zA-Z0-9]{3,6}$', 6),
+        ('fmname', '<name>         entry form name', '', r'[A-Za-z0-9 .:-]{0,35}$', 35),
+        ('fmad1', '<text>         entry form address line 1', '', r'[A-Za-z0-9 #.,:-]{0,35}$', 35),
+        ('fmad2', '<text>         entry form address line 2', '', r'[A-Za-z0-9 #.,:-]{0,35}$', 35),
+        ('fmst', '<text>         entry form state', '', r'[a-z]{2,3}$', 3),
+        ('fmcity', '<text>         entry form city', '', r'[A-Za-z]{2,35}$', 35),
+        ('fmzip', '<text>         entry form zip code', '', r'[0-9]{5}$', 6),
+        ('fmem', '<text>         entry form email', '', r'[A-Za-z0-9@.:-]{0,35}$', 35),
         ('public', '<text>         public location desc', '', r'[A-Za-z0-9@.: -]{0,35}$', 35),
         ('infob', '0/1            public info booth', '0', r'[0-1]$', 1),
         ('svego', '<name>         govt official visitor name', '', r'[A-Za-z., -]{0,35}$', 35),
@@ -1781,7 +1846,7 @@ def contestlog(pr):
     print
     print "    Date:     %s UTC" % datime[:-2]
     print "    Call:     %s" % string.upper(gd.getv('fmcall'))
-    print "    Name:     %s" % gd.getv('fmnam')
+    print "    Name:     %s" % gd.getv('fmname')
     print "    Address:  %s" % gd.getv('fmad1')
     print "    Address:  %s" % gd.getv('fmad2')
     print "    Email:    %s" % gd.getv('fmem')
@@ -1997,6 +2062,11 @@ def contestlog(pr):
     print "VHF Cabrillo"
     print
     qdb.vhf_cabrillo()
+    print
+    print
+    print "Winter Field day"
+    print
+    qdb.winter_fd()
     print
     print "eof"
     sys.stdout = sys.__stdout__  # revert print to console
@@ -3281,6 +3351,24 @@ def proc_key(ch):
                             if clas in rept1:
                                 txtbillb.insert(END, "\n 1D to 1D contacts are logged, but zero points! \n")
                                 topper()
+                        # kc7sda - check the report for valid fd or wfd classes:
+                        # note according to the cheat sheet, \d is a digit
+                        reptclass, dummy = rept.split(" ")
+                        m = ""
+                        if gd.getv('contst') == "fd":
+                            # field day, report in: #+a-f
+                            m = re.match(r'[\d][a-fA-F]', rept)
+                        elif gd.getv('contst') == "wfd":
+                            # WFD
+                            m = re.match(r'[\d][ihoIHO]', rept)
+                        else:
+                            # vhf or other contest
+                            # allow everything
+                            m = "something"
+                        if m == None: # match failed, do not allow and abort logging
+                            txtbillb.insert(END, " - ERROR: Bad exchange ( %s ) Please Try Again\n" % rept)
+                            topper()
+                            return
                         # Check for valid section in report added by Scott Hibbs Feb/6/2017
                         aaaaa = len(rept1)
                         #print "aaaaa is %s" % aaaaa
