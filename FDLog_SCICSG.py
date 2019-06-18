@@ -72,9 +72,9 @@ Your donations are appreciated to support Amateur Radio.
 """
 
 version = "v18"
-fontsize = 10
+fontsize = 14
 fontinterval = 2
-typeface = 'Courier'
+typeface = 'Courier 10 pitch'
 
 fdfont = (typeface, fontsize)  # regular fixed width font
 fdmfont = (typeface, fontsize + fontinterval)  # medium  fixed width font
@@ -2280,7 +2280,7 @@ def setnode(new):
     node = string.lower(new)
     qdb.redup()
     renew_title()
-    lblnode.configure(text="My Node: %s" % node, font=fdfont, foreground='blue', background='grey')
+    lblnode.configure(text="My Node: %s" % node, font=fdfont, foreground='blue', background='light grey')
     # Had to add the above so that the new lblnode could be updated. - Scott Hibbs KD4SIR Mar/28/2017
 
 def applyprop(e=''):
@@ -2431,7 +2431,7 @@ def updatebb():
             bandb[bm].bind("<Enter>", lambda e: None)
             bandb[bm].bind("<Leave>", lambda e: None)
             if n == 0:
-                bc = 'grey'
+                bc = 'light grey'
                 bandb[bm].bind("<Enter>", lambda e: None)
                 bandb[bm].bind("<Leave>", lambda e: None)
             elif n == 1:
@@ -2495,7 +2495,7 @@ def updateqct():
     for i, j in (('FonQ', 'Phone %5s' % fonq),
                  ('CW/D', 'CW&Dig %4s' % (cwq + digq)),
                  ('GOTAq', 'GOTA %6s' % gotaq)):
-        bandb[i].configure(text=j, background='grey')
+        bandb[i].configure(text=j, background='light grey')
         # Update for the operator OpQ - KD4SIR for fd 2014
         if operator == "":
             coin2 = "Contestant"
@@ -2505,12 +2505,12 @@ def updateqct():
             coin = exin(operator)
             if coin in qpop:
                 coin2 = qpop['%s' % coin]
-                opmb.config(text='ConQ %2s' % coin2, background='grey')
-                opds.config(text=operator, background='grey')
+                opmb.config(text='ConQ %2s' % coin2, background='light grey')
+                opds.config(text=operator, background='light grey')
             else:
                 coin2 = "0"
-                opmb.config(text='ConQ %2s' % coin2, background='grey')
-                opds.config(text=operator, background='grey')
+                opmb.config(text='ConQ %2s' % coin2, background='light grey')
+                opds.config(text=operator, background='light grey')
         # Update for the logger LoQ - KD4SIR for fd 2014
         if logger == "":
             coil2 = "Logger"
@@ -2520,12 +2520,12 @@ def updateqct():
             coil = exin(logger)
             if coil in qplg:
                 coil2 = qplg['%s' % coil]
-                logmb.config(text='LogQ %2s' % coil2, background='grey')
-                logds.config(text=logger, background='grey')
+                logmb.config(text='LogQ %2s' % coil2, background='light grey')
+                logds.config(text=logger, background='light grey')
             else:
                 coil2 = "0"
-                logmb.config(text='LogQ %2s' % coil2, background='grey')
-                logds.config(text=logger, background='grey')
+                logmb.config(text='LogQ %2s' % coil2, background='light grey')
+                logds.config(text=logger, background='light grey')
     t = ""  # check for net config trouble
     if net.fills: t = "NEED FILL"
     if net.badauth_rcvd:
@@ -2544,7 +2544,7 @@ def updateqct():
     if t:
         lblnet.configure(text=t, background='yellow')
     else:
-        lblnet.configure(text="Network OK", background='grey')
+        lblnet.configure(text="Network OK", background='light grey')
 
 def BandButtons(w):
     "create band buttons"
@@ -2561,7 +2561,7 @@ def BandButtons(w):
                 bm = 'off'
                 # indicatoron = 0 makes square button with text inside but doesn't work well on mac, with value 1 it makes a
                 # circle alongside the text and works on both so detect mac and change it for mac only
-                bandb[bm] = Radiobutton(master=w, text=bm, font=fdfont, background='grey', indicatoron=mac, \
+                bandb[bm] = Radiobutton(master=w, text=bm, font=fdfont, background='light grey', indicatoron=mac, \
                                         variable=sv, value=bm, selectcolor='red',
                                         command=lambda b=bm: (bandset(b)))
             else:
@@ -2816,7 +2816,7 @@ def setoper(op):
     ini, name, call, age, vist = string.split(op, ', ')
     operator = "%s: %s, %s, %s, %s" % (ini, name, call, age, vist)
     # Adding red to the display - KD4SIR
-    ocolor = 'grey'
+    ocolor = 'light grey'
     opds.config(text=operator, background=ocolor)
     opmb.config(background='yellow')
     saveglob()
@@ -2828,7 +2828,7 @@ def setlog(logr):
     # print "setlog",logr
     ini, name, call, age, vist = string.split(logr, ', ')
     logger = "%s: %s, %s, %s, %s" % (ini, name, call, age, vist)
-    lcolor = 'grey'
+    lcolor = 'light grey'
     logds.config(text=logger, background=lcolor)
     logmb.config(background='yellow')
     saveglob()
@@ -2842,7 +2842,7 @@ pcolor = 'red'
 # Add "who" button to display messagebox with operators on band when clicked.
 # Determined that this is not needed now that the mouse over report is cleaner.
 #opwho = Menubutton(f1b, text='WHO ', font=fdfont, relief='raised',
-#                   background='grey', foreground='blue')
+#                   background='light grey', foreground='blue')
 #opwho.grid(row=0, column=0, sticky=NSEW)
 
 # Operator
@@ -3001,19 +3001,19 @@ f1b.grid(row=1, columnspan=2, sticky=NSEW)
 lblnet = Label(f1b, text="Network Status", font=fdfont, foreground='blue', background='yellow')
 lblnet.grid(row=2, column=0, columnspan=9, sticky=NSEW)
 # Node window
-lblnode = Label(f1b, text="My Node: %s" % node, font=fdfont, foreground='blue', background='grey')
+lblnode = Label(f1b, text="My Node: %s" % node, font=fdfont, foreground='blue', background='light grey')
 lblnode.grid(row=2, column=9, columnspan=1, sticky=NSEW)
 # Whos on First Window to display operators on bands
-# lblwof = Label(f1b, text="", font=fdfont, foreground='blue', background='grey')
+# lblwof = Label(f1b, text="", font=fdfont, foreground='blue', background='light grey')
 # lblwof.grid(row=2, column=0, columnspan=9, sticky=NSEW)
 # Port window
-# lblport = Label(f1b, text="Port: %s" % port_base, font=fdfont, foreground='blue', background='grey')
+# lblport = Label(f1b, text="Port: %s" % port_base, font=fdfont, foreground='blue', background='light grey')
 # lblport.grid(row=3, column=9, columnspan=1, sticky=NSEW)
 # log window
 logw = Text(root, takefocus=0, height=11, width=80, font=fdmfont,
-            background='grey', wrap=NONE, setgrid=1)
+            background='light grey', wrap=NONE, setgrid=1)
 # logw.configure(cursor='arrow')
-scroll = Scrollbar(root, command=logw.yview, background='grey')
+scroll = Scrollbar(root, command=logw.yview, background='light grey')
 logw.configure(yscrollcommand=scroll.set)
 logw.grid(row=2, column=0, sticky=NSEW)
 scroll.grid(row=2, column=1, sticky=NS)
@@ -3021,7 +3021,7 @@ root.grid_rowconfigure(2, weight=1)
 root.grid_columnconfigure(0, weight=1)
 # txtbillb = dialog window
 txtbillb = Text(root, takefocus=1, height=10, width=80, font=fdmfont,
-                wrap=NONE, setgrid=1, background='grey')
+                wrap=NONE, setgrid=1, background='light grey')
 scrollt = Scrollbar(root, command=txtbillb.yview)
 txtbillb.configure(yscrollcommand=scrollt.set)
 txtbillb.grid(row=3, column=0, sticky=NSEW)
@@ -3036,18 +3036,18 @@ logw.insert(END, "%s\n" % prog, ("b"))
 # f1c = Frame(root, bd=1)
 # f1c.grid(row=4,columnspan=4,sticky=NSEW)
 #     Add entry box for entering data
-# entqsl = Entry(f1c,font=fdfont,background='grey')
+# entqsl = Entry(f1c,font=fdfont,background='light grey')
 # entqsl.grid(row=4,column=0,sticky=NSEW)
 # txtentry = Text(f1c,takefocus=1,height=2,width=39,font=fdmfont,\
 # wrap=NONE,setgrid=1)
 # txtentry.grid(row=4,column=4,sticky=NSEW)
 # root.grid_rowconfigure(4,weight=1)
 # txtentry.insert(END,"Call-Class-Sect- \n")
-# fth2lbl = Label(f1c,text="-\n<",font=fdfont,background='grey')
+# fth2lbl = Label(f1c,text="-\n<",font=fdfont,background='light grey')
 # fth2lbl.grid(row=4,column=3,sticky=NSEW)
 # Phonetics box
 # fthw2 = Text(f1c,takefocus=0,height=2,width=40,font=fdmfont,\
-#            background='grey',wrap=NONE,setgrid=1)
+#            background='light grey',wrap=NONE,setgrid=1)
 # fthw2.configure(cursor='arrow')
 # fthw2.grid(row=4,column=2,sticky=NSEW)
 # root.grid_rowconfigure(4,weight=1)
@@ -3517,7 +3517,7 @@ class Edit_Dialog(Toplevel):
     crazytxt = StringVar()
     crazytxt.set('Edit Log Entry')
     crazyclr = StringVar()
-    crazyclr.set('grey')
+    crazyclr.set('light grey')
     crazylbl = Label
 
     def __init__(self, parent, node, seq):
@@ -3528,9 +3528,9 @@ class Edit_Dialog(Toplevel):
         # Toplevel.__init__(self,parent)
         # self.transient(parent)     # avoid showing as separate item
         self.crazytxt.set('Edit Log Entry')
-        self.crazyclr.set('grey')
+        self.crazyclr.set('light grey')
         self.crazylbl = tl = Label(top, text=self.crazytxt.get(), font=fdbfont, bg=self.crazyclr.get(), relief=RAISED)
-        # tl = Label(top, text='Edit Log Entry', font=fdbfont, bg='grey', relief=RAISED)
+        # tl = Label(top, text='Edit Log Entry', font=fdbfont, bg='light grey', relief=RAISED)
         tl.grid(row=0, columnspan=2, sticky=EW)
         tl.grid_columnconfigure(0, weight=1)
         Label(top, text='Date', font=fdbfont).grid(row=1, sticky=W)
