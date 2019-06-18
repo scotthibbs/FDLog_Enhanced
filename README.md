@@ -13,6 +13,8 @@ Download a stable release from the release section to enjoy!
 
 The code here is what is in progress and not stable for release yet. 
 
+NOTE: When adding Contestants/Loggers, press <ENTER> instead of DONE to enter the data into the database. DONE closes the window w/o saving the data.
+
 
 
  This needs to be tested on different networks and cross platform before released.
