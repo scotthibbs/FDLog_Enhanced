@@ -363,7 +363,7 @@ def initialize():
 
 
 def exin(op):
-    """extract Contestant or logger initials"""
+    """extract Operator or Logger initials"""
     r = ""
     m = re.match(r'([a-z0-9]{2,3})', op)
     if m:
@@ -1878,7 +1878,7 @@ def contestlog(pr):
     print
     print
     if gota_call:
-        print "18. Callsigns and QSO counts of GOTA Contestants"
+        print "18. Callsigns and QSO counts of GOTA Operators"
         print
         print "      Call  QSOs"
         for i in qpgop.keys():
@@ -2029,7 +2029,7 @@ def contestlog(pr):
         print "  %4s %s" % (qpst[i], i)
     print
     print
-    print "QSO breakdown by Contestant"
+    print "QSO breakdown by Operator"
     print
     for i in qpop.keys():
         print "  %4s %s" % (qpop[i], i)
@@ -2103,7 +2103,7 @@ def bandset(b):
         txtbillb.insert(END, "err - no node\n")
     if operator == "":
         b = 'off'
-        txtbillb.insert(END, "err - no Contestant\n")
+        txtbillb.insert(END, "err - no Operator\n")
     if b != 'off':
         s = net.si.nod_on_band(b)
         if s: txtbillb.insert(END, " Already on [%s]: %s\n" % (b, s))
@@ -2499,9 +2499,9 @@ def updateqct():
         bandb[i].configure(text=j, background='light grey')
         # Update for the operator OpQ - KD4SIR for fd 2014
         if operator == "":
-            coin2 = "Contestant"
+            coin2 = "Operator"
             opmb.config(text=coin2, background='red')
-            opds.config(text="<Select Contestant>", background='red')
+            opds.config(text="<Select Operator>", background='red')
         else:
             coin = exin(operator)
             if coin in qpop:
@@ -2683,7 +2683,7 @@ print "Enter Authentication Key (Return to re-use previous '%s')" % authk
 print "  (use 'tst' for testing, two digit year for contest):"
 k = string.strip(sys.stdin.readline())
 if k != "":
-    print "New Key entered, Contestant and logger cleared"
+    print "New Key entered, Operator and Logger cleared"
     authk = k
     operator = ""
     logger = ""
@@ -2847,12 +2847,12 @@ pcolor = 'red'
 #opwho.grid(row=0, column=0, sticky=NSEW)
 
 # Operator
-opmb = Menubutton(f1b,text='Contestant',font=fdfont,relief='raised', background=ocolor)
+opmb = Menubutton(f1b,text='Operator',font=fdfont,relief='raised', background=ocolor)
 opmb.grid(row=0,column=1,sticky=NSEW)
 opmu = Menu(opmb,tearoff=0)
 opmb.config(menu=opmu,direction='below')
-opmu.add_command(label="Add New Contestant",command=newpart.dialog)
-opds = Menubutton(f1b, text='<select Contestant>',font=fdfont,relief='raised',background=ocolor)
+opmu.add_command(label="Add New Operator",command=newpart.dialog)
+opds = Menubutton(f1b, text='<select Operator>',font=fdfont,relief='raised',background=ocolor)
 opds.grid(row=0,column=0,sticky=NSEW)
 opdsu = Menu(opds,tearoff=0)
 opds.config(menu=opdsu,direction='below')
@@ -2882,7 +2882,7 @@ def buildmenus():
         #if m: opdsu.add_command(label=i, command=lambda n=i: (setoper(n)))
         opdsu.add_command(label=i, command=lambda n=i: (setoper(n)))
         logdsu.add_command(label=i, command=lambda n=i: (setlog(n)))
-    opdsu.add_command(label="Add New Contestant", command=newpart.dialog)
+    opdsu.add_command(label="Add New Operator", command=newpart.dialog)
     logdsu.add_command(label="Add New Logger", command=newpart.dialog)
 
 
@@ -3082,7 +3082,7 @@ renew_title()
 txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", ("b"))
 txtbillb.insert(END, "                              Dialogue Window\n", ("b"))
 txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", ("b"))
-txtbillb.insert(END, "Please select the Contestant, Logger, Power and Band/Mode in red above.\n\n")
+txtbillb.insert(END, "Please select the Operator, Logger, Power and Band/Mode in red above.\n\n")
 txtbillb.insert(END, "-Call-Class-Sect- \n")
 txtbillb.config(insertwidth=3)
 txtbillb.focus_set()
@@ -3260,7 +3260,7 @@ def proc_key(ch):
             print "FD Report %s %s" % (string.upper(gd.getv('class')), gd.getv('sect'))
             print "Band      %s" % band
             print "Power     %s" % power
-            print "Contestnt %s" % operator
+            print "Operator  %s" % operator
             print "Logger    %s" % logger
             print "Node      %s" % node
             if authk != "" and node != "":
@@ -3304,7 +3304,7 @@ def proc_key(ch):
                     txtbillb.insert(END, " ERROR, set .node <call> before logging\n")
                     topper()
                 elif qdb.dupck(xcall, band):  # dup check
-                    txtbillb.insert(END, "\n\n DUPE on band %s\n" % band)
+                    txtbillb.insert(END, "\n\n ***DUPE*** on band %s ***DUPE***\n" % band)
                     topper()
                 elif qdb.partck(xcall): # Participant check
                     txtbillb.insert(END, "\n Participant - not allowed \n")
@@ -3320,7 +3320,7 @@ def proc_key(ch):
                     # no op, and no logger -- KD4SIR Scott Hibbs Jul/15/2013
                     # Added warning against 1D to 1D contacts being
                     # logged but not counting points -- KD4SIR Scott Hibbs Oct/13/2013
-                    # Checking Contestant or Logger has a license - Scott Hibbs Mar/28/2017
+                    # Checking Operator or Logger has a license - Scott Hibbs Mar/28/2017
                     legal = 0
                     if re.match(r'[a-z :]+ [a-zA-Z ]+, ([a-z0-9]+)',operator):
                         #print "%s has a license" % operator
@@ -3329,7 +3329,7 @@ def proc_key(ch):
                         #print "%s has a license" % logger
                         legal = legal + 1
                     if legal == 0:
-                        txtbillb.insert(END, "\n\n  The Contestant or the logger needs a license.\n")
+                        txtbillb.insert(END, "\n\n  The Operator or the logger needs a license.\n")
                         txtbillb.insert(END, "  Please Try Again\n")
                         topper()
                         return
@@ -3337,7 +3337,7 @@ def proc_key(ch):
                     em = ''
                     if band == "off": em += " Band "
                     if power == 0: em += " Power "
-                    if len(operator) < 2: em += " Contestant "
+                    if len(operator) < 2: em += " Operator "
                     if len(logger) < 2: em += " Logger "
                     if em != '':
                         txtbillb.insert(END, " - WARNING: ( %s ) NOT SET" % em)
@@ -3453,7 +3453,7 @@ def proc_key(ch):
                 txtbillb.insert(END, sfx)  # fall into call dup ck
         if stat == 4:  # whole call, dup chk
             if qdb.dupck(xcall, band):
-                txtbillb.insert(END, "\n\n DUPE on band %s" % band)
+                txtbillb.insert(END, "\n\n ***DUPE*** on band %s ***DUPE***" % band)
                 showthiscall(call)
                 kbuf = ""
                 topper()
@@ -3542,7 +3542,7 @@ class Edit_Dialog(Toplevel):
         Label(top, text='Report', font=fdbfont).grid(row=6, sticky=W)
         Label(top, text='Power', font=fdbfont).grid(row=7, sticky=W)
         # Label(top,text='Natural',font=fdbfont).grid(row=8,sticky=W)
-        Label(top, text='Contestant', font=fdbfont).grid(row=9, sticky=W)
+        Label(top, text='Operator', font=fdbfont).grid(row=9, sticky=W)
         Label(top, text='Logger', font=fdbfont).grid(row=10, sticky=W)
         self.de = Entry(top, width=13, font=fdbfont)
         self.de.grid(row=1, column=1, sticky=W, padx=3, pady=2)
@@ -3651,7 +3651,7 @@ class Edit_Dialog(Toplevel):
             error += 1
         t = self.oe.get().strip().lower()  # operator
         if self.chooper != t:
-            #print "the Contestant has changed."
+            #print "the Operator has changed."
             changer = 1
         self.oe.configure(bg='white')
         if participants.has_key(t):
