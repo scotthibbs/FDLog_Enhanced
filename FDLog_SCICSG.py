@@ -2151,8 +2151,9 @@ class NewParticipantDialog():
         fr2 = Frame(s.t)
         fr2.grid(row=1, column=0, sticky=EW, pady=3)
         fr2.grid_columnconfigure((0, 1), weight=1)
+        Label(fr2, text='Save=<Enter>', font=fdbfont).grid(row=3, column=0, sticky=W)
         #Button(fr2, text='Save', font=fdbfont, command=s.applybtn) .grid(row=3, column=1, sticky=EW, padx=3)
-        Button(fr2, text='Close', font=fdbfont, command=s.quitbtn) .grid(row=3, column=1, sticky=EW, padx=3)
+        Button(fr2, text='Close', font=fdbfont, command=s.quitbtn) .grid(row=3, column=2, sticky=EW, padx=3)
         # Bound enter key to save entries - Scott Hibbs KD4SIR Mar/30/2017
         s.t.bind('<Return>', lambda event: s.applybtn)
 
