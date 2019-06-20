@@ -8,13 +8,13 @@ Scott Hibbs KD4SIR
 scotthibbs at gmail.com 
 
 In a Nutshell:
-	The Contestant is the one making contacts.
+	The Operator is the one making contacts.
 	The Logger is the one entering data.
 	One of them needs to have a license.
 	If you see red, select something.
 	Bands are vertical. Modes are horizontal.
 	The modes are (C)ode, (D)igital, and (P)hone.
-	-Call-Class-Sect- is seperated by spaces. 
+	-Call-Class-Sect- is separated by spaces. 
 	An example is kd4sir 1d ky <Enter>
 	Don't hit enter until after the contact is made.
 	Without "QSL - May I have another?" it didn't work.
@@ -52,7 +52,7 @@ WHY LOVE FDLOG_ENHANCED?:
 	in real time. No one can dupe and non-dupe contacts are displayed as you log. You can 
 	send messages to all users. You can see how many contacts you have made, how many contacts
 	you have logged and see the combined phone and digital contacts for the group. It tracks 
-	who is the control operator (logger) for non-hams (as Contestant). The GOTA station log is 
+	who is the control operator (logger) for non-hams (as Operator). The GOTA station log is 
 	maintained WITH the regular log without conflicting with dupes. It is simple to use. Really.
 
 	The greatest thing is how it is not dependant on one computer! A computer can go down, bad
@@ -132,9 +132,9 @@ PROGRAM SETUP:
 
 USING THE PROGRAM:	
 	
-	The Contestant is the person using the radio. The Logger is the one using the
-	program. The Contestant or the Logger needs a license. When non-hams are using 
-	a radio, they will be listed as the Contestant and a ham (preferably the control 
+	The Operator is the person using the radio. The Logger is the one using the
+	program. The Operator or the Logger needs a license. When non-hams are using 
+	a radio, they will be listed as the Operator and a ham (preferably the control 
 	operator) must be listed as the Logger. Non-hams can only be listed as the 
 	Logger for hams.   
 	
@@ -142,7 +142,7 @@ USING THE PROGRAM:
 LOGGING LIKE A PRO: 
 
 	If you are seeing red, you need to select something before trying to log 
-	an entry. You need to select the Contestant, the Logger, the power (natural
+	an entry. You need to select the Operator, the Logger, the power (natural
 	does not mean a gas generator), and which band and mode you will be using. 
 
 	Entry has been straight forward since 1984. That's before pretty pictures.

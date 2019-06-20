@@ -1,7 +1,7 @@
 You can type ? for help: 
 
 In a Nutshell:
-	The Contestant is the one making contacts.
+	The Operator is the one making contacts.
 	The Logger is the one entering data.
 	One of them needs to have a license.
 	If you see red, select something.
@@ -12,7 +12,7 @@ In a Nutshell:
 	Hit <Escape> to start over 
        
 
--Call-Class-Sect- is seperated by spaces so  
+-Call-Class-Sect- is separated by spaces so  
 kd4sir 1d ky <Enter> (Will log a contact)
 
 Optionally you can: 

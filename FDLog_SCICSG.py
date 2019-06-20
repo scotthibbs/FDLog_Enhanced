@@ -3333,7 +3333,7 @@ def proc_key(ch):
                         txtbillb.insert(END, "  Please Try Again\n")
                         topper()
                         return
-                    # checking for band, power, contestant or logger
+                    # checking for band, power, operator or logger
                     em = ''
                     if band == "off": em += " Band "
                     if power == 0: em += " Power "
