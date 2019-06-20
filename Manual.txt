@@ -122,7 +122,7 @@ PROGRAM SETUP:
 	After Field Day:
 	
 	Look through the .set menu to set any missing information. Don't forget to
-	use .pr to make a "fdlog.txt" file that summerizes the contacts etc. 
+	use .pr to make a "fdlog.txt" file that summarizes the contacts etc. 
 	Using the program's info, you can submit your results. You're a hero and 
 	everyone loves ya. At the recap meeting give everyone funny certificates 
 	such as most contacts, least contacts, most points, prettiest radio, 
@@ -159,7 +159,7 @@ LOGGING LIKE A PRO:
 	
 	Many times the logging program will think you are getting fancy and try to be
 	fancy itself. If either of you are confused, just hit Escape to clear the 
-	entry and start over - try not to get to fancy. 
+	entry and start over - try not to get too fancy. 
 	
 
 COMMANDS: 
@@ -211,7 +211,7 @@ TROUBLESHOOTING:
 	  A new label for FDLog_Enhanced is the Network section. This label will now 
 	discribe your current network status with different colors. Grey shows if everything
 	is ok, Yellow will ask you if there is a problem, and Red displays if there IS a problem. 
-	The messages in FDLog_Enhanced have been renamed to be more discriptive but the issues below
+	The messages in FDLog_Enhanced have been renamed to be more descriptive but the issues below
 	are the same. 
 
 	  NO NODE    The node identification is missing. This is necessary
