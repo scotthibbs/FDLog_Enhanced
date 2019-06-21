@@ -2440,7 +2440,7 @@ def updatebb():
                 bandb[bm].bind("<Enter>", whosonfirst)
                 bandb[bm].bind("<Leave>", whosonsecond)
             else:
-                bc = 'darkorange'; sc = 'salmon'
+                bc = 'darkorange'; sc = 'red'
                 bandb[bm].bind("<Enter>", whosonfirst)
                 bandb[bm].bind("<Leave>", whosonsecond)
             bandb[bm].configure(background=bc, selectcolor=sc)
@@ -2464,7 +2464,7 @@ def updatebb():
     if ts == cltg:
         clc = 'palegreen'
     if ts > cltg:
-        clc = 'salmon'
+        clc = 'pink2'
     bandb['Class'].configure(text='Class %s/%s' % (ts, cltg), background=clc)
 
     vhc = 'gold'
@@ -2472,7 +2472,7 @@ def updatebb():
         vhc = 'palegreen'  # for 1D Class correction KD4SIR
         anytext = "VHF "
     if vh < 0:
-        vhc = 'salmon'
+        vhc = 'pink2'
         anytext = "VHF "
     if vh > vhfree:
         vhc = 'darkorange'  # 2 vhf is okay, only 1 is free...
@@ -2485,7 +2485,7 @@ def updatebb():
         gotatg = 0
     goc = 'gold'
     if go == gotatg: goc = 'palegreen'
-    if go > gotatg: goc = 'salmon'
+    if go > gotatg: goc = 'pink2'
     bandb['GOTA'].configure(text='GOTA %s/%s' % (go, gotatg), background=goc)
 
 def updateqct():
@@ -2500,8 +2500,8 @@ def updateqct():
         # Update for the operator OpQ - KD4SIR for fd 2014
         if operator == "":
             coin2 = "Operator"
-            opmb.config(text=coin2, background='salmon')
-            opds.config(text="<Select Operator>", background='salmon')
+            opmb.config(text=coin2, background='pink2')
+            opds.config(text="<Select Operator>", background='pink2')
         else:
             coin = exin(operator)
             if coin in qpop:
@@ -2515,8 +2515,8 @@ def updateqct():
         # Update for the logger LoQ - KD4SIR for fd 2014
         if logger == "":
             coil2 = "Logger"
-            logmb.config(text=coil2, background='salmon')
-            logds.config(text="<Select Logger>", background='salmon')
+            logmb.config(text=coil2, background='pink2')
+            logds.config(text="<Select Logger>", background='pink2')
         else:
             coil = exin(logger)
             if coil in qplg:
@@ -2563,10 +2563,10 @@ def BandButtons(w):
                 # indicatoron = 0 makes square button with text inside but doesn't work well on mac, with value 1 it makes a
                 # circle alongside the text and works on both so detect mac and change it for mac only
                 bandb[bm] = Radiobutton(master=w, text=bm, font=fdfont, background='lightgrey', indicatoron=mac, \
-                                        variable=sv, value=bm, selectcolor='salmon',
+                                        variable=sv, value=bm, selectcolor='pink2',
                                         command=lambda b=bm: (bandset(b)))
             else:
-                bandb[bm] = Radiobutton(master=w, text=bm, font=fdfont, background='salmon', indicatoron=mac, \
+                bandb[bm] = Radiobutton(master=w, text=bm, font=fdfont, background='pink2', indicatoron=mac, \
                                         variable=sv, value=bm, selectcolor='white',
                                         command=lambda b=bm: (bandset(b)))
             bandb[bm].grid(row=b, column=a, sticky=NSEW)
@@ -2837,9 +2837,9 @@ def setlog(logr):
 
 f1b = Frame(root, bd=0)  # oper logger power and network windows
 #  Changed the color of the user buttons to red until assigned - KD4SIR Scott Hibbs 7/14/2013
-ocolor = 'salmon'
-lcolor = 'salmon'
-pcolor = 'salmon'
+ocolor = 'pink2'
+lcolor = 'pink2'
+pcolor = 'pink2'
 # Add "who" button to display messagebox with operators on band when clicked.
 # Determined that this is not needed now that the mouse over report is cleaner.
 #opwho = Menubutton(f1b, text='WHO ', font=fdfont, relief='raised',
@@ -2902,7 +2902,7 @@ def ckpowr():
         pwr = "%s" % pwr
     power = pwr
     if power == "0":
-        pcolor = 'salmon'
+        pcolor = 'pink2'
         pwrmb.config(background=pcolor)
         pwrnt.config(background=pcolor)
         powcb.config(background=pcolor)
@@ -2914,7 +2914,7 @@ def ckpowr():
         powcb.config(background=pcolor)
         powlbl.config(background=pcolor)
     if power == "0n":
-        pcolor = 'salmon'
+        pcolor = 'pink2'
         pwrmb.config(background=pcolor)
         pwrnt.config(background=pcolor)
         powcb.config(background=pcolor)
@@ -2940,7 +2940,7 @@ def setpwr(p):
         powcb.deselect()
     power = p
     if power == "0":
-        pcolor = 'salmon'
+        pcolor = 'pink2'
         pwrmb.config(background=pcolor)
         pwrnt.config(background=pcolor)
         powcb.config(background=pcolor)
@@ -2952,7 +2952,7 @@ def setpwr(p):
         powcb.config(background=pcolor)
         powlbl.config(background=pcolor)
     if power == "0n":
-        pcolor = 'salmon'
+        pcolor = 'pink2'
         pwrmb.config(background=pcolor)
         pwrnt.config(background=pcolor)
         powcb.config(background=pcolor)
@@ -3676,7 +3676,7 @@ class Edit_Dialog(Toplevel):
             if changer == 0:
                 print 'Nothing changed. No action performed.'
                 self.crazytxt.set('nothing changed?')
-                self.crazyclr.set('salmon')
+                self.crazyclr.set('pink2')
                 self.crazylbl.configure(bg=self.crazyclr.get(), text=self.crazytxt.get())
                 error += 1
             if changer == 1:
@@ -3693,7 +3693,7 @@ class Edit_Dialog(Toplevel):
                 if qdb.dupck(newcall, newband):  # dup check for new data
                     print 'Edit is a DUPE. No action performed.'
                     self.crazytxt.set("This is a DUPE")
-                    self.crazyclr.set('salmon')
+                    self.crazyclr.set('pink2')
                     self.crazylbl.configure(bg=self.crazyclr.get(), text=self.crazytxt.get())
                     error += 1
                 else:
