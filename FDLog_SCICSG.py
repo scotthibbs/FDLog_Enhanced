@@ -55,7 +55,7 @@ W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Sc
 #               Future: Adding interoperability with other programs such as HRDeluxe Free,
 #               FLDigi, Rigserve etc if we can?
 
-prog = 'FDLog_SCICSG v2017_Field_Day2 \n' \
+prog = 'FDLog_Enhanced v2019-FD-WE7U\n' \
        'Copyright 2017 by South Central Indiana Communications Support Group \n' \
        'FDLog_SCICSG is under the GNU Public License v2 without warranty. \n' \
        'The original license file is in the folder. \n'
