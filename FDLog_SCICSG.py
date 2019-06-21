@@ -2162,7 +2162,7 @@ class NewParticipantDialog():
         initials = string.lower(self.initials.get())
         if not re.match(r'[a-zA-Z]{2,3}$', initials):
             # self.initials.delete(0,END)
-            self.initials.configure(bg='yellow')
+            self.initials.configure(bg='gold')
             self.initials.focus()
         else:
             self.initials.configure(bg='white')
@@ -2202,31 +2202,31 @@ class NewParticipantDialog():
             txtbillb.see(END)
             topper()
             self.initials.focus()
-            self.initials.configure(bg='yellow')
+            self.initials.configure(bg='gold')
         elif not re.match(r'[A-Za-z ]{4,20}$', name):
             txtbillb.insert(END, "error in name\n")
             txtbillb.see(END)
             topper()
             self.name.focus()
-            self.name.configure(bg='yellow')
+            self.name.configure(bg='gold')
         elif not re.match(r'([a-zA-Z0-9]{3,6})?$', call):
             txtbillb.insert(END, "error in call\n")
             txtbillb.see(END)
             topper()
             self.call.focus()
-            self.call.configure(bg='yellow')
+            self.call.configure(bg='gold')
         elif not re.match(r'([0-9]{1,2})?$', age):
             txtbillb.insert(END, "error in age\n")
             txtbillb.see(END)
             topper()
             self.age.focus()
-            self.age.configure(bg='yellow')
+            self.age.configure(bg='gold')
         elif not re.match(r'([a-zA-Z0-9]{4,20})?$', vist):
             txtbillb.insert(END, "error in title\n")
             txtbillb.see(END)
             topper()
             self.vist.focus()
-            self.vist.configure(bg='yellow')
+            self.vist.configure(bg='gold')
         else:
             # Enter the Participant in the dictionary
             initials
@@ -2281,7 +2281,7 @@ def setnode(new):
     node = string.lower(new)
     qdb.redup()
     renew_title()
-    lblnode.configure(text="My Node: %s" % node, font=fdfont, foreground='blue', background='light grey')
+    lblnode.configure(text="My Node: %s" % node, font=fdfont, foreground='royalblue', background='light grey')
     # Had to add the above so that the new lblnode could be updated. - Scott Hibbs KD4SIR Mar/28/2017
 
 def applyprop(e=''):
@@ -2436,11 +2436,11 @@ def updatebb():
                 bandb[bm].bind("<Enter>", lambda e: None)
                 bandb[bm].bind("<Leave>", lambda e: None)
             elif n == 1:
-                bc = 'yellow'
+                bc = 'gold'
                 bandb[bm].bind("<Enter>", whosonfirst)
                 bandb[bm].bind("<Leave>", whosonsecond)
             else:
-                bc = 'orange'; sc = 'red'
+                bc = 'darkorange'; sc = 'salmon'
                 bandb[bm].bind("<Enter>", whosonfirst)
                 bandb[bm].bind("<Leave>", whosonsecond)
             bandb[bm].configure(background=bc, selectcolor=sc)
@@ -2460,22 +2460,22 @@ def updatebb():
         ts = cl
     #ts = cl + max(0, vh-vhfree)  # total sta = class + excess vhf stations
     # Fixed VHF to reflect a free transmitter and warn if two vhf rigs are used. - Scott Hibbs KD4SIR 5/14/2014
-    clc = 'yellow'
+    clc = 'gold'
     if ts == cltg:
-        clc = 'green'
+        clc = 'palegreen'
     if ts > cltg:
-        clc = 'red'
+        clc = 'salmon'
     bandb['Class'].configure(text='Class %s/%s' % (ts, cltg), background=clc)
 
-    vhc = 'yellow'
+    vhc = 'gold'
     if vh - vhfree == 0:
-        vhc = 'green'  # for 1D Class correction KD4SIR
+        vhc = 'palegreen'  # for 1D Class correction KD4SIR
         anytext = "VHF "
     if vh < 0:
-        vhc = 'red'
+        vhc = 'salmon'
         anytext = "VHF "
     if vh > vhfree:
-        vhc = 'orange'  # 2 vhf is okay, only 1 is free...
+        vhc = 'darkorange'  # 2 vhf is okay, only 1 is free...
         anytext = "VHF taking HF "
     bandb['VHF'].configure(text='%s%s/%s' % (anytext, vh, vhfree), background=vhc)
 
@@ -2483,9 +2483,9 @@ def updatebb():
         gotatg = 1
     else:
         gotatg = 0
-    goc = 'yellow'
-    if go == gotatg: goc = 'green'
-    if go > gotatg: goc = 'red'
+    goc = 'gold'
+    if go == gotatg: goc = 'palegreen'
+    if go > gotatg: goc = 'salmon'
     bandb['GOTA'].configure(text='GOTA %s/%s' % (go, gotatg), background=goc)
 
 def updateqct():
@@ -2500,8 +2500,8 @@ def updateqct():
         # Update for the operator OpQ - KD4SIR for fd 2014
         if operator == "":
             coin2 = "Operator"
-            opmb.config(text=coin2, background='red')
-            opds.config(text="<Select Operator>", background='red')
+            opmb.config(text=coin2, background='salmon')
+            opds.config(text="<Select Operator>", background='salmon')
         else:
             coin = exin(operator)
             if coin in qpop:
@@ -2515,8 +2515,8 @@ def updateqct():
         # Update for the logger LoQ - KD4SIR for fd 2014
         if logger == "":
             coil2 = "Logger"
-            logmb.config(text=coil2, background='red')
-            logds.config(text="<Select Logger>", background='red')
+            logmb.config(text=coil2, background='salmon')
+            logds.config(text="<Select Logger>", background='salmon')
         else:
             coil = exin(logger)
             if coil in qplg:
@@ -2543,7 +2543,7 @@ def updateqct():
     if node == '':
         t = "NO NODE SELECTED"
     if t:
-        lblnet.configure(text=t, background='yellow')
+        lblnet.configure(text=t, background='gold')
     else:
         lblnet.configure(text="Network OK", background='light grey')
 
@@ -2563,10 +2563,10 @@ def BandButtons(w):
                 # indicatoron = 0 makes square button with text inside but doesn't work well on mac, with value 1 it makes a
                 # circle alongside the text and works on both so detect mac and change it for mac only
                 bandb[bm] = Radiobutton(master=w, text=bm, font=fdfont, background='light grey', indicatoron=mac, \
-                                        variable=sv, value=bm, selectcolor='red',
+                                        variable=sv, value=bm, selectcolor='salmon',
                                         command=lambda b=bm: (bandset(b)))
             else:
-                bandb[bm] = Radiobutton(master=w, text=bm, font=fdfont, background='red', indicatoron=mac, \
+                bandb[bm] = Radiobutton(master=w, text=bm, font=fdfont, background='salmon', indicatoron=mac, \
                                         variable=sv, value=bm, selectcolor='white',
                                         command=lambda b=bm: (bandset(b)))
             bandb[bm].grid(row=b, column=a, sticky=NSEW)
@@ -2819,7 +2819,7 @@ def setoper(op):
     # Adding red to the display - KD4SIR
     ocolor = 'light grey'
     opds.config(text=operator, background=ocolor)
-    opmb.config(background='yellow')
+    opmb.config(background='gold')
     saveglob()
 
 
@@ -2831,19 +2831,19 @@ def setlog(logr):
     logger = "%s: %s, %s, %s, %s" % (ini, name, call, age, vist)
     lcolor = 'light grey'
     logds.config(text=logger, background=lcolor)
-    logmb.config(background='yellow')
+    logmb.config(background='gold')
     saveglob()
 
 
 f1b = Frame(root, bd=0)  # oper logger power and network windows
 #  Changed the color of the user buttons to red until assigned - KD4SIR Scott Hibbs 7/14/2013
-ocolor = 'red'
-lcolor = 'red'
-pcolor = 'red'
+ocolor = 'salmon'
+lcolor = 'salmon'
+pcolor = 'salmon'
 # Add "who" button to display messagebox with operators on band when clicked.
 # Determined that this is not needed now that the mouse over report is cleaner.
 #opwho = Menubutton(f1b, text='WHO ', font=fdfont, relief='raised',
-#                   background='light grey', foreground='blue')
+#                   background='light grey', foreground='royalblue')
 #opwho.grid(row=0, column=0, sticky=NSEW)
 
 # Operator
@@ -2902,7 +2902,7 @@ def ckpowr():
         pwr = "%s" % pwr
     power = pwr
     if power == "0":
-        pcolor = 'red'
+        pcolor = 'salmon'
         pwrmb.config(background=pcolor)
         pwrnt.config(background=pcolor)
         powcb.config(background=pcolor)
@@ -2914,7 +2914,7 @@ def ckpowr():
         powcb.config(background=pcolor)
         powlbl.config(background=pcolor)
     if power == "0n":
-        pcolor = 'red'
+        pcolor = 'salmon'
         pwrmb.config(background=pcolor)
         pwrnt.config(background=pcolor)
         powcb.config(background=pcolor)
@@ -2940,7 +2940,7 @@ def setpwr(p):
         powcb.deselect()
     power = p
     if power == "0":
-        pcolor = 'red'
+        pcolor = 'salmon'
         pwrmb.config(background=pcolor)
         pwrnt.config(background=pcolor)
         powcb.config(background=pcolor)
@@ -2952,7 +2952,7 @@ def setpwr(p):
         powcb.config(background=pcolor)
         powlbl.config(background=pcolor)
     if power == "0n":
-        pcolor = 'red'
+        pcolor = 'salmon'
         pwrmb.config(background=pcolor)
         pwrnt.config(background=pcolor)
         powcb.config(background=pcolor)
@@ -2999,16 +2999,16 @@ f1b.grid(row=1, columnspan=2, sticky=NSEW)
 # Added wof label - KD4SIR Scott Hibbs Jan/19/2017
 # Added port label - KD4SIR Scott Hibbs Jan/19/2017
 # Network window
-lblnet = Label(f1b, text="Network Status", font=fdfont, foreground='blue', background='yellow')
+lblnet = Label(f1b, text="Network Status", font=fdfont, foreground='royalblue', background='gold')
 lblnet.grid(row=2, column=0, columnspan=9, sticky=NSEW)
 # Node window
-lblnode = Label(f1b, text="My Node: %s" % node, font=fdfont, foreground='blue', background='light grey')
+lblnode = Label(f1b, text="My Node: %s" % node, font=fdfont, foreground='royalblue', background='light grey')
 lblnode.grid(row=2, column=9, columnspan=1, sticky=NSEW)
 # Whos on First Window to display operators on bands
-# lblwof = Label(f1b, text="", font=fdfont, foreground='blue', background='light grey')
+# lblwof = Label(f1b, text="", font=fdfont, foreground='royalblue', background='light grey')
 # lblwof.grid(row=2, column=0, columnspan=9, sticky=NSEW)
 # Port window
-# lblport = Label(f1b, text="Port: %s" % port_base, font=fdfont, foreground='blue', background='light grey')
+# lblport = Label(f1b, text="Port: %s" % port_base, font=fdfont, foreground='royalblue', background='light grey')
 # lblport.grid(row=3, column=9, columnspan=1, sticky=NSEW)
 # log window
 logw = Text(root, takefocus=0, height=11, width=80, font=fdmfont,
@@ -3028,7 +3028,7 @@ txtbillb.configure(yscrollcommand=scrollt.set)
 txtbillb.grid(row=3, column=0, sticky=NSEW)
 scrollt.grid(row=3, column=1, sticky=NS)
 root.grid_rowconfigure(3, weight=1)
-logw.tag_config("b", foreground="blue")
+logw.tag_config("b", foreground="royalblue")
 logw.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", ("b"))
 logw.insert(END, "                            DATABASE DISPLAY WINDOW\n", ("b"))
 logw.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", ("b"))
@@ -3550,7 +3550,7 @@ class Edit_Dialog(Toplevel):
         self.chodate = qdb.byid[s].date
         self.be = Entry(top, width=5, font=fdbfont)
         self.be.grid(row=3, column=1, sticky=W, padx=3, pady=2)
-        # self.be.configure(bg='yellow') #test yes works
+        # self.be.configure(bg='gold') #test yes works
         self.be.insert(0, qdb.byid[s].band)
         self.choband = qdb.byid[s].band
         self.ce = Entry(top, width=11, font=fdbfont)
@@ -3599,7 +3599,7 @@ class Edit_Dialog(Toplevel):
             newdate = t + '00'[:13 - len(t)]
             #print newdate
         else:
-            self.de.configure(bg='yellow')
+            self.de.configure(bg='gold')
             error += 1
         t = self.be.get().strip()  # band mode
         if self.choband != t:
@@ -3611,7 +3611,7 @@ class Edit_Dialog(Toplevel):
             newband = t
             #print newband
         else:
-            self.be.configure(bg='yellow')
+            self.be.configure(bg='gold')
             error += 1
         t = self.ce.get().strip()  # call
         if self.chocall != t:
@@ -3623,7 +3623,7 @@ class Edit_Dialog(Toplevel):
             newcall = t
             #print newcall
         else:
-            self.ce.configure(bg='yellow')
+            self.ce.configure(bg='gold')
             error += 1
         t = self.re.get().strip()  # report
         if self.chorept != t:
@@ -3635,7 +3635,7 @@ class Edit_Dialog(Toplevel):
             newrept = t
             #print newrept
         else:
-            self.re.configure(bg='yellow')
+            self.re.configure(bg='gold')
             error += 1
         t = self.pe.get().strip().lower()  # power
         if self.chopowr != t:
@@ -3647,7 +3647,7 @@ class Edit_Dialog(Toplevel):
             newpowr = t
             #print newpowr
         else:
-            self.pe.configure(bg='yellow')
+            self.pe.configure(bg='gold')
             error += 1
         t = self.oe.get().strip().lower()  # operator
         if self.chooper != t:
@@ -3658,7 +3658,7 @@ class Edit_Dialog(Toplevel):
             newopr = t
             #print newopr
         else:
-            self.oe.configure(bg='yellow')
+            self.oe.configure(bg='gold')
             error += 1
         t = self.le.get().strip().lower()  # logger
         if self.chologr != t:
@@ -3669,14 +3669,14 @@ class Edit_Dialog(Toplevel):
             newlogr = t
             #print newlogr
         else:
-            self.le.configure(bg='yellow')
+            self.le.configure(bg='gold')
             error += 1
         if error == 0:
             # There was no dupe check on the edited qso info. This was added. Scott Hibbs Jul/01/2016
             if changer == 0:
                 print 'Nothing changed. No action performed.'
                 self.crazytxt.set('nothing changed?')
-                self.crazyclr.set('red')
+                self.crazyclr.set('salmon')
                 self.crazylbl.configure(bg=self.crazyclr.get(), text=self.crazytxt.get())
                 error += 1
             if changer == 1:
@@ -3693,7 +3693,7 @@ class Edit_Dialog(Toplevel):
                 if qdb.dupck(newcall, newband):  # dup check for new data
                     print 'Edit is a DUPE. No action performed.'
                     self.crazytxt.set("This is a DUPE")
-                    self.crazyclr.set('red')
+                    self.crazyclr.set('salmon')
                     self.crazylbl.configure(bg=self.crazyclr.get(), text=self.crazytxt.get())
                     error += 1
                 else:
