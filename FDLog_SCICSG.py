@@ -2145,7 +2145,7 @@ class NewParticipantDialog():
         Label(fr1, text='Age', font=fdbfont).grid(row=3, column=0, sticky=W)
         s.age = Entry(fr1, width=2, font=fdbfont)
         s.age.grid(row=3, column=1, sticky=W)
-        Label(fr1, text='Vstr Title', font=fdbfont).grid(row=4, column=0, sticky=W)
+        Label(fr1, text='Visitor Title', font=fdbfont).grid(row=4, column=0, sticky=W)
         s.vist = Entry(fr1, width=20, font=fdbfont)
         s.vist.grid(row=4, column=1, sticky=W)
         fr2 = Frame(s.t)
