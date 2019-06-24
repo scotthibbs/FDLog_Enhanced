@@ -72,7 +72,7 @@ Your donations are appreciated to support Amateur Radio.
 """
 
 version = "v18"
-fontsize = 14
+fontsize = 10
 fontinterval = 2
 typeface = 'Courier 10 pitch'
 

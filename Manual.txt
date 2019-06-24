@@ -113,7 +113,11 @@ PROGRAM SETUP:
 	or two. If you forget this step, the program will spend time adjusting it's 
 	time to the others. Start the program and set the name and year's digits. 
 	Answer NO to the setup question. If connected to the network, it should see 
-	your computer and grab all it's information. Rinse and Repeat for the others. 
+	your computer and grab all it's information. Rinse and Repeat for the others.
+    Make sure to allow the ports it uses through the firewall on each machine,
+    or temporarily drop the firewall entirely if you're at no risk from hackers
+    at the Field Day site (For instance no internet access). Ports used at one
+    installation were 7373 and 7374, yours may vary.
 
 	Before field day ends, make sure your computer is the last to be turned off. 
 	This is so you have the most accurate log entries in case someone is editing 
