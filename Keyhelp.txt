@@ -16,7 +16,7 @@ In a Nutshell:
 kd4sir 1d ky <Enter> (Will log a contact)
 
 Optionally you can: 
-<suffix><space>                 will look up dups by suffix
+<suffix><space>                 will look up dupes by suffix
 <ESC>                           to abort the entry or continue with 
 <prefix><space>                 to add prefix to previous suffix
 
