@@ -1,13 +1,13 @@
 # FDLog_Enhanced
 This is a complete Field Day group logging solution!
-Download this on all computers (Windows, Mac, Linux including Raspberry Pis) and start logging. 
+Download this on all computers (Windows, Mac, Linux including Raspberry Pi's) and start logging. 
 Have everyone sign in when they visit. We have our visitors log for us because it is so simple.
 
 Log entry is just three simple things : KD4SIR 1D IN
 
 Tracks Dupes, shows previous contacts, see who is on which radio and which band, 
 who is contesting and who is logging, how many contacts they have made etc. 
-It shares the database to all computers and tracks operations so everyone can see and co-operate.   
+It shares the database to all computers and tracks operations so everyone can see and cooperate.   
 
 Download a stable release from the release section to enjoy! 
 
@@ -54,7 +54,7 @@ FDLog_SCICSG             Apr 9, 2017               v2017-FD
 This is our stable 2017 Field Day Release. 
 
 Found this didn't work on many versions of Linux. 
-Ubuntu (including Mint, Desbian, Raspian etc) all gave the
+Ubuntu (including Mint, Debian, Raspian etc) all gave the
 loopback address in the program. This is fixed - You can now 
 use your Raspberry Pi on Field Day! 
 
@@ -67,7 +67,7 @@ FDLog_SCICSG             Apr 1, 2017               v2017-beta-7
 This will become our stable 2017 Field Day Release. 
 
 I am in need of someone to double check that it works correctly
-using a Mac and/or a Linux pc. 
+using a Mac and/or a Linux PC. 
 
 I have checked it with Windows 10, Windows 7 and using various 
 versions of python from 2.7.5 to the current release of 2.7.13. 
@@ -82,10 +82,10 @@ FDLog_SCICSG             Apr 1, 2017               v2017-beta-6
 
 2017-beta-6 (unreleased)
   + Fixed who's on the bands reporting - now nice print out (from .ba report). 
-  + Fixed freezing for the gota station.. gota is now gotanode.
+  + Fixed freezing for the GOTA station.. GOTA is now gotanode.
   + Changed clock slew to a bigger number (0.75931) 
   + Class reporting should be correct now. Free VHF too. (reworked)
-  + Protected against putting the fdcall and gota call in the log. 
+  + Protected against putting the fdcall and GOTA call in the log. 
   + Fixed the .node command - discovered it was broken.
   + Updated all the documentation files. 
   + Removed the wireless information menu - no longer needed.
@@ -153,7 +153,7 @@ This will be tested to see if it will be our 2017 stable version for field day t
   * Removed bug that would not allow edits if the call and band are the same.
      Now can't edit a deleted log entry, and can't edit unless it is in the log.
       -- Need to display the latest log entry if an entry has been edited previously.
-  * Removed the extra lines or labels in the qui for the port and for the list of nodes on
+  * Removed the extra lines or labels in the GUI for the port and for the list of nodes on
      on each band. - reverted back to the way it was for now but added the port
      to the header.
 
@@ -177,10 +177,10 @@ back to a simple time master like before. Internet time will probably be kept..
 but our focus will be on new features.
 
 Working on these items:
-   *  Adding a Dupe check when editing qsos. Thanks to K9JAJ Jeff Jones for the idea.
+   *  Adding a Dupe check when editing QSO's. Thanks to K9JAJ Jeff Jones for the idea.
         Bug: This will not let you edit details if the call and band are the same.
    *  At some point I broke the Class updating by one when clicking on an HF band. 
-   *  Added a line in the gui to place the port and users on bands in, but changed my mind.
+   *  Added a line in the GUI to place the port and users on bands in, but changed my mind.
         If there are a lot of users it will not fit on this line. popup or back to the bottom. 
        Still need to remove it. 
 
@@ -205,7 +205,7 @@ using this software, so we learned a few things because we knew what to look for
      * Edited entries are counting in the operator contact count given by the program. (Thanks to K9JAJ!) <br />
      * Really need to place the mouse over data about which operators are on what bands to a temporary pop up.<br />
      * One operator's firewall started up and blocked outgoing data (he was receive only). 
-        Once corrected his data was sent to others. It didn't seem to be a big deal that his data wasn't synced right away 
+        Once corrected his data was sent to others. It didn't seem to be a big deal that his data wasn't sync'ed right away 
         since his time was correct. Should we continue the "ultra" precise time function in beta 4? <br /><br />
 Anyway, I was ready to use another program for this field day since I wasn't ready with updates, but my group liked the program
 and wanted to use last years edition. I now have renewed excitement to continue adding functionality to this program.
@@ -216,7 +216,7 @@ Please help. Scott KD4SIR
 *******************************************************************
 FDLog_SCICSG             Sep 3, 2015      notes on beta 4 (unreleased) 
 
-Major overhaul to the clock feature underway. Before the GUI displays and right after the log is checked/loaded. If the log is new it will ask if you need to set up the event. After a series of questions (name, club call etc) it will check for an accurate time source (gps or internet), if found it will ask to set this first computer as time master. Clock skewing till take place before the gui displays. If you don't set up the event, the program will check for a time master and then skew the clock once a time broadcast is received. Once the time is accurate, it will display the gui.
+Major overhaul to the clock feature underway. Before the GUI displays and right after the log is checked/loaded. If the log is new it will ask if you need to set up the event. After a series of questions (name, club call etc) it will check for an accurate time source (GPS or Internet), if found it will ask to set this first computer as time master. Clock skewing till take place before the GUI displays. If you don't set up the event, the program will check for a time master and then skew the clock once a time broadcast is received. Once the time is accurate, it will display the GUI.
 
 I got it roughly written except for the skewing...
 Again your help is needed!
@@ -248,20 +248,20 @@ fork to a repository.
 
 The code here is the combined code from our v2015-beta-1 and 
 Alan Biocca's latest v4-1-152i 2014/05/26. This version actually
-had the updated clock function. But it also added tcp/udp.
+had the updated clock function. But it also added TCP/UDP.
 
-I chose not to bring in his code for tcp/udp to this version. I don't
+I chose not to bring in his code for TCP/UDP to this version. I don't
 think it adds to the programs primary function. I don't see operators
-connecting over the internet. The 152i still has to broken sqlite and
-with the tcp/udp it is further broken at the moment. 
+connecting over the Internet. The 152i still has to broken sqlite and
+with the TCP/UDP it is further broken at the moment. 
 
 New in this version is the new clock function. Alan's solution is to 
-make a gps clock to coincide with the program. FDLog now looks for 
-this clock before starting. I don't see hams building a gps clock
+make a GPS clock to coincide with the program. FDLog now looks for 
+this clock before starting. I don't see hams building a GPS clock
 to make a program function better. I'm leaving it in for now. 
  
 My next task is to make this stable. Then we will evaluate sqlite, and
-maybe by then we will have a working tcp/udp version to evaluate as well. 
+maybe by then we will have a working TCP/UDP version to evaluate as well. 
 
 I am in need of volunteers to expand this program. 
 
@@ -270,7 +270,7 @@ for our digital folks. It would be nice to have FDLog automatically add
 contacts from that program when they are made. 
 
 2. It would be nice if this program was to catch up with Writelog in all 
-the automated features it offers. Like cw and voice keying first. 
+the automated features it offers. Like CW and voice keying first. 
 
 At this rate we will have a great Field Day stable version for 2016.
 
@@ -292,7 +292,7 @@ for our digital folks. It would be nice to have FDLog automatically add
 contacts from that program when they are made. 
 
 2. It would be nice if this program was to catch up with Writelog in all 
-the automated features it offers. Like cw and voice keying first. 
+the automated features it offers. Like CW and voice keying first. 
 
 OH, I'm doing my version numbering different. I'd like to see a stable
 release issued every year. So we will start with v2015-beta-1 etc. Then in 
