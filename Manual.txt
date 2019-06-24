@@ -32,7 +32,7 @@ SHORT HISTORY AND INTRODUCTION:
 	released as open source with the GNU License. FDLog is still in use by the High Sierra 
 	Field Day Group and maintained by Mr Biocca at www.fdlog.info. 
 
-	My name is Scott Hibbs KD4SIR. I found FDLog on the internet and started using it
+	My name is Scott Hibbs KD4SIR. I found FDLog on the Internet and started using it
 	for Field Day 2012. After using FDLog for Field Day 2013, the South Central Indiana 
 	Communications Support Group (SCICSG - we pronounce it scuzzy) wanted to know their 
 	individual scores and wanted a better way to see who was on what bands. When our 
@@ -59,10 +59,10 @@ WHY LOVE FDLOG_ENHANCED?:
 	crash - like Zed is dead baby - and Field Day goes on. Add a new computer to 
 	the network and all the other computers will catch the new one up very quickly. 
 
-	Because it is Python 2.7, all you need is a PC - Linux, Mac, any Windoze, RaspberryPi - 
+	Because it is Python 2.7, all you need is a PC - Linux, Mac, any Windows, RaspberryPi - 
 	we don't care - doesn't matter. 
 	
-	Oh... Did you notice that it is HALF THE SIZE of a one page pdf file? (the ARRL Band Chart)?
+	Oh... Did you notice that it is HALF THE SIZE of a one page PDF file? (the ARRL Band Chart)?
 	
 	If I didn't HAVE you when I said, "free", "Zed is dead", and "I really don't care what 
 	kind you have", maybe this program isn't for you. :)
@@ -81,9 +81,9 @@ PROGRAM SETUP:
 	I've had to buy cheap routers the morning of - I got a collection.
 
 	Find a blank USB Flash Drive. You will need this program folder, and a 
-	copy of python 2.7 from python.org for windows, mac, & linux on a flash drive.
+	copy of python 2.7 from python.org for windows, Mac, & Linux on a flash drive.
 	Python because someone will not have python installed and you may be 
-	offline - without internet. Once the USB flash drive is created, copy 
+	offline - without Internet. Once the USB flash drive is created, copy 
 	the program folder to your desktop. It is a good habit to check the time
 	before starting the program, because this program can not change the 
 	computer's clock. We start habits now. Check the clock. Now. 
@@ -101,7 +101,7 @@ PROGRAM SETUP:
 	Set up the new router because you left yours at home. Also note many
 	public guest router networks will not allow computers to talk to each other. 
 	Start YOUR computer (Time Master) before the others and using an accurate 
-	time source - your cell phone, gps clock, atomic clock, change the time on the 
+	time source - your cell phone, GPS clock, atomic clock, change the time on the 
 	computer to match this time source to within a second or two. Connect to
 	the router network if wireless (you could also be wired). Start the 
 	program. If you need to change the class or other information you added
@@ -116,7 +116,7 @@ PROGRAM SETUP:
 	your computer and grab all it's information. Rinse and Repeat for the others.
     Make sure to allow the ports it uses through the firewall on each machine,
     or temporarily drop the firewall entirely if you're at no risk from hackers
-    at the Field Day site (For instance no internet access). Ports used at one
+    at the Field Day site (For instance no Internet access). Ports used at one
     installation were 7373 and 7374, yours may vary.
 
 	Before field day ends, make sure your computer is the last to be turned off. 
@@ -213,8 +213,8 @@ COMMANDS:
 TROUBLESHOOTING:
 
 	  A new label for FDLog_Enhanced is the Network section. This label will now 
-	discribe your current network status with different colors. Grey shows if everything
-	is ok, Yellow will ask you if there is a problem, and Red displays if there IS a problem. 
+	describe your current network status with different colors. Grey shows if everything
+	is OK, Yellow will ask you if there is a problem, and Red displays if there IS a problem. 
 	The messages in FDLog_Enhanced have been renamed to be more descriptive but the issues below
 	are the same. 
 
@@ -231,7 +231,7 @@ TROUBLESHOOTING:
 				 This is usually the last two digits of the year. 
 				 
 	  SNDP FAIL  The Packet Sender has received an error from the operating
-				 sytem. This may occur when there is a network problem.
+				 system. This may occur when there is a network problem.
 				 Restarting the program or rebooting may cure it.
 				 
 	  RCVP FAIL  In FDLog_Enhanced this is called "alone?" Ten seconds have 
@@ -268,4 +268,4 @@ Thanks for using the program,
 Scott Hibbs KD4SIR
 scotthibbs at gmail.com 
 
-eof
+EOF
