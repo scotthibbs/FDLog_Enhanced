@@ -121,7 +121,7 @@ PROGRAM SETUP:
 
 	Before field day ends, make sure your computer is the last to be turned off. 
 	This is so you have the most accurate log entries in case someone is editing 
-	thier log after the contest. 
+	their log after the contest. 
 	
 	After Field Day:
 	
