@@ -8,7 +8,7 @@ GITHUB README:
 	released as open source with the GNU License. The original FDLog is still in 
 	use by the High Sierra Field Day Group and maintained by Mr Biocca at 			www.fdlog.info. 
 
-	My name is Scott Hibbs KD4SIR. I found FDLog on the internet and started using it
+	My name is Scott Hibbs KD4SIR. I found FDLog on the Internet and started using it
 	for Field Day 2012. In love with it, I immediately started learning Python. After
 	using FDLog for Field Day 2013, the South Central Indiana Communications Support
 	Group (SCICSG - we pronounce it scuzzy) wanted to know their individual scores and 
@@ -29,7 +29,7 @@ ITEMS WE ARE WORKING ON NEXT:
 		* Change the visitor/participant entry so the initials are not first.
 		* copy/paste and up arrow (to reprint the last entry) in the program.
 		* Add more scoring: 
-			complex gota points, youth, information table, official visitors, 
+			complex GOTA points, youth, information table, official visitors, 
 			max 20 radios, power multipliers, educational activity... 
 		* An Information Table node that will allow sign in, show our group score, 
 			the top 5 operators, the top 5 visitors, Worked All States etc.
