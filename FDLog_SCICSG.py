@@ -3765,7 +3765,7 @@ net.bcast_now()  # push band out
 time.sleep(0.2)
 saveglob()  # save globals
 print "  globals saved"
-print "\n\nFDLog is shut down, you should close this console window now"
+print "\n\nFDLog has shut down."
 time.sleep(0.5)
 # os._exit(1)  # kill the process somehow?
 exit(1)
