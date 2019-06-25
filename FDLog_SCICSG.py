@@ -1,5 +1,4 @@
 #!/usr/bin/python 
-# NOTE for Linux users: you must convert the line endings from windows to linux
 import os
 import time
 import string
@@ -14,7 +13,7 @@ from Tkinter import Tk, END, NORMAL, DISABLED, re, sys, Toplevel, Frame, Label, 
 W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, Checkbutton, RAISED, IntVar
 
 
-# This needs to be tested on different networks and cross platform before released.
+# This needs to be tested on different networks and cross platform.
 # 
 # KD4SIR - Will probably work on copy/paste functionality
 # KC7SDA - Will check network and platform compatibility and upper/lower case entry 
@@ -23,7 +22,7 @@ W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Sc
 
 # Originally "WB6ZQZ's Field Day Logging Program" written in 1984.
 # Alan Biocca (as WB6ZQZ) ported it to python with GNU in 2002. 
-# Our code starts from: 
+# Our (SCICSG) code starts from: 
 # FDLog 1-149-2 2011/07/11
 # Copyright 2002-2013 by Alan Biocca (W6AKB) (www.fdlog.info)
 # FDLog is distributed under the GNU Public License
@@ -37,12 +36,12 @@ W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Sc
 # Our Goals are twofold:
 #       1: Improve on fdlog faster with open and directed collaboration.
 #               This is now on github as FDLog_Enhanced.
-#       2: Increase user friendlyness (GUI) and inter-operability with other GNU programs.
+#       2: Increase user friendliness (GUI) and inter-operability with other GNU programs.
 #               Future: Adding interoperability with other programs such as HRDeluxe Free,
 #               FLDigi, Rigserve etc if we can?
 
 prog = 'FDLog_Enhanced v2019-FD-WE7U\n' \
-       'Copyright 2017 by South Central Indiana Communications Support Group \n' \
+       'Copyright 2017-2018 by South Central Indiana Communications Support Group \n' \
        'FDLog_SCICSG is under the GNU Public License v2 without warranty. \n' \
        'The original license file is in the folder. \n'
 print prog
@@ -51,7 +50,7 @@ about = """
 
 FDLog_Enhanced can be found on www.github.com
 GNU Public License V2 - in program folder.
-Copyright 2018 South Central Indiana Communications Support Group
+Copyright 2017-2018 South Central Indiana Communications Support Group
 Visit us at www.scicsg.org
 Your donations are appreciated to support Amateur Radio.
 
@@ -159,14 +158,13 @@ class clock_class:
         elif adj < -rate:
             adj = -rate
         self.offset += adj
-        ## or self.offset = float(database.get('tmast',0)) instead of the line above.
+        # or self.offset = float(database.get('tmast',0)) instead of the line above.
         self.adjusta -= adj
         print "Slewing clock", adj, "to", self.offset
 
 
 mclock = clock_class()
 
-# kc7sda - code cleanup and modify (refactor), added wfd support
 def initialize():
     k = "" # keyboard input
     z = "" # answer counter
@@ -199,7 +197,7 @@ def initialize():
             renew_title()
             print "Have a nice Field Day!"
         if k == "w":
-            kfd = 2 #used later to skip grid square question.SAH
+            kfd = 2 #used later to skip grid square question
             globDb.put('contst', "WFD")
             qdb.globalshare('contst', "WFD")  # global to db
             renew_title()
@@ -210,7 +208,7 @@ def initialize():
             renew_title()
             print "Enjoy the VHF contest!"
         # Name of the club or group
-        print "What is the name of your club or group?"
+        print "What is the NAME of your club or group?"
         k = string.strip(sys.stdin.readline())
         while k == "":
             print "Please type the name of your club or group"
@@ -270,7 +268,7 @@ def initialize():
             while k == "":
                 print "Please type the grid square. (For FD type none)"
                 k = string.strip(sys.stdin.readline())
-                k = k.upper() # kc7sda = changed the init so the grid square will be cap
+                k = k.upper() # changed the init so the grid square will be cap
             else:
                 globDb.put('grid', k)
                 qdb.globalshare('grid', k)  # global to db
@@ -576,7 +574,7 @@ class qsodb:
                 i.date, freq, mod, date, tim, mycall, mygrid, call, grid))
         l.sort()  # sort data with prepended date.time
         for i in l: print i[13:]  # rm sort key date.time
-# kc7sda - added support for winter field day, this outputs the cabrillo format that is posted on their website. 
+# added support for winter field day, this outputs the cabrillo format that is posted on their website. 
     def winter_fd(self):
         "output Winter Field day QSO data in cabrillo format:"
         #vars:
@@ -764,7 +762,7 @@ class qsodb:
         if self.seq == current + 1:  # filter out dup or nonsequential
             self.byid["%s.%s" % (self.src, self.seq)] = self
             self.hiseq[self.src] = current + 1
-            ##            if debug: print "todb:",self.src,self.seq
+            #            if debug: print "todb:",self.src,self.seq
             r = self
         elif self.seq == current:
             if debug: print "dup sequence log entry ignored"
@@ -805,7 +803,7 @@ class qsodb:
         for i in c.values() + g.values():
             if re.search('sat', i.band): sat.append(i)
             if 'n' in i.powr: nat.append(i)
-            # stop ignoring above 100 q's per oper per new gota rules. 6/05 akb
+            # stop ignoring above 100 q's per oper per new gota rules
             # GOTA q's stop counting over 400 (500 in 2009)
             if i.src == 'gotanode':  # analyze gota limits
                 qpgop[i.oper] = qpgop.get(i.oper, 0) + 1
@@ -934,7 +932,7 @@ class qsodb:
             rept = m.group(7)
             stat = 0
             if m.group(1) > '' or xcall > '': stat = 1
-            ##            print; print "tm [%s] xcall [%s] rept [%s]"%(tm,xcall,rept)
+            #            print; print "tm [%s] xcall [%s] rept [%s]"%(tm,xcall,rept)
             if tm > '':
                 stat = 0
                 m = re.match(r'([0-3]([0-9]([.]([0-5]([0-9]([0-5]([0-9])?)?)?)?)?)?)?$', tm)
@@ -1163,7 +1161,7 @@ class node_info:
         for i in self.nodinfo.values():
             if i.age < 999:
                 i.age += 1
-                # if debug: print "ageing nodinfo",i.fnod,i.nod,i.bnd,i.age
+                # if debug: print "aging nodinfo",i.fnod,i.nod,i.bnd,i.age
             if i.age > 55 and i.bnd:
                 print t, "age out info from", i.fnod, "about", i.nod, "on", i.bnd, "age", i.age
                 i.bnd = ""
@@ -1271,7 +1269,7 @@ class netsync:
         """set net port"""
         self.port = useport
         self.skt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # send socket
-        self.skt.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # Erics linux fix
+        self.skt.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # Eric's linux fix
         self.skt.bind((self.my_addr, self.port + 1))
 
     def setauth(self, newauth):
@@ -1443,7 +1441,7 @@ class global_data:
             if len(value) > i.maxl:  # too long
                 return "error - value too long: %s = %s" % (name, value)
             if name == 'grid':
-                value = value.upper() # kc7sda - added to properly format grid (ie CN88 not cn88)
+                value = value.upper() # added to properly format grid (ie CN88 not cn88)
             if not re.match(i.okg, value):  # bad grammar
                 return "set error - invalid value: %s = %s" % (name, value)
         if timestamp > i.ts:  # timestamp later?
@@ -1470,8 +1468,8 @@ class global_data:
         l.sort()
         viewtextl(l)
 
-# kc7sda - modifed  the sect setting regex to accept both lower and upper case
-# kc7sda - added additional form fields (also fixed 'from' to 'form') for wfd NOTE: set commands have a max length of 6!
+# modifed  the sect setting regex to accept both lower and upper case
+# added additional form fields (also fixed 'from' to 'form') for wfd NOTE: set commands have a max length of 6!
 gd = global_data()
 for name, desc, default, okre, maxlen in (
         ('class', '<n><A-F>       FD class (eg 2A)', '2A', r'[1-9][0-9]?[a-fihoA-FIHO]$', 3),
@@ -2369,7 +2367,7 @@ def viewwasrpt():
 def updatebb():
     """update band buttons"""
     # Added Who's on the bands functionality with a mouse over event
-    # Tried and tried to get wof to return only one result for the mouse over. If you can, you're awesome! -Scott
+    # Tried and tried to get wof to return only one result for the mouse over. If you can, you're awesome!
     global wof
     r, cl, vh, go = net.si.nod_on_bands()
     anytext = "VHF "
@@ -2464,7 +2462,6 @@ def updatebb():
 
 def updateqct():
     "update contact count"
-    #function reworked in time for field day 2014
     dummy, dummy, qpop, qplg, dummy, dummy, dummy, dummy, cwq, digq, fonq, dummy, gotaq, dummy, dummy = \
         qdb.bandrpt()  # xx reduce processing here
     for i, j in (('FonQ', 'Phone %5s' % fonq),
@@ -2618,7 +2615,7 @@ if node == "":
     print "  (7 characters}"
     k = string.lower(string.strip(sys.stdin.readline())[:8])
     if len(k) == 8:
-        print "That's to many.. (Marc? is that you?)" # Thanks to Marc Fountain K9MAF for the correction.
+        print "That's too many.. (Marc? is that you?)" # Thanks to Marc Fountain K9MAF for the correction.
         k = k[:7]
     z = len(k)
     if k != 'gota':
@@ -2680,7 +2677,7 @@ saveglob()
 print "Time Difference Window (tdwin):", tdwin, "seconds"
 print "Starting GUI setup"
 root = Tk()  # setup Tk GUI
-# root.withdraw()  # This was removed in the last beta without explaination
+# root.withdraw()  # This was removed in the last beta without explanation
 menu = Menu(root)
 root.config(menu=menu)
 filemenu = Menu(menu, tearoff=0)
@@ -2753,11 +2750,6 @@ for g in range(0, 2400, 100):
 resourcemenu.add_command(label="Time Conversion Chart", command=lambda: viewtextv(tzchart, "Time Conversion Chart"))
 helpmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Help", menu=helpmenu)
-# Basically reworked the whole menu section
-# Removed duplicate help sources and files. Rewrote documentation
-# Renamed fdlogman to Manual to give distance from name of program
-# Removed "getting started" from code to external text file
-# Removed Wireless Network as it is not needed
 helpmenu.add_command(label="Quick Help", command=lambda: viewtextf('Keyhelp.txt'))
 helpmenu.add_command(label="Set Commands", command=gd.sethelp)
 helpmenu.add_command(label="The Manual", command=lambda: viewtextf('Manual.txt', "Manual"))
@@ -2849,7 +2841,7 @@ def buildmenus():
     l = participants.values()
     l.sort()
     for i in l:
-        # I had to take out the $ which looks for the end of value
+        # had to take out the $ which looks for the end of value
         # Decided non-hams can be in operator field but will check for license before logging
         # m = re.match(r'[a-z0-9]+, [a-zA-Z ]+, ([a-z0-9]+)',i)
         #if m: opdsu.add_command(label=i, command=lambda n=i: (setoper(n)))
@@ -2943,7 +2935,6 @@ pwrmb = Menubutton(f1b, text="Power", font=fdfont, relief='raised',
 pwrmb.grid(row=0, column=6, sticky=NSEW)
 pwrmu = Menu(pwrmb, tearoff=0)
 pwrmb.config(menu=pwrmu, direction='below')
-# rearranged this menu
 pwrmu.add_command(label='     0 Watts', command=lambda: (setpwr('0')))
 pwrmu.add_command(label='     5 Watts', command=lambda: (setpwr('5')))
 pwrmu.add_command(label='    50 Watts', command=lambda: (setpwr('50')))
@@ -2967,10 +2958,6 @@ powcb = Checkbutton(f1b, text="Natural", variable=natv, command=ckpowr,
 powcb.grid(row=0, column=9, sticky=NSEW)
 setpwr(power)
 f1b.grid(row=1, columnspan=2, sticky=NSEW)
-# Added Network label
-# Added Node label
-# Added wof label
-# Added port label
 # Network window
 lblnet = Label(f1b, text="Network Status", font=fdfont, foreground='royalblue', background='gold')
 lblnet.grid(row=2, column=0, columnspan=9, sticky=NSEW)
@@ -3047,7 +3034,7 @@ else:
 print "To change system time, stop FDLog, change the time or zone, then restart"
 print
 # These root commands were removed without an explanation in the beta.
-# but I'm leaving them in.
+# but will leave them in.
 root.update()
 root.deiconify()
 net.start()  # start threads
@@ -3148,7 +3135,6 @@ def proc_key(ch):
             kbuf = ""
             txtbillb.insert(END, '\n')
             return
-        # This section was reworked and added from 152i
         pwr, s = testcmd(".pow", r"[0-9]{1,4}n?", power)
         if s is True:
             power = pwr
@@ -3324,7 +3310,7 @@ def proc_key(ch):
                             if clas in rept1:
                                 txtbillb.insert(END, "\n 1D to 1D contacts are logged, but zero points! \n")
                                 topper()
-                        # kc7sda - check the report for valid fd or wfd classes:
+                        # check the report for valid fd or wfd classes:
                         # note according to the cheat sheet, \d is a digit
                         reptclass, dummy = rept.split(" ")
                         m = ""
@@ -3460,7 +3446,7 @@ def proc_key(ch):
 def kevent(event):
     "keyboard event handler"
     global goBack
-    ##    print "event '%s' '%s' '%s'"%(event.type,event.keysym,event.keysym_num)
+    #    print "event '%s' '%s' '%s'"%(event.type,event.keysym,event.keysym_num)
     k = event.keysym_num
     if 31 < k < 123:  # space to z
         proc_key(chr(event.keysym_num))
@@ -3472,7 +3458,7 @@ def kevent(event):
         proc_key('\x1b')
     elif k == 65293:  # return
         proc_key('\r')
-    txtbillb.see(END)  # insure that it stays in view
+    txtbillb.see(END)  # Ensure that it stays in view
     return "break"  # prevent further processing on kbd events
 
 
@@ -3522,7 +3508,7 @@ class Edit_Dialog(Toplevel):
         self.chodate = qdb.byid[s].date
         self.be = Entry(top, width=5, font=fdbfont)
         self.be.grid(row=3, column=1, sticky=W, padx=3, pady=2)
-        # self.be.configure(bg='gold') #test yes works
+        # self.be.configure(bg='gold') # test yes works
         self.be.insert(0, qdb.byid[s].band)
         self.choband = qdb.byid[s].band
         self.ce = Entry(top, width=11, font=fdbfont)
