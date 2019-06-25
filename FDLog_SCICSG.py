@@ -2127,8 +2127,8 @@ class NewParticipantDialog():
         fr2.grid_columnconfigure((0, 1), weight=1)
         Label(fr2, text='Save=<Enter>', font=fdbfont, foreground='red').grid(row=3, column=0, sticky=W)
         #Button(fr2, text='Save', font=fdbfont, command=s.applybtn) .grid(row=3, column=1, sticky=EW, padx=3)
-        Button(fr2, text='Close', font=fdbfont, command=s.quitbtn) .grid(row=3, column=2, sticky=EW, padx=3)
-        # Bound enter key to save entries - Scott Hibbs KD4SIR Mar/30/2017
+        Button(fr2, text='Dismiss', font=fdbfont, command=s.quitbtn) .grid(row=3, column=2, sticky=EW, padx=3)
+        # Bound enter key to save entries
         s.t.bind('<Return>', lambda event: s.applybtn)
 
     def lookup(self):
@@ -3552,7 +3552,7 @@ class Edit_Dialog(Toplevel):
         db.grid(row=1, sticky=EW, padx=3)
         sb = Button(bf, text=' Save ', font=fdbfont, command=self.submit)
         sb.grid(row=1, column=1, sticky=EW, padx=3)
-        qb = Button(bf, text=' Quit ', font=fdbfont, command=self.quitb)
+        qb = Button(bf, text=' Dismiss ', font=fdbfont, command=self.quitb)
         qb.grid(row=1, column=2, sticky=EW, padx=3)
         # self.wait_window(top)
 
@@ -3686,7 +3686,7 @@ class Edit_Dialog(Toplevel):
         self.top.destroy()
 
     def quitb(self):
-        print 'quit - edit aborted'
+        print 'dismiss - edit aborted'
         self.top.destroy()
 
 
