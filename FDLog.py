@@ -42,7 +42,7 @@ W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Sc
 
 prog = 'FDLog_Enhanced v2019-FD-WE7U\n' \
        'Copyright 2017-2018 by South Central Indiana Communications Support Group \n' \
-       'FDLog_SCICSG is under the GNU Public License v2 without warranty. \n' \
+       'FDLog is under the GNU Public License v2 without warranty. \n' \
        'The original license file is in the folder. \n'
 print prog
 
@@ -78,10 +78,10 @@ fdbfont = (typeface, fontsize + fontinterval * 2)  # large   fixed width font
 #
 
 def fingerprint():
-    t = open('FDLog_SCICSG.py').read()
+    t = open('FDLog.py').read()
     h = hashlib.md5()
     h.update(t)
-    print " FDLog_SCICSG Fingerprint", h.hexdigest()
+    print " FDLog Fingerprint", h.hexdigest()
 
 
 fingerprint()
@@ -524,7 +524,7 @@ class qsodb:
 
     def pradif(self):
         "print clean log in adif format"
-        pgm = "FDLog_SCICSG (https://github.com/scotthibbs/FDLog_Enhanced)"
+        pgm = "FDLog (https://github.com/scotthibbs/FDLog_Enhanced)"
         print "<PROGRAMID:%d>%s" % (len(pgm), pgm)
         dummy, n, g = self.cleanlog()
         for i in n.values() + g.values():
@@ -631,7 +631,7 @@ class qsodb:
         #output
         print "Winter field day Cabrillo output"
         print "START-OF-LOG: 3.0"
-        print "Created-By: FDLog_SCICSG (https://github.com/scotthibbs/FDLog_Enhanced)"
+        print "Created-By: FDLog (https://github.com/scotthibbs/FDLog_Enhanced)"
         print "CONTEST: WFD "
         print "CALLSIGN: " + mycall
         print "LOCATION: " + mystate
@@ -2101,7 +2101,7 @@ class NewParticipantDialog():
         s = NewParticipantDialog()
         s.t = Toplevel(root)
         s.t.transient(root)
-        s.t.title('SCICSG_FDLOG Add New Participant')
+        s.t.title('Add New Participant')
         fr1 = Frame(s.t)
         fr1.grid(row=0, column=0)
         Label(fr1, text='Initials   ', font=fdbfont).grid(row=0, column=0, sticky=W)
@@ -2243,7 +2243,7 @@ def renew_title():
     h = mob / 60
     m = mob % 60
     # Added port to the heading
-    root.title('  FDLOG_SCICSG %s %s %s (Node: %s Time on Band: %d:%02d) %s:%s UTC %s/%s Port:%s' % \
+    root.title('  FDLOG %s %s %s (Node: %s Time on Band: %d:%02d) %s:%s UTC %s/%s Port:%s' % \
                (call, clas, sec, node, h, m, t[-6:-4], t[-4:-2], t[2:4], t[4:6], port_base))
     net.bcast_now()  # this is periodic bcast...
 
@@ -2308,7 +2308,7 @@ def viewprep(ttl=''):
     "view preparation core code"
     w = Toplevel(root)
     ##    w.transient(root)
-    w.title("FDLOG_SCICSG - %s" % ttl)
+    w.title("FDLOG - %s" % ttl)
     t = Text(w, takefocus=0, height=20, width=85, font=fdfont, \
              wrap=NONE, setgrid=1)
     s = Scrollbar(w, command=t.yview)
@@ -2755,7 +2755,7 @@ helpmenu.add_command(label="Set Commands", command=gd.sethelp)
 helpmenu.add_command(label="The Manual", command=lambda: viewtextf('Manual.txt', "Manual"))
 helpmenu.add_command(label="Release Log", command=lambda: viewtextf('Releaselog.txt'))
 helpmenu.add_command(label="GitHub ReadMe", command=lambda: viewtextf('readme.txt'))
-helpmenu.add_command(label="About SCICSG_FDLOG", command=lambda: viewtextv(about, "About"))
+helpmenu.add_command(label="About FDLOG", command=lambda: viewtextv(about, "About"))
 
 # Band Buttons
 f1 = Frame(root, bd=1)
