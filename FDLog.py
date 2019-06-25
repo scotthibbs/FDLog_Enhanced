@@ -31,7 +31,8 @@ W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Sc
 
 # Forked & Repository Project
 # FDLog_Enhanced at Github.com
-# Copyright 2014-2018 South Central Indiana Communications Support Group
+# Copyright 2014-2019 South Central Indiana Communications Support Group
+# Copyright 2019 Curtis E. Mills (WE7U)
 # 
 # Our Goals are twofold:
 #       1: Improve on fdlog faster with open and directed collaboration.
@@ -41,7 +42,8 @@ W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Sc
 #               FLDigi, Rigserve etc if we can?
 
 prog = 'FDLog_Enhanced v2019-FD-WE7U\n' \
-       'Copyright 2017-2018 by South Central Indiana Communications Support Group \n' \
+       'Copyright 2014-2019 by South Central Indiana Communications Support Group \n' \
+       'Copyright 2019 by Curtis E. Mills (WE7U) \n' \
        'FDLog is under the GNU Public License v2 without warranty. \n' \
        'The original license file is in the folder. \n'
 print prog
@@ -50,9 +52,8 @@ about = """
 
 FDLog_Enhanced can be found on www.github.com
 GNU Public License V2 - in program folder.
-Copyright 2017-2018 South Central Indiana Communications Support Group
-Visit us at www.scicsg.org
-Your donations are appreciated to support Amateur Radio.
+Copyright 2014-2019 South Central Indiana Communications Support Group
+Copyright 2019 Curtis E. Mills (WE7U)
 
 """
 
