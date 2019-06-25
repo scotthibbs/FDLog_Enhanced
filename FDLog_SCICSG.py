@@ -1,5 +1,4 @@
 #!/usr/bin/python 
-# Added by Art Miller KC7SDA May/5/2017
 # NOTE for Linux users: you must convert the line endings from windows to linux
 import os
 import time
@@ -19,19 +18,6 @@ W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Sc
 # 
 # KD4SIR - Will probably work on copy/paste functionality
 # KC7SDA - Will check network and platform compatibility and upper/lower case entry 
-
-
-
-# 2019_Beta_1
-#
-# + added python path shebang so program can run from command line - Art Miller KC7SDA Jul/1/2018
-# + Corrected code as suggested by pylint - Scott Hibbs KD4SIR Jun/28/2018
-# + Streamlined the networking section of the code - netmask removed. Art Miller KC7SDA Jul/1/2018
-# + Allowed upper case entry for several settings. Art Miller KC7SDA Jul/1/2018
-# + After an edit, the log window is redrawn to show only valid log entries. Scott Hibbs KD4SIR Jul/3/2018
-# + Removed unused code and comments - Scott Hibbs KD4SIR Jul/3/2018
-# + Up arrow will now retype the last entry (just in case enter was hit instead of space) - Scott Hibbs KD4SIR Jul/06/2018
-
 
 
 
@@ -91,16 +77,6 @@ fdbfont = (typeface, fontsize + fontinterval * 2)  # large   fixed width font
 #   bring down a previous suffix with a character such as ' or .
 #
 #
-
-#  Scott Hibbs KD4SIR 10/2/13
-#  Removed Release Log that was here into a text file.
-
-#  Scott Hibbs KD4SIR 5/11/14
-#  Removed the key help that was here into a text file.
-
-#  Scott A Hibbs KD4SIR 7/25/2013
-#  Removed the getting started text that was here into a text file.
-
 
 def fingerprint():
     t = open('FDLog_SCICSG.py').read()
@@ -383,7 +359,7 @@ class SQDB:
         self.dbPath = logdbf[0:-4] + '.sq3'
         print "Using database", self.dbPath
         self.sqdb = sqlite3.connect(self.dbPath, check_same_thread=False)  # connect to the database
-        # Have to add FALSE here to get this stable - Scott Hibbs 7/17/2015
+        # Have to add FALSE here to get this stable
         self.sqdb.row_factory = sqlite3.Row  # namedtuple_factory
         self.curs = self.sqdb.cursor()  # make a database connection cursor
         sql = "create table if not exists qjournal(src text,seq int,date text,band " \
@@ -404,7 +380,7 @@ class SQDB:
         return nl
 
     # Removed next(self) function. There is no self.result
-    # and nothing calls sqdb.next() -Scott Hibbs 07/27/2015
+    # and nothing calls sqdb.next()
 
     # def next(self):  # get next item from db in text format
     #     n = self.result
@@ -478,7 +454,7 @@ class qsodb:
                     # database (temporary for transition)
         if i == 0 and s == 1:
             print "Log file not found, must be new"
-            initialize()  # Set up routine - Scott Hibbs 7/26/2015
+            initialize()  # Set up routine
         else:
             print "  ", i, "Records Loaded,", s, "Errors"
         if i == 0:
@@ -762,7 +738,6 @@ class qsodb:
             logw.insert(END, "\n")
             # Redraw the logw text window (on delete) to only show valid calls in the log. 
             # This avoids confusion by only listing items in the log to edit in the future.
-            # Scott Hibbs KD4SIR - July 3, 2018
             l = []
             for i in sorted(a.values()):
                 if i.seq == seq:
@@ -1017,8 +992,8 @@ class qsodb:
             return xcall in self.sfx2call(sfx, band)  # vhf contest
         return call in self.sfx2call(sfx, band)  # field day
 
-    # Added function to test against participants like dupes Scott Hibbs KD4SIR Jan/29/2017
-    # Added function to test against call and gota call like dupes Scott Hibbs KD4SIR Mar/23/2017
+    # Added function to test against participants like dupes
+    # Added function to test against call and gota call like dupes
     def partck(self, wcall):
         """ check for participants to act as dupes in this event"""
         dummy, dummy, dummy, dummy, call, xcall, dummy = self.qparse(wcall)
@@ -1134,7 +1109,6 @@ class node_info:
     nodinfo = {}
     # rembcast = {}
     #  This was not remarked out of the 2015_stable version
-    #  Scott Hibbs 7/3/2015
     lock = threading.RLock()  # reentrant sharing lock
 
     def sqd(self, src, seq, t, b, c, rp, p, o, l):
@@ -1275,7 +1249,7 @@ class node_info:
 class netsync:
     """network database synchronization"""
 	# removed netmask - it isn't used anywhere in the program from what I can tell (do a search for 'netmask' this is the only place you find it)
-	# re-coded the ip address calculation to smooth it out and make it cross platform compatible. - Art Miller KC7SDA Jul/01/2018
+	# re-coded the ip address calculation to smooth it out and make it cross platform compatible
     #netmask = '255.255.255.0'
     rem_adr = ""  # remote bc address
     authkey = hashlib.md5()
@@ -1554,7 +1528,7 @@ class syncmsg:
             seq = int(seq)
             stn = self.msgs[0][69:].strip()
             if nod == node:
-                # Added a check to see if in the log to print blue or not - Scott Hibbs June 26, 2018
+                # Added a check to see if in the log to print blue or not
                 bid, dummy, dummy = qdb.cleanlog()  # get a clean log
                 stnseq = stn +"|"+str(seq)
                 if stnseq in bid:
@@ -1595,7 +1569,7 @@ class GlobalDb:
         self.dbPath = globf[0:-4] + '.sq3'
         print "  Using local value database", self.dbPath
         self.sqdb = sqlite3.connect(self.dbPath, check_same_thread=False)  # connect to the database
-        # Have to add FALSE here to get this stable. - Scott Hibbs 7/17/2015
+        # Have to add FALSE here to get this stable.
         self.sqdb.row_factory = sqlite3.Row  # row factory
         self.curs = self.sqdb.cursor()  # make a database connection cursor
         sql = "create table if not exists global(nam text,val text,primary key(nam))"
@@ -2073,7 +2047,7 @@ def contestlog(pr):
     print
     print "entry and log written to file", logfile
 
-# setup for phonetics printout  ## Added by Scott Hibbs KD4SIR to get phonetics on bottom of gui?
+# setup for phonetics printout  ## to get phonetics on bottom of gui?
 # d = {"a":"alpha ","b":"bravo ","c":"charlie ","d":"delta ","e":"echo ", \
 #     "f":"foxtrot ","g":"golf ","h":"hotel ","i":"india ","j":"juliett ", \
 #     "k":"kilo ","l":"lima ","m":"mike ","n":"november ","o":"oscar ", \
@@ -2090,7 +2064,7 @@ def contestlog(pr):
 
 # band set buttons
 # this can be customized -Only here customizing this in program will break from compatibility with
-# original fdlog.py -Scott Hibbs Oct/13/2013
+# original fdlog.py
 bands = ('160', '80', '40', '20', '15', '10', '6', '2', '220', '440', '900', '1200', 'sat', 'off')
 modes = ('c', 'd', 'p')
 bandb = {}  # band button handles
@@ -2183,7 +2157,7 @@ class NewParticipantDialog():
                 self.vist.insert(END, vist)
         return 1
     
-    @property   #This added so I can use the <Return> binding -Scott Hibbs KD4SIR Mar/30/2017
+    @property   #This added so I can use the <Return> binding
     def applybtn(self):
         global participants
         # print "store"
@@ -2270,7 +2244,7 @@ def renew_title():
     mob = sob / 60
     h = mob / 60
     m = mob % 60
-    # Added port to the heading - Scott Hibbs KD4SIR Jan/27/2017
+    # Added port to the heading
     root.title('  FDLOG_SCICSG %s %s %s (Node: %s Time on Band: %d:%02d) %s:%s UTC %s/%s Port:%s' % \
                (call, clas, sec, node, h, m, t[-6:-4], t[-4:-2], t[2:4], t[4:6], port_base))
     net.bcast_now()  # this is periodic bcast...
@@ -2282,7 +2256,7 @@ def setnode(new):
     qdb.redup()
     renew_title()
     lblnode.configure(text="My Node: %s" % node, font=fdfont, foreground='royalblue', background='lightgrey')
-    # Had to add the above so that the new lblnode could be updated. - Scott Hibbs KD4SIR Mar/28/2017
+    # Had to add the above so that the new lblnode could be updated
 
 def applyprop(e=''):
     """apply property"""
@@ -2394,7 +2368,7 @@ def viewwasrpt():
 
 def updatebb():
     """update band buttons"""
-    # Added Who's on the bands functionality with a mouse over event - KD4SIR Scott A Hibbs Oct/13/2013
+    # Added Who's on the bands functionality with a mouse over event
     # Tried and tried to get wof to return only one result for the mouse over. If you can, you're awesome! -Scott
     global wof
     r, cl, vh, go = net.si.nod_on_bands()
@@ -2402,7 +2376,7 @@ def updatebb():
 
 
     def whosonfirst(event):
-        # Cleaned up whos on band (with section of .ba report) - KD4SIR Scott Hibbs Mar/23/2017 
+        # Cleaned up whos on band (with section of .ba report)
         d = {}
         txtbillb.insert(END,"\n--node-- band opr lgr pwr  ----- last\n")
         for t in net.si.nodinfo.values():
@@ -2459,7 +2433,7 @@ def updatebb():
         vhfree = 0
         ts = cl
     #ts = cl + max(0, vh-vhfree)  # total sta = class + excess vhf stations
-    # Fixed VHF to reflect a free transmitter and warn if two vhf rigs are used. - Scott Hibbs KD4SIR 5/14/2014
+    # Fixed VHF to reflect a free transmitter and warn if two vhf rigs are used
     clc = 'gold'
     if ts == cltg:
         clc = 'palegreen'
@@ -2469,7 +2443,7 @@ def updatebb():
 
     vhc = 'gold'
     if vh - vhfree == 0:
-        vhc = 'palegreen'  # for 1D Class correction KD4SIR
+        vhc = 'palegreen'  # for 1D Class correction
         anytext = "VHF "
     if vh < 0:
         vhc = 'pink2'
@@ -2490,14 +2464,14 @@ def updatebb():
 
 def updateqct():
     "update contact count"
-    #function reworked in time for field day 2014. - Scott Hibbs KD4SIR
+    #function reworked in time for field day 2014
     dummy, dummy, qpop, qplg, dummy, dummy, dummy, dummy, cwq, digq, fonq, dummy, gotaq, dummy, dummy = \
         qdb.bandrpt()  # xx reduce processing here
     for i, j in (('FonQ', 'Phone %5s' % fonq),
                  ('CW/D', 'CW&Dig %4s' % (cwq + digq)),
                  ('GOTAq', 'GOTA %6s' % gotaq)):
         bandb[i].configure(text=j, background='lightgrey')
-        # Update for the operator OpQ - KD4SIR for fd 2014
+        # Update for the operator OpQ - for fd 2014
         if operator == "":
             coin2 = "Operator"
             opmb.config(text=coin2, background='pink2')
@@ -2512,7 +2486,7 @@ def updateqct():
                 coin2 = "0"
                 opmb.config(text='ConQ %2s' % coin2, background='lightgrey')
                 opds.config(text=operator, background='lightgrey')
-        # Update for the logger LoQ - KD4SIR for fd 2014
+        # Update for the logger LoQ - for fd 2014
         if logger == "":
             coil2 = "Logger"
             logmb.config(text=coil2, background='pink2')
@@ -2596,7 +2570,6 @@ def rnddig():
 
 
 def testqgen(n):
-    # Scott A Hibbs KD4SIR 07/25/2013
     # added if authk protection so that .testqgen only operates with a 'tst' database.
     # no funny business with the contest log
     if authk == "tst":
@@ -2633,11 +2606,11 @@ logdbf = "fdlog.fdd"  # persistent file copy of log database
 logfile = "fdlog.log"  # printable log file (contest entry)
 globf = "fdlog.dat"  # persistent global file
 kbuf = ""  # keyboard line buffer
-goBack = "" # needed to print the last line entered with up arrow - Scott Hibbs KD4SIR Jul/05/2018
+goBack = "" # needed to print the last line entered with up arrow
 loadglob()  # load persistent globals from file
 print
 if node == "":
-    # Revised 4/19/2014 for 8 characters so the log lines up nicely. - Scott Hibbs KD4SIR
+    # Revised for 8 characters so the log lines up nicely
     print "  Enter the station name"
     print "  Please be 7 characters! (I will add letters to be unique)"
     print "  (Use 'gota' for get on the air station)"
@@ -2645,7 +2618,7 @@ if node == "":
     print "  (7 characters}"
     k = string.lower(string.strip(sys.stdin.readline())[:8])
     if len(k) == 8:
-        print "That's to many.. (Marc? is that you?)" # Thanks to Marc Fountain K9MAF for the correction. Mar/23/2017
+        print "That's to many.. (Marc? is that you?)" # Thanks to Marc Fountain K9MAF for the correction.
         k = k[:7]
     z = len(k)
     if k != 'gota':
@@ -2707,7 +2680,7 @@ saveglob()
 print "Time Difference Window (tdwin):", tdwin, "seconds"
 print "Starting GUI setup"
 root = Tk()  # setup Tk GUI
-# root.withdraw()  # This was removed in the last beta without explaination - sah 7/3/2015
+# root.withdraw()  # This was removed in the last beta without explaination
 menu = Menu(root)
 root.config(menu=menu)
 filemenu = Menu(menu, tearoff=0)
@@ -2741,20 +2714,20 @@ for j in modes:
         if i == 'off': continue
         bm = "%s%s" % (i, j)
         m.add_command(label=bm, command=lambda x=bm: (viewlogf(x)))
-#  Added Resources Menu Item to clean up the menu. - Apr/16/2014 Scott Hibbs
+#  Added Resources Menu Item to clean up the menu
 resourcemenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Resources", menu=resourcemenu)
-# Changed this from fdrules to just Rules to get away from fd name in file folder - Scott Hibbs KD4SIR Mar/28/2017
+# Changed this from fdrules to just Rules to get away from fd name in file folder
 resourcemenu.add_command(label="ARRL FD Rules (pdf)", command=lambda: os.startfile('Rules.pdf'))
-# Changed this to a .dat file to remove the duplicate txt file - Scott Hibbs KD4SIR Mar/28/2017
+# Changed this to a .dat file to remove the duplicate txt file
 resourcemenu.add_command(label="ARRL Sections", command=lambda: viewtextf('Arrl_sect.dat', 'ARRL Sections'))
 resourcemenu.add_command(label="ARRL Band Chart (pdf)", command=lambda: os.startfile('Bands.pdf'))
 resourcemenu.add_command(label="ARRL Band Plan", command=lambda: viewtextf('ARRL_Band_Plans.txt', "ARRL Band Plan"))
-# This is not needed with the band chart giving the same info - Scott Hibbs KD4SIR Mar/28/2017 
+# This is not needed with the band chart giving the same info
 #resourcemenu.add_command(label="FD Frequency List", command=lambda: viewtextf('frequencies.txt', "FD Frequency List"))
-# Removed the propagation report. We don't use it. - Mar/29/2017 Scott Hibbs KD4SIR 
+# Removed the propagation report. We don't use it
 #resourcemenu.add_command(label="Propagation Info", command=lambda: viewtextf('propagation.txt', "Propagation Info"))
-# Created a W1AW menu - Scott Hibbs KD4SIR Mar/28/2017
+# Created a W1AW menu
 W1AWmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="W1AW", menu=W1AWmenu)
 W1AWmenu.add_command(label="W1AW Schedule", command=lambda: viewtextf('w1aw.txt', 'W1AW Schedule'))
@@ -2780,11 +2753,11 @@ for g in range(0, 2400, 100):
 resourcemenu.add_command(label="Time Conversion Chart", command=lambda: viewtextv(tzchart, "Time Conversion Chart"))
 helpmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Help", menu=helpmenu)
-# Basically reworked the whole menu section. - Scott A Hibbs KD4SIR 7/25/13
-# Removed duplicate help sources and files. Rewrote documentation - Scott Hibbs Mar/31/2017
-# Renamed fdlogman to Manual to give distance from name of program - Scott Hibbs KD4SIR Mar/29/2017
-# Removed "getting started" from code to external text file. - Scott A Hibbs KD4SIR 7/25/13
-# Removed Wireless Network as it is not needed - Scott Hibbs KD4SIR Mar/29/2017
+# Basically reworked the whole menu section
+# Removed duplicate help sources and files. Rewrote documentation
+# Renamed fdlogman to Manual to give distance from name of program
+# Removed "getting started" from code to external text file
+# Removed Wireless Network as it is not needed
 helpmenu.add_command(label="Quick Help", command=lambda: viewtextf('Keyhelp.txt'))
 helpmenu.add_command(label="Set Commands", command=gd.sethelp)
 helpmenu.add_command(label="The Manual", command=lambda: viewtextf('Manual.txt', "Manual"))
@@ -2816,7 +2789,7 @@ def setoper(op):
     # print "setoper",op
     ini, name, call, age, vist = string.split(op, ', ')
     operator = "%s: %s, %s, %s, %s" % (ini, name, call, age, vist)
-    # Adding red to the display - KD4SIR
+    # Adding red to the display
     ocolor = 'lightgrey'
     opds.config(text=operator, background=ocolor)
     opmb.config(background='gold')
@@ -2836,7 +2809,7 @@ def setlog(logr):
 
 
 f1b = Frame(root, bd=0)  # oper logger power and network windows
-#  Changed the color of the user buttons to red until assigned - KD4SIR Scott Hibbs 7/14/2013
+#  Changed the color of the user buttons to red until assigned
 ocolor = 'pink2'
 lcolor = 'pink2'
 pcolor = 'pink2'
@@ -2876,8 +2849,8 @@ def buildmenus():
     l = participants.values()
     l.sort()
     for i in l:
-        # I had to take out the $ which looks for the end of value - Scott Hibbs KD4SIR 2/12/2017
-        # Decided non-hams can be in operator field but will check for license before logging - Scott Hibbs KD4SIR Mar/29/2017
+        # I had to take out the $ which looks for the end of value
+        # Decided non-hams can be in operator field but will check for license before logging
         # m = re.match(r'[a-z0-9]+, [a-zA-Z ]+, ([a-z0-9]+)',i)
         #if m: opdsu.add_command(label=i, command=lambda n=i: (setoper(n)))
         opdsu.add_command(label=i, command=lambda n=i: (setoper(n)))
@@ -2970,7 +2943,7 @@ pwrmb = Menubutton(f1b, text="Power", font=fdfont, relief='raised',
 pwrmb.grid(row=0, column=6, sticky=NSEW)
 pwrmu = Menu(pwrmb, tearoff=0)
 pwrmb.config(menu=pwrmu, direction='below')
-# rearranged this menu - Scott Hibbs Mar/23/2017
+# rearranged this menu
 pwrmu.add_command(label='     0 Watts', command=lambda: (setpwr('0')))
 pwrmu.add_command(label='     5 Watts', command=lambda: (setpwr('5')))
 pwrmu.add_command(label='    50 Watts', command=lambda: (setpwr('50')))
@@ -2994,10 +2967,10 @@ powcb = Checkbutton(f1b, text="Natural", variable=natv, command=ckpowr,
 powcb.grid(row=0, column=9, sticky=NSEW)
 setpwr(power)
 f1b.grid(row=1, columnspan=2, sticky=NSEW)
-# Added Network label - KD4SIR Scott Hibbs Oct 4, 2013
-# Added Node label - KD4SIR Scott Hibbs Oct/13/2013
-# Added wof label - KD4SIR Scott Hibbs Jan/19/2017
-# Added port label - KD4SIR Scott Hibbs Jan/19/2017
+# Added Network label
+# Added Node label
+# Added wof label
+# Added port label
 # Network window
 lblnet = Label(f1b, text="Network Status", font=fdfont, foreground='royalblue', background='gold')
 lblnet.grid(row=2, column=0, columnspan=9, sticky=NSEW)
@@ -3074,7 +3047,7 @@ else:
 print "To change system time, stop FDLog, change the time or zone, then restart"
 print
 # These root commands were removed without an explanation in the beta.
-# but I'm leaving them in. sah 7/3/2015
+# but I'm leaving them in.
 root.update()
 root.deiconify()
 net.start()  # start threads
@@ -3089,7 +3062,7 @@ txtbillb.focus_set()
 
 
 def topper():
-    """This will reset the display for input. Added Jul/01/2016 KD4SIR Scott Hibbs"""
+    """This will reset the display for input"""
     txtbillb.insert(END, "\n")
     txtbillb.insert(END, "-Call-Class-Sect- \n")
 
@@ -3111,7 +3084,7 @@ def showthiscall(call):
     return findany
 
 
-# added this to take out the keyhelp from the code. - Scott Hibbs
+# added this to take out the keyhelp from the code
 def mhelp():
     viewtextf('Keyhelp.txt')
 
@@ -3119,7 +3092,7 @@ secName = {}
 
 def readSections():
     """this will read the Arrl_sect.dat file for sections"""
-    # This modified from Alan Biocca version 153d - Scott Hibbs Feb/6/2017
+    # This modified from Alan Biocca version 153d
     try:
         fd = file("Arrl_sect.dat","r")  # read section data
         while 1:
@@ -3145,7 +3118,7 @@ def proc_key(ch):
     if ch == '?' and (kbuf == "" or kbuf[0] != '#'):  # ? for help
         mhelp()
         return
-    # Adding a statement to check for uppercase. Previously unresponsive while capped locked. - Scott Hibbs Jul/01/2016
+    # Adding a statement to check for uppercase. Previously unresponsive while capped locked
     # Thanks to WW9A Brian Smith for pointing out that the program isn't randomly frozen and not requiring a restart.
     if ch.isupper():
         txtbillb.insert(END, " LOWERCAPS PLEASE \n")
@@ -3183,7 +3156,6 @@ def proc_key(ch):
         netsync.rem_host, s = testcmd('.remip', r'([0-9]{1,3}[.]){3}[0-9]{1,3}', netsync.rem_host)
         if s: globDb.put('remip', netsync.rem_host)
         # This change was made below for debug, tdwin, and testq
-        # Scott Hibbs 7/16/2015
         v, s = testcmd(".debug", r"[0-9]+", debug)
         if s is True: debug = int(v)
         v, s = testcmd(".tdwin", r"[0-9]{1,3}", tdwin)
@@ -3237,7 +3209,7 @@ def proc_key(ch):
             kbuf = ""
             txtbillb.insert(END, "To edit: click on the log entry\n")
             return
-        #Found that .node needed fixing. Reworked - Scott Hibbs Mar/28/2017
+        #Found that .node needed fixing. Reworked
         if re.match(r'[.]node', kbuf):
             if band != 'off':
                 txtbillb.insert(END, "\nSet band off before changing node id\n")
@@ -3297,7 +3269,7 @@ def proc_key(ch):
         # check for valid contact
         if (ch == '\r'):
             stat, ftm, dummy, sfx, call, xcall, rept = qdb.qparse(kbuf)
-            goBack = "%s %s" % (call, rept)# for the up arrow enhancement - Scott Hibbs KD4SIR Jul/5/2018
+            goBack = "%s %s" % (call, rept)# for the up arrow enhancement
             if stat == 5:  # whole qso parsed
                 kbuf = ""
                 if len(node) < 3:
@@ -3317,10 +3289,10 @@ def proc_key(ch):
                     topper()
                 else:
                     # Added database protection against no band, no power,
-                    # no op, and no logger -- KD4SIR Scott Hibbs Jul/15/2013
+                    # no op, and no logger
                     # Added warning against 1D to 1D contacts being
-                    # logged but not counting points -- KD4SIR Scott Hibbs Oct/13/2013
-                    # Checking Operator or Logger has a license - Scott Hibbs Mar/28/2017
+                    # logged but not counting points
+                    # Checking Operator or Logger has a license
                     legal = 0
                     if re.match(r'[a-z :]+ [a-zA-Z ]+, ([a-z0-9]+)',operator):
                         #print "%s has a license" % operator
@@ -3370,7 +3342,7 @@ def proc_key(ch):
                             txtbillb.insert(END, " - ERROR: Bad exchange ( %s ) Please Try Again\n" % rept)
                             topper()
                             return
-                        # Check for valid section in report added by Scott Hibbs Feb/6/2017
+                        # Check for valid section in report
                         aaaaa = len(rept1)
                         #print "aaaaa is %s" % aaaaa
                         rept2 = rept1[3:aaaaa].strip()
@@ -3409,7 +3381,7 @@ def proc_key(ch):
                         qdb.qsl(tm, xcall, band, rept)
             elif stat == 4:
                 kbuf = ""
-                # Added participant check here too - Feb/12/2017 -Scott Hibbs 
+                # Added participant check here too
                 if qdb.partck(xcall): # Participant check
                     txtbillb.insert(END, "\n Participant - not allowed \n")
                     topper()
@@ -3427,7 +3399,7 @@ def proc_key(ch):
             kbuf = kbuf[0:-1]
             txtbillb.delete('end - 2 chars')
         return
-    if ch == '\u1p':  # up arrow reprints the input line - Scott Hibbs KD4SIR Jul/5/2018
+    if ch == '\u1p':  # up arrow reprints the input line
         if goBack != "":
             if kbuf == "":
                 txtbillb.insert(END, goBack) #print goBack info
@@ -3511,7 +3483,7 @@ def focevent(e):
 
 class Edit_Dialog(Toplevel):
     """edit log entry dialog"""
-    """Added functionality to check for dupes and change the title to show the error - Scott Hibbs Jul/02/2016"""
+    """Added functionality to check for dupes and change the title to show the error"""
     # Had to add variables for each text box to know if they changed to do dupe check.
     global editedornot 
     editedornot = StringVar
@@ -3672,7 +3644,7 @@ class Edit_Dialog(Toplevel):
             self.le.configure(bg='gold')
             error += 1
         if error == 0:
-            # There was no dupe check on the edited qso info. This was added. Scott Hibbs Jul/01/2016
+            # There was no dupe check on the edited qso info. This was added.
             if changer == 0:
                 print 'Nothing changed. No action performed.'
                 self.crazytxt.set('nothing changed?')
@@ -3737,15 +3709,15 @@ def log_select(e):
     seq = logtext[65:69].strip()
     bxnd = logtext[8:14].strip()
     cxll = logtext[15:22].strip()
-    #  In case user clicks on a deleted log entry Feb/2/2017 Scott Hibbs
+    #  In case user clicks on a deleted log entry
     baddd = logtext[23:24].strip()
     if baddd == '*':
         print "Can't edit a delete entry"
         return 'break'
     if len(seq) == 0: return 'break'
-    #    In case user clicks on tildes - May/11/2014 Scott Hibbs
+    #    In case user clicks on tildes
     if seq == '~~~~': return 'break'
-    # fixed clicking on the copywrite line gave a valueerror - Feb/12/2017 Scott Hibbs
+    # fixed clicking on the copywrite line gave a valueerror
     try:
         seq = int(seq)
         stn = logtext[69:].strip()
@@ -3754,9 +3726,9 @@ def log_select(e):
         return 'break'
     print stn, seq, bxnd, cxll
     if stn == node:  # only edit my own Q's
-        # Also check to make sure the call isn't previously deleted. Jul/02/2016 KD4SIR Scott Hibbs
+        # Also check to make sure the call isn't previously deleted
         if qdb.dupck(cxll, bxnd):
-            # Now we check to see if the entry is still in the log. Mar/31/2017 KD4SIR Scott Hibbs
+            # Now we check to see if the entry is still in the log
             bid, dummy, dummy = qdb.cleanlog()  # get a clean log
             stnseq = stn +"|"+str(seq)
             if stnseq in bid:
@@ -3816,9 +3788,9 @@ exit(1)
 #
 #  Grab out of order entry from Alan Biocca's FDLog. 
 #
-#  Change Participant entry so the name is on top. (It's odd to ask their initials first.) Scott 2018 Field Day notes
+#  Change Participant entry so the name is on top. (It's odd to ask their initials first.)
 #
-#  Would love another file to use for the "InfoNode" computer. Scott 2017 Field Day notes
+#  Would love another file to use for the "InfoNode" computer
         # It will allow visitors/participants to log in
         # It will show top 5 operators and top 5 loggers
         # It will show worked all states
@@ -3828,11 +3800,11 @@ exit(1)
 #
 #  add node list display after db read during startup?
 #
-#  add phonetic alphabet display (started: some code commented out) 2016 Field Day notes
+#  add phonetic alphabet display (started: some code commented out)
 #
 #  Weo suggested making Control-C text copy/paste work. (suggestion from original group - FDLog)
 #
 #  Tried and tried to get wof (whoseonfirst) to return only one value for the mouse over.
-#    I don't have the python skilz... If you can awesome!!! -Scott Mar/18/2017
+#    I don't have the python skilz... If you can awesome!!!
 #
 # eof
