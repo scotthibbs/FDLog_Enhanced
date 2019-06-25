@@ -2506,9 +2506,9 @@ def updateqct():
     if net.pkts_rcvd:
         net.pkts_rcvd = 0
     else:
-        t = "Alone? Not receiving data from others."
+        t = "Alone? Not receiving data from others. Firewall?"
     if net.send_errs:
-        t = "SEND FAIL - Not sending data to others."; net.send_errs = 0
+        t = "SEND FAIL - Not sending data to others. Firewall?"; net.send_errs = 0
     if authk == '':
         t = "NO AUTHKEY SELECTED"
     if node == '':
