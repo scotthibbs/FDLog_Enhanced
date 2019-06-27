@@ -14,49 +14,10 @@ import sqlite3
 from Tkinter import Tk, END, NORMAL, DISABLED, re, sys, Toplevel, Frame, Label, Entry, Button, \
 W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, Checkbutton, RAISED, IntVar
 
+# all history removed to readme.md
 
-# This needs to be tested on different networks and cross platform before released.
-# 
-# KD4SIR - Will probably work on copy/paste functionality
-# KC7SDA - Will check network and platform compatibility and upper/lower case entry 
-
-
-
-# 2019_Beta_1
-#
-# + added python path shebang so program can run from command line - Art Miller KC7SDA Jul/1/2018
-# + Corrected code as suggested by pylint - Scott Hibbs KD4SIR Jun/28/2018
-# + Streamlined the networking section of the code - netmask removed. Art Miller KC7SDA Jul/1/2018
-# + Allowed upper case entry for several settings. Art Miller KC7SDA Jul/1/2018
-# + After an edit, the log window is redrawn to show only valid log entries. Scott Hibbs KD4SIR Jul/3/2018
-# + Removed unused code and comments - Scott Hibbs KD4SIR Jul/3/2018
-# + Up arrow will now retype the last entry (just in case enter was hit instead of space) - Scott Hibbs KD4SIR Jul/06/2018
-
-
-
-
-# Originally "WB6ZQZ's Field Day Logging Program" written in 1984.
-# Alan Biocca (as WB6ZQZ) ported it to python with GNU in 2002. 
-# Our code starts from: 
-# FDLog 1-149-2 2011/07/11
-# Copyright 2002-2013 by Alan Biocca (W6AKB) (www.fdlog.info)
-# FDLog is distributed under the GNU Public License
-# Additional code included from FDLog v4-1-152i 2014/05/26
-# Some code modified from FDLog v4-1-153d Febuary 2017
-
-# Forked & Repository Project
-# FDLog_Enhanced at Github.com
-# Copyright 2014-2018 South Central Indiana Communications Support Group
-# 
-# Our Goals are twofold:
-#       1: Improve on fdlog faster with open and directed collaboration.
-#               This is now on github as FDLog_Enhanced.
-#       2: Increase user friendlyness (GUI) and inter-operability with other GNU programs.
-#               Future: Adding interoperability with other programs such as HRDeluxe Free,
-#               FLDigi, Rigserve etc if we can?
-
-prog = 'FDLog_SCICSG v2017_Field_Day2 \n' \
-       'Copyright 2017 by South Central Indiana Communications Support Group \n' \
+prog = 'FDLog_SCICSG v2019_Field_Day \n' \
+       'Orginal Copyright 2017 by South Central Indiana Communications Support Group \n' \
        'FDLog_SCICSG is under the GNU Public License v2 without warranty. \n' \
        'The original license file is in the folder. \n'
 print prog
@@ -71,7 +32,7 @@ Your donations are appreciated to support Amateur Radio.
 
 """
 
-version = "v18"
+version = "v19"
 fontsize = 10
 fontinterval = 2
 typeface = 'Courier'
@@ -79,7 +40,6 @@ typeface = 'Courier'
 fdfont = (typeface, fontsize)  # regular fixed width font
 fdmfont = (typeface, fontsize + fontinterval)  # medium  fixed width font
 fdbfont = (typeface, fontsize + fontinterval * 2)  # large   fixed width font
-
 
 # Known Bug List
 #
@@ -89,18 +49,6 @@ fdbfont = (typeface, fontsize + fontinterval * 2)  # large   fixed width font
 #   define a suffix as trailing letters
 #   prefix as anything ending in digits
 #   bring down a previous suffix with a character such as ' or .
-#
-#
-
-#  Scott Hibbs KD4SIR 10/2/13
-#  Removed Release Log that was here into a text file.
-
-#  Scott Hibbs KD4SIR 5/11/14
-#  Removed the key help that was here into a text file.
-
-#  Scott A Hibbs KD4SIR 7/25/2013
-#  Removed the getting started text that was here into a text file.
-
 
 def fingerprint():
     t = open('FDLog_SCICSG.py').read()
@@ -108,9 +56,7 @@ def fingerprint():
     h.update(t)
     print " FDLog_SCICSG Fingerprint", h.hexdigest()
 
-
 fingerprint()
-
 
 def ival(s):
     """return value of leading int"""
@@ -120,7 +66,6 @@ def ival(s):
         if mm and mm.group(1):
             r = int(mm.group(1))
     return r
-
 
 class clock_class:
     level = 9  # my time quality level
@@ -186,7 +131,6 @@ class clock_class:
         ## or self.offset = float(database.get('tmast',0)) instead of the line above.
         self.adjusta -= adj
         print "Slewing clock", adj, "to", self.offset
-
 
 mclock = clock_class()
 
@@ -361,7 +305,6 @@ def initialize():
             pass                
     return
 
-
 def exin(op):
     """extract Contestant or logger initials"""
     r = ""
@@ -370,13 +313,11 @@ def exin(op):
         r = m.group(1)
     return r
 
-
 # sqlite database upgrade
 # sqlite3.connect(":memory:", check_same_thread = False)
 # I found this online to correct thread errors with sql locking to one thread only.
 # I'm pretty sure I emailed this fix to Alan Biocca over a year ago. :(
 # Scott Hibbs 7/5/2015
-
 
 class SQDB:
     def __init__(self):
@@ -426,7 +367,6 @@ class SQDB:
         sqdb.commit()  # do the commit
         if n.band == '*QST':
             print("QST\a " + n.rept+" -"+n.logr)  # The "\a" emits the beep sound for QST
-
 
 class qsodb:
     byid = {}  # qso database by src.seq
@@ -540,7 +480,6 @@ class qsodb:
             ln = "%8s %5s %-11s %-24s %4s %-3s %-3s %4s %s" % \
                  (s.date[4:11], s.band, s.call[:11], s.rept[:24], s.powr, s.oper, s.logr, s.seq, s.src)
         return ln
-
 
     def prlog(self):
         "print log in time order"
@@ -1271,7 +1210,6 @@ class node_info:
                 if b < 8 or b > 200: vhf += 1
         return r, hf, vhf, gotanode
 
-
 class netsync:
     """network database synchronization"""
 	# removed netmask - it isn't used anywhere in the program from what I can tell (do a search for 'netmask' this is the only place you find it)
@@ -1440,7 +1378,6 @@ class netsync:
         time.sleep(0.5)  # let em print
         print "Startup complete"
 
-
 class global_data:
     """Global data stored in the journal"""
     byname = {}
@@ -1530,7 +1467,6 @@ for name, desc, default, okre, maxlen in (
         ('tmast', '<text>         Time Master Node', '', r'[A-Za-z0-9-]{0,8}$', 8)):
     gd.new(name, desc, default, okre, maxlen)
 
-
 class syncmsg:
     """synchronous message printing"""
     lock = threading.RLock()
@@ -1565,7 +1501,6 @@ class syncmsg:
             del self.msgs[0]
         self.lock.release()
 
-
 # global functions
 
 def now():
@@ -1587,7 +1522,6 @@ def tmtofl(a):
 def tmsub(a, b):
     """time subtract in seconds"""
     return tmtofl(a) - tmtofl(b)
-
 
 class GlobalDb:
     """new sqlite globals database fdlog.sq3 replacing globals file"""
@@ -1626,7 +1560,6 @@ class GlobalDb:
         # print "writing to globDb", name, value
         self.cache[name] = str(value)
 
-
 def loadglob():
     """load persistent local config to global vars from file"""
     # updated from 152i
@@ -1643,7 +1576,6 @@ def loadglob():
     netsync.rem_host = globDb.get('remip', '0.0.0.0')
     if debug: print "  debug:", debug
 
-
 def saveglob():
     """save persistent local config global vars to file"""
     globDb.put('node', node)
@@ -1658,7 +1590,6 @@ def saveglob():
     #    fd.write("|%s|%s|%s|%s|%s|%s|%s|"%(node,operator,logger,power,\
     #                                       authk,tdwin,debug))
     #    fd.close()
-
 
 # contest log section
 def getfile(fn):
@@ -1675,9 +1606,7 @@ def getfile(fn):
         # print data
     return data
 
-
 participants = {}
-
 
 def contestlog(pr):
     """generate contest entry and log forms"""
@@ -2095,7 +2024,6 @@ bands = ('160', '80', '40', '20', '15', '10', '6', '2', '220', '440', '900', '12
 modes = ('c', 'd', 'p')
 bandb = {}  # band button handles
 
-
 def bandset(b):
     global band, tmob
     if node == "":
@@ -2116,7 +2044,6 @@ def bandset(b):
 def bandoff():
     """ To set the band to off"""
     bandset('off')
-
 
 # new participant setup
 class NewParticipantDialog():
@@ -2248,13 +2175,10 @@ class NewParticipantDialog():
     def quitbtn(self):
         self.t.destroy()
 
-
 newpart = NewParticipantDialog()
 # property dialogs
 
-
 cf = {}
-
 
 def renew_title():
     """renew title and various, called at 10 second rate"""
@@ -2328,7 +2252,6 @@ def noddiag():
     #def authdiag():
     #    pdiag('AuthKey',authk,r'.{3,12}$',12)
 
-
 # view textdocs
 
 def viewprep(ttl=''):
@@ -2347,13 +2270,11 @@ def viewprep(ttl=''):
     t.bind('<KeyPress>', kevent)
     return t
 
-
 def viewtextv(txt, ttl=''):
     "view text variable"
     w = viewprep(ttl)
     w.insert(END, txt)
     w.configure(state=DISABLED)
-
 
 def viewtextl(l, ttl=''):
     "view text list"
@@ -2361,7 +2282,6 @@ def viewtextl(l, ttl=''):
     for i in l:
         w.insert(END, "%s\n" % i)
     w.configure(state=DISABLED)
-
 
 def viewtextf(fn, ttl=''):
     "view text file"
@@ -2374,12 +2294,10 @@ def viewtextf(fn, ttl=''):
     except:
         viewtextv("read error on file %s" % fn)
 
-
 def viewlogf(bandm):
     "view log filtered by bandmode"
     lg = qdb.filterlog2(bandm)
     viewtextl(lg, "Log Filtered for %s" % bandm)
-
 
 def viewlogfs(nod):
     "view log filtered by node"
@@ -2390,7 +2308,6 @@ def viewwasrpt():
     r = qdb.wasrpt()
     viewtextl(r, "Worked All States Report")
 
-
 def updatebb():
     """update band buttons"""
     # Added Who's on the bands functionality with a mouse over event - KD4SIR Scott A Hibbs Oct/13/2013
@@ -2398,7 +2315,6 @@ def updatebb():
     global wof
     r, cl, vh, go = net.si.nod_on_bands()
     anytext = "VHF "
-
 
     def whosonfirst(event):
         # Cleaned up whos on band (with section of .ba report) - KD4SIR Scott Hibbs Mar/23/2017 
@@ -2412,12 +2328,10 @@ def updatebb():
         topper()
         txtbillb.see(END)
 
-
-
     def whosonsecond(event):
         global wof
         wof = ""
-		#tkMessageBox.destroy
+        #tkMessageBox.destroy
 
     for i in bands:
         dummy = 0
@@ -2428,12 +2342,14 @@ def updatebb():
             bc = 'gray'
             sc = 'white'
             n = len(r.get(bm, ''))
-            bandb[bm].bind("<Enter>", lambda e: None)
-            bandb[bm].bind("<Leave>", lambda e: None)
+            # possible memory leak: recommended fix based on comment: python and tkinter programming book pg 434: .bind(sequence, function, add)
+            # no need for lambda
+            bandb[bm].bind("<Enter>", None)
+            bandb[bm].bind("<Leave>", None)
             if n == 0:
                 bc = 'grey'
-                bandb[bm].bind("<Enter>", lambda e: None)
-                bandb[bm].bind("<Leave>", lambda e: None)
+                bandb[bm].bind("<Enter>", None)
+                bandb[bm].bind("<Leave>", None)
             elif n == 1:
                 bc = 'yellow'
                 bandb[bm].bind("<Enter>", whosonfirst)
@@ -2585,14 +2501,11 @@ def BandButtons(w):
         bandb[i].grid(row=j, column=a, sticky=NSEW)
     w.grid_columnconfigure(a, weight=1)
 
-
 def rndlet():
     return chr(random.randrange(ord('a'), ord('z') + 1))
 
-
 def rnddig():
     return chr(random.randrange(ord('0'), ord('9') + 1))
-
 
 def testqgen(n):
     # Scott A Hibbs KD4SIR 07/25/2013
@@ -2608,7 +2521,6 @@ def testqgen(n):
             time.sleep(0.1)
     else:
         txtbillb.insert(END, "This command only available while testing with tst.")
-
 
 # global section, main program
 # setup persistent globals before GUI
@@ -2665,7 +2577,6 @@ if node == "":
                         z = len(k)
                         ## 1. if there is more than four characters
                         ## 2. add the rest with randoms
-                    
         else:
             print "Thank You!!"
             node = k + random.choice('abcdefghijklmnopqrstuvwxyz')
@@ -2759,7 +2670,6 @@ menu.add_cascade(label="W1AW", menu=W1AWmenu)
 W1AWmenu.add_command(label="W1AW Schedule", command=lambda: viewtextf('w1aw.txt', 'W1AW Schedule'))
 W1AWmenu.add_command(label="NTS Message", command=lambda: os.startfile('NTS_eg.txt'))
 
-
 # Time Conversion Chart
 
 tzchart = """
@@ -2833,7 +2743,6 @@ def setlog(logr):
     logmb.config(background='yellow')
     saveglob()
 
-
 f1b = Frame(root, bd=0)  # oper logger power and network windows
 #  Changed the color of the user buttons to red until assigned - KD4SIR Scott Hibbs 7/14/2013
 ocolor = 'red'
@@ -2884,7 +2793,6 @@ def buildmenus():
     opdsu.add_command(label="Add New Contestant", command=newpart.dialog)
     logdsu.add_command(label="Add New Logger", command=newpart.dialog)
 
-
 # power
 def ckpowr():
     global power
@@ -2927,7 +2835,6 @@ def ckpowr():
     print 'power', power
     return 1
 
-
 def setpwr(p):
     global power
     pwr = ival(p)
@@ -2963,7 +2870,6 @@ def setpwr(p):
         powcb.config(background=pcolor)
         powlbl.config(background=pcolor)
 
-        
 pwrmb = Menubutton(f1b, text="Power", font=fdfont, relief='raised',
                    background=pcolor)
 pwrmb.grid(row=0, column=6, sticky=NSEW)
@@ -3086,12 +2992,10 @@ txtbillb.insert(END, "-Call-Class-Sect- \n")
 txtbillb.config(insertwidth=3)
 txtbillb.focus_set()
 
-
 def topper():
     """This will reset the display for input. Added Jul/01/2016 KD4SIR Scott Hibbs"""
     txtbillb.insert(END, "\n")
     txtbillb.insert(END, "-Call-Class-Sect- \n")
-
 
 def showthiscall(call):
     "show the log entries for this call"
@@ -3108,7 +3012,6 @@ def showthiscall(call):
             txtbillb.insert(END, "%s\n" % i.prlogln(i))
             findany = 1
     return findany
-
 
 # added this to take out the keyhelp from the code. - Scott Hibbs
 def mhelp():
@@ -3135,7 +3038,6 @@ def readSections():
         print "read error during readSections", e
 
 readSections()
-
 
 def proc_key(ch):
     "process keystroke"
@@ -3483,7 +3385,6 @@ def proc_key(ch):
                 kbuf = buf
                 txtbillb.insert(END, ch)
 
-
 def kevent(event):
     "keyboard event handler"
     global goBack
@@ -3502,11 +3403,9 @@ def kevent(event):
     txtbillb.see(END)  # insure that it stays in view
     return "break"  # prevent further processing on kbd events
 
-
 def focevent(e):
     txtbillb.mark_set('insert', END)
     return "break"
-
 
 class Edit_Dialog(Toplevel):
     """edit log entry dialog"""
@@ -3716,12 +3615,10 @@ class Edit_Dialog(Toplevel):
         print 'quit - edit aborted'
         self.top.destroy()
 
-
 def edit_dialog(node, seq):
     'edit log entry'
     dummy = Edit_Dialog(root, node, seq)
 
-    
 def log_select(e):
     'process mouse left-click on log window'
     #    print e.x,e.y
@@ -3770,7 +3667,6 @@ def log_select(e):
     return 'break'
 
 updatect = 0
-
 
 # This function updated from 152i
 def update():
