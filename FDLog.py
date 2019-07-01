@@ -10,7 +10,8 @@ import random
 import calendar
 import sqlite3
 from Tkinter import Tk, END, NORMAL, DISABLED, re, sys, Toplevel, Frame, Label, Entry, Button, \
-    W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, Checkbutton, RAISED, IntVar
+    W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
+    Checkbutton, RAISED, IntVar
 
 # This needs to be tested on different networks and cross platform.
 #
@@ -372,8 +373,8 @@ class SQDB:
         nl = []
         for r in result:
             # print dir(r)
-            nl.append("|".join(('q', r['src'], str(r['seq']), r['date'], r['band'], r['call'], r['rept'], r['powr'],
-                                r['oper'], r['logr'], '')))
+            nl.append("|".join(('q', r['src'], str(r['seq']), r['date'], r['band'], r['call'],
+                                r['rept'], r['powr'], r['oper'], r['logr'], '')))
         # print nl
         return nl
 
@@ -382,7 +383,8 @@ class SQDB:
 
     # def next(self):  # get next item from db in text format
     #     n = self.result
-    #     nl = "|".join(n.src, n['seq'], n['date'], n['band'], n['call'], n['rept'], n['powr'], n['oper'], n['logr'])
+    #     nl = "|".join(n.src, n['seq'], n['date'], n['band'], n['call'], n['rept'],
+    #                   n['powr'], n['oper'], n['logr'])
     #     return nl
 
     def log(self, n):  # add item to journal logfile table (and other tables...)
@@ -391,11 +393,14 @@ class SQDB:
         #        self.sqdb.row_factory = sqlite3.Row   # namedtuple_factory
         curs = sqdb.cursor()  # make a database connection cursor
         # start commit, begin transaction
-        sql = "insert into qjournal (src,seq,date,band,call,rept,powr,oper,logr) values (?,?,?,?,?,?,?,?,?)"
+        sql = "insert into qjournal (src,seq,date,band,call,rept,powr,oper,logr)" \
+              "values (?,?,?,?,?,?,?,?,?)"
         curs.execute(sql, parms)
-        # sql = "insert into qsos values (src,seq,date,band,call,sfx,rept,powr,oper,logr),(?,?,?,?,?,?,?,?,?,?)"
+        # sql = "insert into qsos values (src,seq,date,band,call,sfx,rept,powr,oper,logr),
+        #        (?,?,?,?,?,?,?,?,?,?)"
         # self.cur(sql,parms)
-        # update qso count, scores? or just use q db count? this doesn't work well for different weights
+        # update qso count, scores? or just use q db count? this doesn't work well for
+        # different weights
         # update sequence counts for journals?
         sqdb.commit()  # do the commit
         if n.band == '*QST':
@@ -484,7 +489,8 @@ class qsodb:
                 # print "discarding out of date range",iv.date,iv.src,iv.seq
                 del (d[i])
         for i in d.values():  # re-index by call-band
-            dummy, dummy, dummy, dummy, call, dummy, dummy = self.qparse(i.call)  # extract call (not /...)
+            dummy, dummy, dummy, dummy, call, dummy, dummy = self.qparse(i.call)
+            # extract call (not /...)
             k = "%s-%s" % (call, i.band)
             # filter out noncontest entries
             if ival(i.powr) == 0 and i.band[0] != '*': continue
@@ -512,7 +518,8 @@ class qsodb:
                  (s.date[4:11], s.band, s.call[:7], s.rept[:33], s.oper, s.logr, s.seq, s.src)
         else:
             ln = "%8s %5s %-11s %-24s %4s %-3s %-3s %4s %s" % \
-                 (s.date[4:11], s.band, s.call[:11], s.rept[:24], s.powr, s.oper, s.logr, s.seq, s.src)
+                 (s.date[4:11], s.band, s.call[:11], s.rept[:24], s.powr,
+                  s.oper, s.logr, s.seq, s.src)
         return ln
 
     def prlog(self):
@@ -574,12 +581,14 @@ class qsodb:
         l.sort()  # sort data with prepended date.time
         for i in l: print i[13:]  # rm sort key date.time
 
-    # added support for winter field day, this outputs the cabrillo format that is posted on their website.
+    # added support for winter field day, this outputs the Cabrillo format
+    # that is posted on their website.
     def winter_fd(self):
-        "output Winter Field day QSO data in cabrillo format:"
+        "output Winter Field Day QSO data in Cabrillo format:"
         # vars:
-        band_map = {'160': '1800', '80': '3500', '40': '7000', '20': '14000', '15': '21000', '10': '28000', '6': '50',
-                    '2': '144', '220': '222', '440': '432', '900': '902', '1200': '1.2G'}
+        band_map = {'160': '1800', '80': '3500', '40': '7000', '20': '14000', '15': '21000',
+                    '10': '28000', '6': '50', '2': '144', '220': '222', '440': '432',
+                    '900': '902', '1200': '1.2G'}
         dummy, n, dummy = self.cleanlog()
         l = []
         mycall = string.upper(GD.getv('fdcall'))
@@ -604,7 +613,8 @@ class qsodb:
             cat, sect = i.rept.split(" ")
             if '/' in call:  # split off grid from call
                 call, grid = call.split('/')
-            # cabrillo example: QSO:  40 DI 2019-01-19 1641 KC7SDA        1H  WWA    KZ9ZZZ        1H  NFL
+            # cabrillo example:
+            # QSO:  40 DI 2019-01-19 1641 KC7SDA        1H  WWA    KZ9ZZZ        1H  NFL
             l.append("%sQSO:  %-5s %-2s %-10s %4s %-10s %-2s  %-5s %-10s %-2s  %-5s" % (
                 i.date, freq, mod, date, tim, mycall, mycat, mysect, call, cat, sect))
         l.sort()  # sort data with prepended date.time
@@ -714,7 +724,8 @@ class qsodb:
     def postnew(self, time, call, bandmod, report, oper, logr, powr):
         "post new locally generated info"
         s = self.new(NODE)
-        s.date, s.call, s.band, s.rept, s.oper, s.logr, s.powr = time, call, bandmod, report, oper, logr, powr
+        s.date, s.call, s.band, s.rept, s.oper, s.logr,\
+        s.powr = time, call, bandmod, report, oper, logr, powr
         s.seq = -1
         return s.dispatch('user')
 
@@ -846,7 +857,8 @@ class qsodb:
                 digq += 1
             if 'p' in i.band:
                 fonq += 1
-        return (qpb, ppb, qpop, qplg, qpst, tq, score, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat)
+        return (qpb, ppb, qpop, qplg, qpst, tq, score, maxp,
+                cwq, digq, fonq, qpgop, gotaq, nat, sat)
 
     def bands(self):
         """ .ba command band status station on, q/band, xx needs upgd"""
@@ -980,8 +992,8 @@ class qsodb:
                 if tm:  # if forced time exists
                     if len(tm) < 7:  # it must be complete
                         stat = 0
-                        #        print "stat[%s] time[%s] pfx[%s] sfx[%s] call[%s] xcall[%s] rpt[%s]"%\
-                        #              (stat,tm,pfx,sfx,call,xcall,rept)
+                        # print "stat[%s] time[%s] pfx[%s] sfx[%s] call[%s] xcall[%s] rpt[%s]"%\
+                        #       (stat,tm,pfx,sfx,call,xcall,rept)
         return (stat, tm, pfx, sfx, call, xcall, rept)
 
     def dupck(self, wcall, band):
@@ -1089,7 +1101,8 @@ class qsodb:
                 else:
                     h.append("%s" % i)
         n.sort()
-        r.append("Worked All States Report\n%s Warning(s) Below\nNeed %s States:" % (len(e), len(n)))
+        r.append("Worked All States Report\n%s Warning(s) Below\nNeed %s States:"
+                 % (len(e), len(n)))
         for i in n:
             r.append(i)
         h.sort()
@@ -1248,7 +1261,8 @@ class node_info:
 
 class netsync:
     """network database synchronization"""
-    # removed netmask - it isn't used anywhere in the program from what I can tell (do a search for 'netmask' this is the only place you find it)
+    # removed netmask - it isn't used anywhere in the program from what I can tell
+    # (do a search for 'netmask' this is the only place you find it)
     # re-coded the ip address calculation to smooth it out and make it cross platform compatible
     # netmask = '255.255.255.0'
     rem_adr = ""  # remote bc address
@@ -1463,7 +1477,9 @@ class global_data:
         return self.byname[name].val
 
     def sethelp(self):
-        l = ["   Set Commands\n   For the Logging Guru In Charge\n   eg: .set <parameter> <value>\n"]  # spaced for sort
+        l = ["   Set Commands\n   For the Logging Guru In Charge"
+             "\n   eg: .set <parameter> <value>\n"]
+        # spaced for sort
         for i in self.byname.keys():
             if i[:2] != 'p:':  # skip ops in help display
                 l.append("  %-6s  %-43s  '%s'" % (i, self.byname[i].desc, self.byname[i].val))
@@ -1472,7 +1488,8 @@ class global_data:
 
 
 # modifed  the sect setting regex to accept both lower and upper case
-# added additional form fields (also fixed 'from' to 'form') for wfd NOTE: set commands have a max length of 6!
+# added additional form fields (also fixed 'from' to 'form') for wfd
+# NOTE: set commands have a max length of 6!
 GD = global_data()
 for name, desc, default, okre, maxlen in (
         ('class', '<n><A-F>       FD class (eg 2A)', '2A', r'[1-9][0-9]?[a-fihoA-FIHO]$', 3),
@@ -1775,7 +1792,8 @@ def contestlog(pr):
     if natural_q >= 5:
         natural_bp = 100
         tot_bonus += natural_bp
-        print "    %3s Five Alternate power QSOs completed (%s/5) (list below)" % (natural_bp, natural_q)
+        print "    %3s Five Alternate power QSOs completed (%s/5) (list below)"\
+              % (natural_bp, natural_q)
     w1aw_msg_bp = 0
     if len(w1aw_msg) > 30:  # ignore short file place holder 152i
         w1aw_msg_bp = 100
@@ -1785,12 +1803,14 @@ def contestlog(pr):
     if GD.getv('svego') > "":
         site_visited_ego_bp = 100
         tot_bonus += site_visited_ego_bp
-        print "    %3s Site Visited by elected govt officials (%s)" % (site_visited_ego_bp, GD.getv('svego'))
+        print "    %3s Site Visited by elected govt officials (%s)"\
+              % (site_visited_ego_bp, GD.getv('svego'))
     site_visited_roa_bp = 0
     if GD.getv('svroa') > "":
         site_visited_roa_bp = 100
         tot_bonus += site_visited_roa_bp
-        print "    %3s Site Visited by representative of agency (%s)" % (site_visited_roa_bp, GD.getv('svroa'))
+        print "    %3s Site Visited by representative of agency (%s)"\
+              % (site_visited_roa_bp, GD.getv('svroa'))
     gota_max_bp = 0
     if gotaq >= 100:
         gota_max_bp = 100
@@ -2113,7 +2133,8 @@ class NewParticipantDialog():
         fr1 = Frame(s.t)
         fr1.grid(row=0, column=0)
         Label(fr1, text='Initials   ', font=FDBFONT).grid(row=0, column=0, sticky=W)
-        s.initials = Entry(fr1, width=3, font=FDBFONT, validate='focusout', validatecommand=s.lookup)
+        s.initials = Entry(fr1, width=3, font=FDBFONT,
+                           validate='focusout', validatecommand=s.lookup)
         s.initials.grid(row=0, column=1, sticky=W)
         s.initials.focus()
         Label(fr1, text='Name', font=FDBFONT).grid(row=1, column=0, sticky=W)
@@ -2131,9 +2152,12 @@ class NewParticipantDialog():
         fr2 = Frame(s.t)
         fr2.grid(row=1, column=0, sticky=EW, pady=3)
         fr2.grid_columnconfigure((0, 1), weight=1)
-        Label(fr2, text='<Enter>=Save', font=FDBFONT, foreground='red').grid(row=3, column=0, sticky=W)
-        # Button(fr2, text='Save', font=fdbfont, command=s.applybtn) .grid(row=3, column=1, sticky=EW, padx=3)
-        Button(fr2, text='Dismiss', font=FDBFONT, command=s.quitbtn).grid(row=3, column=2, sticky=EW, padx=3)
+        Label(fr2, text='<Enter>=Save', font=FDBFONT,
+              foreground='red').grid(row=3, column=0, sticky=W)
+        # Button(fr2, text='Save', font=fdbfont,
+        #        command=s.applybtn) .grid(row=3, column=1, sticky=EW, padx=3)
+        Button(fr2, text='Dismiss', font=FDBFONT,
+               command=s.quitbtn).grid(row=3, column=2, sticky=EW, padx=3)
         # Bound enter key to save entries
         s.t.bind('<Return>', lambda event: s.applybtn)
 
@@ -2146,7 +2170,8 @@ class NewParticipantDialog():
             self.initials.focus()
         else:
             self.initials.configure(bg='white')
-            dummy, name, call, age, vist = string.split(PARTICIPANTS.get(initials, ', , , , '), ', ')
+            dummy, name, call, age, vist =\
+                string.split(PARTICIPANTS.get(initials, ', , , , '), ', ')
             self.name.delete(0, END)
             self.name.insert(END, name)
             self.call.delete(0, END)
@@ -2262,7 +2287,8 @@ def setnode(new):
     NODE = string.lower(new)
     QDB.redup()
     renew_title()
-    LBLNODE.configure(text="My Node: %s" % NODE, font=FDFONT, foreground='royalblue', background='lightgrey')
+    LBLNODE.configure(text="My Node: %s" % NODE, font=FDFONT,
+                      foreground='royalblue', background='lightgrey')
     # Had to add the above so that the new lblnode could be updated
 
 
@@ -2380,7 +2406,8 @@ def viewwasrpt():
 def updatebb():
     """update band buttons"""
     # Added Who's on the bands functionality with a mouse over event
-    # Tried and tried to get wof to return only one result for the mouse over. If you can, you're awesome!
+    # Tried and tried to get wof to return only one result for the mouse over.
+    # If you can, you're awesome!
     global WOF
     r, cl, vh, go = NET.si.nod_on_bands()
     anytext = "VHF "
@@ -2393,7 +2420,8 @@ def updatebb():
             dummy, dummy, age = d.get(t.nod, ('', '', 9999))
             if age > t.age: d[t.nod] = (t.bnd, t.msc, t.age)
         for t in d:
-            TXTBILLB.insert(END, "%8s %4s %-18s %4s\n" % (t, d[t][0], d[t][1], d[t][2]))  # t.bnd,t.msc,t.age)
+            TXTBILLB.insert(END, "%8s %4s %-18s %4s\n" % (t, d[t][0], d[t][1], d[t][2]))
+            # t.bnd,t.msc,t.age)
         topper()
         TXTBILLB.see(END)
 
@@ -2475,8 +2503,8 @@ def updatebb():
 
 def updateqct():
     "update contact count"
-    dummy, dummy, qpop, qplg, dummy, dummy, dummy, dummy, cwq, digq, fonq, dummy, gotaq, dummy, dummy = \
-        QDB.bandrpt()  # xx reduce processing here
+    dummy, dummy, qpop, qplg, dummy, dummy, dummy, dummy, cwq, digq, fonq,\
+    dummy, gotaq, dummy, dummy = QDB.bandrpt()  # xx reduce processing here
     for i, j in (('FonQ', 'Phone %5s' % fonq),
                  ('CW/D', 'CW&Dig %4s' % (cwq + digq)),
                  ('GOTAq', 'GOTA %6s' % gotaq)):
@@ -2546,14 +2574,15 @@ def BandButtons(w):
             bm = "%s%s" % (i, j)
             if i == 'off':
                 bm = 'off'
-                # indicatoron = 0 makes square button with text inside but doesn't work well on mac, with value 1 it makes a
-                # circle alongside the text and works on both so detect mac and change it for mac only
-                BANDB[bm] = Radiobutton(master=w, text=bm, font=FDFONT, background='lightgrey', indicatoron=mac, \
-                                        variable=SV, value=bm, selectcolor='pink2',
+                # indicatoron = 0 makes square button with text inside but doesn't work well on mac,
+                # with value 1 it makes a circle alongside the text and works on both so detect mac
+                # and change it for mac only
+                BANDB[bm] = Radiobutton(master=w, text=bm, font=FDFONT, background='lightgrey',
+                                        indicatoron=mac, variable=SV, value=bm, selectcolor='pink2',
                                         command=lambda b=bm: (bandset(b)))
             else:
-                BANDB[bm] = Radiobutton(master=w, text=bm, font=FDFONT, background='pink2', indicatoron=mac, \
-                                        variable=SV, value=bm, selectcolor='white',
+                BANDB[bm] = Radiobutton(master=w, text=bm, font=FDFONT, background='pink2',
+                                        indicatoron=mac, variable=SV, value=bm, selectcolor='white',
                                         command=lambda b=bm: (bandset(b)))
             BANDB[bm].grid(row=b, column=a, sticky=NSEW)
             b += 1
@@ -2630,7 +2659,8 @@ if NODE == "":
     print "  (7 characters}"
     k = string.lower(string.strip(sys.stdin.readline())[:8])
     if len(k) == 8:
-        print "That's too many.. (Marc? is that you?)"  # Thanks to Marc Fountain K9MAF for the correction.
+        print "That's too many.. (Marc? is that you?)"
+        # Thanks to Marc Fountain K9MAF for the correction.
         k = k[:7]
     Z = len(k)
     if k != 'gota':
@@ -2730,15 +2760,21 @@ for j in MODES:
 RESOURCEMENU = Menu(MENU, tearoff=0)
 MENU.add_cascade(label="Resources", menu=RESOURCEMENU)
 # Changed this from fdrules to just Rules to get away from fd name in file folder
-RESOURCEMENU.add_command(label="ARRL FD Rules (pdf)", command=lambda: os.startfile('Rules.pdf'))
+RESOURCEMENU.add_command(label="ARRL FD Rules (pdf)",
+                         command=lambda: os.startfile('Rules.pdf'))
 # Changed this to a .dat file to remove the duplicate txt file
-RESOURCEMENU.add_command(label="ARRL Sections", command=lambda: viewtextf('Arrl_sect.dat', 'ARRL Sections'))
-RESOURCEMENU.add_command(label="ARRL Band Chart (pdf)", command=lambda: os.startfile('Bands.pdf'))
-RESOURCEMENU.add_command(label="ARRL Band Plan", command=lambda: viewtextf('ARRL_Band_Plans.txt', "ARRL Band Plan"))
+RESOURCEMENU.add_command(label="ARRL Sections",
+                         command=lambda: viewtextf('Arrl_sect.dat', 'ARRL Sections'))
+RESOURCEMENU.add_command(label="ARRL Band Chart (pdf)",
+                         command=lambda: os.startfile('Bands.pdf'))
+RESOURCEMENU.add_command(label="ARRL Band Plan",
+                         command=lambda: viewtextf('ARRL_Band_Plans.txt', "ARRL Band Plan"))
 # This is not needed with the band chart giving the same info
-# resourcemenu.add_command(label="FD Frequency List", command=lambda: viewtextf('frequencies.txt', "FD Frequency List"))
+# resourcemenu.add_command(label="FD Frequency List",
+#                          command=lambda: viewtextf('frequencies.txt', "FD Frequency List"))
 # Removed the propagation report. We don't use it
-# resourcemenu.add_command(label="Propagation Info", command=lambda: viewtextf('propagation.txt', "Propagation Info"))
+# resourcemenu.add_command(label="Propagation Info",
+#                          command=lambda: viewtextf('propagation.txt', "Propagation Info"))
 # Created a W1AW menu
 W1AWMENU = Menu(MENU, tearoff=0)
 MENU.add_cascade(label="W1AW", menu=W1AWMENU)
@@ -2761,7 +2797,8 @@ for g in range(0, 2400, 100):
     x = e + 100
     if (x < 0): x += 2400
     TZCHART += "%04d %04d %04d %04d %04d\n" % (g, p, c, e, x)
-RESOURCEMENU.add_command(label="Time Conversion Chart", command=lambda: viewtextv(TZCHART, "Time Conversion Chart"))
+RESOURCEMENU.add_command(label="Time Conversion Chart",
+                         command=lambda: viewtextv(TZCHART, "Time Conversion Chart"))
 HELPMENU = Menu(MENU, tearoff=0)
 MENU.add_cascade(label="Help", menu=HELPMENU)
 HELPMENU.add_command(label="Quick Help", command=lambda: viewtextf('Keyhelp.txt'))
@@ -2964,7 +3001,8 @@ PWRMU.add_command(label='     5W Natural', command=lambda: (setpwr('5n')))
 PWRMU.add_command(label='   50W Natural', command=lambda: (setpwr('50n')))
 PWRMU.add_command(label=' 100W Natural', command=lambda: (setpwr('100n')))
 PWRMU.add_command(label=' 150W Natural', command=lambda: (setpwr('150n')))
-PWRNT = Entry(F1B, width=4, font=FDFONT, background=PCOLOR, validate='focusout', validatecommand=ckpowr)
+PWRNT = Entry(F1B, width=4, font=FDFONT,
+              background=PCOLOR, validate='focusout', validatecommand=ckpowr)
 PWRNT.grid(row=0, column=7, sticky=NSEW)
 POWLBL = Label(F1B, text="W", font=FDFONT, background=PCOLOR)
 POWLBL.grid(row=0, column=8, sticky=NSEW)
@@ -2978,13 +3016,15 @@ F1B.grid(row=1, columnspan=2, sticky=NSEW)
 LBLNET = Label(F1B, text="Network Status", font=FDFONT, foreground='royalblue', background='gold')
 LBLNET.grid(row=2, column=0, columnspan=9, sticky=NSEW)
 # Node window
-LBLNODE = Label(F1B, text="My Node: %s" % NODE, font=FDFONT, foreground='royalblue', background='lightgrey')
+LBLNODE = Label(F1B, text="My Node: %s" % NODE, font=FDFONT,
+                foreground='royalblue', background='lightgrey')
 LBLNODE.grid(row=2, column=9, columnspan=1, sticky=NSEW)
 # Whos on First Window to display operators on bands
 # lblwof = Label(f1b, text="", font=fdfont, foreground='royalblue', background='lightgrey')
 # lblwof.grid(row=2, column=0, columnspan=9, sticky=NSEW)
 # Port window
-# lblport = Label(f1b, text="Port: %s" % port_base, font=fdfont, foreground='royalblue', background='lightgrey')
+# lblport = Label(f1b, text="Port: %s" % port_base, font=fdfont,
+#                 foreground='royalblue', background='lightgrey')
 # lblport.grid(row=3, column=9, columnspan=1, sticky=NSEW)
 # log window
 LOGW = Text(ROOT, takefocus=0, height=11, width=80, font=FDMFONT,
@@ -3055,11 +3095,18 @@ ROOT.update()
 ROOT.deiconify()
 NET.start()  # start threads
 renew_title()
-TXTBILLB.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", ("b"))
-TXTBILLB.insert(END, "                              Dialogue Window\n", ("b"))
-TXTBILLB.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", ("b"))
-TXTBILLB.insert(END, "Please select the Operator, Logger, Power and Band/Mode in pink above.\n\n")
-TXTBILLB.insert(END, "-Call-Class-Sect- \n")
+TXTBILLB.insert(END,
+                "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n",
+                ("b"))
+TXTBILLB.insert(END,
+                "                              Dialogue Window\n", ("b"))
+TXTBILLB.insert(END,
+                "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n",
+                ("b"))
+TXTBILLB.insert(END,
+                "Please select the Operator, Logger, Power and Band/Mode in pink above.\n\n")
+TXTBILLB.insert(END,
+                "-Call-Class-Sect- \n")
 TXTBILLB.config(insertwidth=3)
 TXTBILLB.focus_set()
 
@@ -3125,7 +3172,8 @@ def proc_key(ch):
         mhelp()
         return
     # Adding a statement to check for uppercase. Previously unresponsive while capped locked
-    # Thanks to WW9A Brian Smith for pointing out that the program isn't randomly frozen and not requiring a restart.
+    # Thanks to WW9A Brian Smith for pointing out that the program isn't randomly frozen
+    # and not requiring a restart.
     if ch.isupper():
         TXTBILLB.insert(END, " LOWERCAPS PLEASE \n")
         KBUF = ""
@@ -3250,8 +3298,9 @@ def proc_key(ch):
             return
         if re.match(r'[.]re$', KBUF):  # report  xx mv to gui
             print
-            print "  band  cw q   pwr dig q   pwr fon q   pwr"
-            qpb, ppb, dummy, dummy, dummy, tq, score, maxp, dummy, dummy, dummy, dummy, dummy, dummy, dummy = QDB.bandrpt()
+            print "  band  cw q   pwr dig q   pwr fon q   pwr", qpb, ppb, dummy, dummy,
+            dummy, tq, score, maxp, dummy, dummy, dummy, dummy, dummy, dummy,\
+            dummy = QDB.bandrpt()
             for b in (160, 80, 40, 20, 15, 10, 6, 2, 220, 440, 1200, 'sat', 'gota'):
                 print "%6s" % b,
                 for m in 'cdp':
@@ -3327,7 +3376,9 @@ def proc_key(ch):
                         rept1 = string.upper(rept)
                         if clas == '1D':
                             if clas in rept1:
-                                TXTBILLB.insert(END, "\n 1D to 1D contacts are logged, but zero points! \n")
+                                TXTBILLB.insert(END,
+                                                "\n 1D to 1D contacts are logged, but zero points!"
+                                                " \n")
                                 topper()
                         # check the report for valid fd or wfd classes:
                         # note according to the cheat sheet, \d is a digit
@@ -3344,7 +3395,9 @@ def proc_key(ch):
                             # allow everything
                             m = "something"
                         if m == None:  # match failed, do not allow and abort logging
-                            TXTBILLB.insert(END, " - ERROR: Bad exchange ( %s ) Please Try Again\n" % rept)
+                            TXTBILLB.insert(END,
+                                            " - ERROR: Bad exchange ( %s ) Please Try Again\n"
+                                            % rept)
                             topper()
                             return
                         # Check for valid section in report
@@ -3507,7 +3560,8 @@ class Edit_Dialog(Toplevel):
         # self.transient(parent)     # avoid showing as separate item
         self.crazytxt.set('Edit Log Entry')
         self.crazyclr.set('lightgrey')
-        self.crazylbl = tl = Label(top, text=self.crazytxt.get(), font=FDBFONT, bg=self.crazyclr.get(), relief=RAISED)
+        self.crazylbl = tl = Label(top, text=self.crazytxt.get(), font=FDBFONT,
+                                   bg=self.crazyclr.get(), relief=RAISED)
         # tl = Label(top, text='Edit Log Entry', font=fdbfont, bg='lightgrey', relief=RAISED)
         tl.grid(row=0, columnspan=2, sticky=EW)
         tl.grid_columnconfigure(0, weight=1)
