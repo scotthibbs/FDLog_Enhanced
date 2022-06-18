@@ -34,6 +34,7 @@ Ideas: If you can do any of these - Fantastic!!
 	believe prefix check only returns first prefix in the log. 
 		Actually there is a note in the code from Alan Biocca to fix this
 		as foreign callsigns are not supported properly.
+	Fix requiring full text of "IN-Indiana" for our section entry, try abbreviation instead
 
 Enhancement #
 
