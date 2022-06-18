@@ -22,7 +22,8 @@ scotthibbs at gmail.com (email ideas for enhancements/bugs)
 v2022_Beta_1 (working toward a 2023 stable release)
 	Started looking at the program again out of curiosity around 2022 Field Day. Joined Tristate Amateur Radio Society in Evansville Indiana a couple years ago and they successfully use N3FJP-FD version. This will never replace that program as long as it doesn't integrate with other programs or do cw keying etc. But I miss programming, it's fun.
 
-Ideas: 	
+Ideas: If you can do any of these - Fantastic!!
+
 	KD4SIR - Will probably work on copy/paste functionality
 	KC7SDA - Will check network and platform compatibility and upper/lower case entry
 	option to auto time out nodes from the band select 15m/30m/45m/1hr
@@ -30,13 +31,20 @@ Ideas:
 	Change natural to battery
 	Work on States worked to the side
 	Work on Phonetic helper
-	believe prefix check only returns first prefix in the log. Actually there is a note in the code from Alan Biocca to fix this
+	believe prefix check only returns first prefix in the log. 
+		Actually there is a note in the code from Alan Biocca to fix this
 		as foreign callsigns are not supported properly.
+
 Enhancement #
+
  71 Added reminder that the space bar will check prefix, suffix and calls for dupes. 
+
  70 Add new participant dialogue window quit button now states "enter to save, click to quit" (I kept forgetting to hit enter.)
+
  69 Worked on other bands and dupe checking responses are nicer and are more readable, also reminds to up arrow.   
+
  68 Fixed dupe checking against club call and gota call that could have been entered with upper case and missed.
+
  67 Changed the file name from FDLog_SCICSG to FDLog_Enhanced.
 	Two reasons, it's slightly confusing and I moved away from this awesome group of hams. :( 
 
