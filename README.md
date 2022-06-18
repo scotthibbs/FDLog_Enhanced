@@ -11,19 +11,36 @@ It shares the database to all computers and tracks operations so everyone can se
 
 Download a stable release from the release section to enjoy! 
 
-The code here is what is in progress and not stable for release yet. 
+The code here is what is in progress for a 2023 stable release.  
 
+The release log has more detailed information. It "seems" stable. 
+ This needs to be tested on different networks and cross platform.
 
+Last updated 18Jun2022 Scott Hibbs KD4SIR
+scotthibbs at gmail.com (email ideas for enhancements/bugs)
 
- This needs to be tested on different networks and cross platform before released.
- 
- KD4SIR - Will probably work on copy/paste functionality
- 
- KC7SDA - Will check network and platform compatibility and upper/lower case entry 
+v2022_Beta_1 (working toward a 2023 stable release)
+	Started looking at the program again out of curiosity around 2022 Field Day. Joined Tristate Amateur Radio Society in Evansville Indiana a couple years ago and they successfully use N3FJP-FD version. This will never replace that program as long as it doesn't integrate with other programs or do cw keying etc. But I miss programming, it's fun.
 
+Ideas: 	
+	KD4SIR - Will probably work on copy/paste functionality
+	KC7SDA - Will check network and platform compatibility and upper/lower case entry
+	option to auto time out nodes from the band select 15m/30m/45m/1hr
+	Fix so reports another's last contact time
+	Change natural to battery
+	Work on States worked to the side
+	Work on Phonetic helper
+	believe prefix check only returns first prefix in the log. Actually there is a note in the code from Alan Biocca to fix this
+		as foreign callsigns are not supported properly.
+Enhancement #
+ 71 Added reminder that the space bar will check prefix, suffix and calls for dupes. 
+ 70 Add new participant dialogue window quit button now states "enter to save, click to quit" (I kept forgetting to hit enter.)
+ 69 Worked on other bands and dupe checking responses are nicer and are more readable, also reminds to up arrow.   
+ 68 Fixed dupe checking against club call and gota call that could have been entered with upper case and missed.
+ 67 Changed the file name from FDLog_SCICSG to FDLog_Enhanced.
+	Two reasons, it's slightly confusing and I moved away from this awesome group of hams. :( 
 
-
- 2019_Beta_1 So far...
+2019_Beta_1 (posted on github, not tested)
 
  + added python path shebang so program can run from command line - Art Miller KC7SDA Jul/1/2018
  + Corrected code as suggested by pylint - Scott Hibbs KD4SIR Jun/28/2018
