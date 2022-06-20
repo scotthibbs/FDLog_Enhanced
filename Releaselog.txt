@@ -1,4 +1,4 @@
-Release Log for FDLog and FDLog_Enhanced (77 Enhancements so far)
+Release Log for FDLog and FDLog_Enhanced (78 Enhancements so far)
 From the present back to 1984. 
 
 Last updated 19Jun2022 Scott Hibbs KD4SIR
@@ -30,6 +30,7 @@ Ideas and things to Do:
 
 2022_Beta_1.1 (Working toward a stable 2023_Field_Day Release)
  
+ 78 All txt files converted to Unix EOL Conversion - Scott and Curtis
  77 W1AW schedule is now a PDF file. - Curtis E. Mills WE7U 20Jun2019 
  76 Changed colors to be less garish: Yellow to gold, orange to dark orange, green to pale green, 
 	grey to light grey. - Curtis E. Mills WE7U 21Jun2019 

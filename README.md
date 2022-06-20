@@ -43,30 +43,33 @@ Ideas and things to Do:
 	*Make font size a setting before Tkinker loads? 10,12,14 pt font. 
 
 2022_Beta_1.1 (Working toward a stable 2023_Field_Day Release)
-
--77 W1AW schedule is now a PDF file. - Curtis E. Mills WE7U 20Jun2019    
--76 Changed colors to be less garish: Yellow to gold, orange to dark orange, green to pale green,    
+ 
+ 78 All text files converted to Unix EOL Conversion - Curtis E. Mills WE7U 21Jun2019   
+ 77 W1AW schedule is now a PDF file. - Curtis E. Mills WE7U 20Jun2019    
+ 76 Changed colors to be less garish: Yellow to gold, orange to dark orange, green to pale green,    
 	grey to light grey. - Curtis E. Mills WE7U 21Jun2019    
--75 Spell check and comment cleanup - Curtis E. Mills WE7U 25Jun2019 and Scott Hibbs 18Jun2022     
--74 Added reminder that the space bar will check prefix, suffix and calls for dupes.    
--73 Changed New Participant window to be more user freindly - Curtis E. Mills WE7U 25Jun2019   
--72 Worked on other bands and dupe checking responses are nicer and are more readable, also reminds to up arrow.      
--71 Fixed dupe checking against club call and gota call that could have been entered with upper case and missed.   
--70 Changed the file name from FDLog_SCICSG to FDLog_Enhanced.   
+ 75 Spell check and comment cleanup - Curtis E. Mills WE7U 25Jun2019 and Scott Hibbs 18Jun2022     
+ 74 Added reminder that the space bar will check prefix, suffix and calls for dupes.    
+ 73 Changed New Participant window to be more user freindly - Curtis E. Mills WE7U 25Jun2019   
+ 72 Worked on other bands and dupe checking responses are nicer and are more readable, also reminds to up    arrow.      
+ 71 Fixed dupe checking against club call and gota call that could have been entered with upper case and     missed.   
+ 70 Changed the file name from FDLog_SCICSG to FDLog_Enhanced.   
 	Two reasons, it's slightly confusing and I moved away from this awesome group of hams. :(    
+ 
 
 2019_Beta_1 (posted on github, not tested)
 
--69 Winter Field Day update added - -Art Miller KC7SDA   
--68 Found and fixed memory leak (updatebb() method.bind) -Art Miller KC7SDA   
--67 Cleaned whitespace code (ie all revision history moved to readme file) -Art Miller KC7SDA   
--66 added python path shebang so program can run from command line - Art Miller KC7SDA Jul/1/2018   
--65 Corrected code as suggested by pylint - Scott Hibbs KD4SIR Jun/28/2018   
--64 Streamlined the networking section of the code - netmask removed. Art Miller KC7SDA Jul/1/2018   
--63 Allowed upper case entry for several settings. Art Miller KC7SDA Jul/1/2018   
--62 After an edit, the log window is redrawn to show only valid log entries. Scott Hibbs KD4SIR Jul/3/2018   
--61 Removed unused code and comments - Scott Hibbs KD4SIR Jul/3/2018   
--60 Up arrow will now retype the last entry (just in case enter was hit instead of space) - Scott Hibbs KD4SIR Jul/06/2018   
+ 69 Winter Field Day update added - -Art Miller KC7SDA   
+ 68 Found and fixed memory leak (updatebb() method.bind) -Art Miller KC7SDA   
+ 67 Cleaned whitespace code (ie all revision history moved to readme file) -Art Miller KC7SDA   
+ 66 added python path shebang so program can run from command line - Art Miller KC7SDA Jul/1/2018   
+ 65 Corrected code as suggested by pylint - Scott Hibbs KD4SIR Jun/28/2018   
+ 64 Streamlined the networking section of the code - netmask removed. Art Miller KC7SDA Jul/1/2018   
+ 63 Allowed upper case entry for several settings. Art Miller KC7SDA Jul/1/2018   
+ 62 After an edit, the log window is redrawn to show only valid log entries. Scott Hibbs KD4SIR Jul/3/2018   
+ 61 Removed unused code and comments - Scott Hibbs KD4SIR Jul/3/2018   
+ 60 Up arrow will now retype the last entry (just in case enter was hit instead of space) - Scott Hibbs KD4SIR Jul/06/2018   
+
 
 *******************************************************************
 FDLog_SCICSG             Jun 25, 2018               v2017-FD              
