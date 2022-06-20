@@ -1,11 +1,14 @@
 Release Log for FDLog and FDLog_Enhanced (77 Enhancements so far)
 From the present back to 1984. 
 
-Last updated 18Jun2022 Scott Hibbs KD4SIR
+Last updated 19Jun2022 Scott Hibbs KD4SIR
 scotthibbs at gmail.com (email ideas for enhancements/bugs)
 
-2022_Beta_1 (Working toward a stable 2023_Field_Day Release)
 	Started looking at the program again out of curiosity around 2022 Field Day. Joined Tristate Amateur Radio Society in Evansville Indiana a couple years ago and they successfully use N3FJP-FD version. This will never replace that program as long as it doesn't integrate with other programs or do cw keying etc. But I miss programming, it's fun.
+
+Ideas and things to Do: 
+
+
 	* An Information Table node that will allow sign in, show our group score, 
 			the top 5 Contestors, the top 5 visitors, Worked All States etc.
 	* Add more scoring: 
@@ -25,7 +28,7 @@ scotthibbs at gmail.com (email ideas for enhancements/bugs)
 	*Need to rewrite all the documentation. It's everywhere...
 	*Make font size a setting before Tkinker loads? 10,12,14 pt font. 
 
-
+2022_Beta_1.1 (Working toward a stable 2023_Field_Day Release)
  
  77 W1AW schedule is now a PDF file. - Curtis E. Mills WE7U 20Jun2019 
  76 Changed colors to be less garish: Yellow to gold, orange to dark orange, green to pale green, 
