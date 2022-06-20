@@ -1,4 +1,4 @@
-Release Log for FDLog and FDLog_Enhanced (all 71 of them)
+Release Log for FDLog and FDLog_Enhanced (77 Enhancements so far)
 From the present back to 1984. 
 
 Last updated 18Jun2022 Scott Hibbs KD4SIR
@@ -6,7 +6,12 @@ scotthibbs at gmail.com (email ideas for enhancements/bugs)
 
 2022_Beta_1 (Working toward a stable 2023_Field_Day Release)
 	Started looking at the program again out of curiosity around 2022 Field Day. Joined Tristate Amateur Radio Society in Evansville Indiana a couple years ago and they successfully use N3FJP-FD version. This will never replace that program as long as it doesn't integrate with other programs or do cw keying etc. But I miss programming, it's fun.
-	
+	* An Information Table node that will allow sign in, show our group score, 
+			the top 5 Contestors, the top 5 visitors, Worked All States etc.
+	* Add more scoring: 
+			complex gota points, youth, information table, official visitors, 
+			max 20 radios, power multipliers, educational activity... 
+	* Change the visitor/participant entry so the initials are not first.
 	KD4SIR - Will probably work on copy/paste functionality
 	KC7SDA - Will check network and platform compatibility and upper/lower case entry
 	*option to auto time out nodes from the band select 15m/30m/45m/1hr
@@ -14,19 +19,31 @@ scotthibbs at gmail.com (email ideas for enhancements/bugs)
 	*Change natural to battery
 	*Work on States worked to the side
 	*Work on Phonetic helper
-	*believe prefix check only returns first prefix in the log. Actually there is a note in the code from Alan Biocca to fix this
-		as foreign callsigns are not supported properly.
+	*believe prefix check only returns first prefix in the log. Actually there is a note in the code from
+		Alan Biocca to fix this as foreign callsigns are not supported properly.
+	*Dupe check for requested fills - 2 UNconnected nodes can dupe and both count when connected. (currently dupe checking is at entry - not on fills)
+	*Need to rewrite all the documentation. It's everywhere...
+	*Make font size a setting before Tkinker loads? 10,12,14 pt font. 
 
- 71 Added reminder that the space bar will check prefix, suffix and calls for dupes. 
- 70 Add new participant dialogue window quit button now states "enter to save, click to quit" (I kept forgetting to hit enter.)
- 69 Worked on other bands and dupe checking responses are nicer and are more readable, also reminds to up arrow.   
- 68 Fixed dupe checking against club call and gota call that could have been entered with upper case and missed.
- 67 Changed the file name from FDLog_SCICSG to FDLog_Enhanced.
+
+ 
+ 77 W1AW schedule is now a PDF file. - Curtis E. Mills WE7U 20Jun2019 
+ 76 Changed colors to be less garish: Yellow to gold, orange to dark orange, green to pale green, 
+	grey to light grey. - Curtis E. Mills WE7U 21Jun2019 
+ 75 Spell check and comment cleanup - Curtis E. Mills WE7U 25Jun2019 and Scott Hibbs 18Jun2022  
+ 74 Added reminder that the space bar will check prefix, suffix and calls for dupes. 
+ 73 Changed New Participant window to be more user freindly - Curtis E. Mills WE7U 25Jun2019
+ 72 Worked on other bands and dupe checking responses are nicer and are more readable, also reminds to up arrow.   
+ 71 Fixed dupe checking against club call and gota call that could have been entered with upper case and missed.
+ 70 Changed the file name from FDLog_SCICSG to FDLog_Enhanced.
 	Two reasons, it's slightly confusing and I moved away from this awesome group of hams. :( 
  
 
 2019_Beta_1 (posted on github, not tested)
 
+ 69 Winter Field Day update added - -Art Miller KC7SDA
+ 68 Found and fixed memory leak (updatebb() method.bind) -Art Miller KC7SDA
+ 67 Cleaned whitespace code (ie all revision history moved to readme file) -Art Miller KC7SDA
  66 added python path shebang so program can run from command line - Art Miller KC7SDA Jul/1/2018
  65 Corrected code as suggested by pylint - Scott Hibbs KD4SIR Jun/28/2018
  64 Streamlined the networking section of the code - netmask removed. Art Miller KC7SDA Jul/1/2018
@@ -62,6 +79,9 @@ SCICSG will be at The Rock Church for our third year.
 	42 Created a W1AW menu with the schedule and the NTS message file.
 	41 Contestant or Logger needs a license to enter a QSO.
 	40 Operator now called Contestant. This allows non-hams to operate with a control operator.
+
+                The Operator field caused debate on if the person was Control Operator. We made a version that required a license for the operator. The problem then, was that a ham & non-ham pair had no idea who operated the radio or logged since it could only be entered one way. The ham got credit for contacts while logging and the non-ham had no idea the number they logged or contacted (added together). So the Radio Operator and Control Operator are different and confusing. Non-hams are after all allowed and encouraged to operate with a Control Operator logging. This program has always tracked who's the logger. So the Operator field is renamed Contestant for person at radio. Thus, we can track the number of contacts or data entries, and accurate logs for everyone, even for non-hams. Hams can accurately know how many contacts they worked and logged for themselves or someone else and know who. This maintains a score for contacts and a score for logging them. The program will check for a Control Operator (license needed for Contestant or logger) before allowing a contact. - Scott Hibbs KD4SIR Mar/29/2017
+
     	39 "Add New Participant" window uses the Enter key to save to facilitate multiple entries.
 	38 Can not edit previously EDITED log entries. 
 2017-beta-5 (stable needs testing)

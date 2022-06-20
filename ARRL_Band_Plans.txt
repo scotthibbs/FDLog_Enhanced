@@ -1,4 +1,6 @@
-2018
+[downloaded 18Jun2022 from http://www.arrl.org/band-plan. Saved with Unix EOL]
+
+Band Plan 
 A band plan refers to a voluntary division of a band to avoid interference between incompatible modes.
 
 Resources
@@ -93,7 +95,7 @@ Amateurs wishing to operate on either 2,200 or 630 meters must first register wi
 28.300-29.300	Phone
 28.680	SSTV
 29.000-29.200	AM
-29.300-29.510	Satellite Downlinks
+29.300-29.510	Satellite Uplinks or Downlinks
 29.520-29.590	Repeater Inputs
 29.600	FM Simplex
 29.610-29.700	Repeater Outputs
@@ -192,3 +194,601 @@ Note: The 222 MHz band plan was adopted by the ARRL Board of Directors in July 1
 445.00-447.00	Shared by auxiliary and control links, repeaters and simplex (local option)
 446.00	National simplex frequency
 447.00-450.00	Repeater inputs and outputs (local option)
+
+33 Centimeters (902-928 MHz)
+Frequency Range
+
+Mode
+
+Functional Use
+
+Comments
+
+902.000-902.075
+
+FM / other including DV Or CW/SSB
+
+Repeater inputs 25 MHz split paired with those in 927.000-927.075 or Weak signal
+
+12.5 kHz channel spacing Note 2)
+
+902.075-902.100
+
+CW/SSB
+
+Weak signal
+
+ 
+
+902.100                    
+
+CW/SSB
+
+Weak signal calling
+
+Regional option
+
+902.100-902.125
+
+CW/SSB
+
+Weak signal
+
+ 
+
+902.125-903.000
+
+FM/other including DV
+
+Repeater inputs 25 MHz split paired with those in 927.1250-928.0000
+
+12.5 kHz channel spacing
+
+903.000-903.100
+
+CW/SSB
+
+Beacons and weak signal
+
+ 
+
+903.100
+
+CW/SSB
+
+Weak signal calling
+
+Regional option
+
+903.100-903.400
+
+CW/SSB
+
+Weak signal
+
+ 
+
+903.400-909.000
+
+Mixed modes
+
+Mixed operations including control links
+
+ 
+
+909.000-915.000
+
+Analog/digital
+
+Broadband multimedia including ATV, DATV and SS
+
+Notes 3) 4)
+
+915.000-921.000
+
+Analog/digital
+
+Broadband multimedia including ATV, DATV and SS
+
+Notes 3) 4)
+
+921.000-927.000
+
+Analog/digital
+
+Broadband multimedia including ATV, DATV and SS
+
+Notes 3) 4)
+
+927.000-927.075
+
+FM / other including DV
+
+Repeater outputs 25 MHz split paired with those in 902.0000-902.0750
+
+12.5 kHz channel spacing
+
+927.075-927.125
+
+FM / other including DV
+
+Simplex
+
+ 
+
+927.125-928.000
+
+FM / other including DV
+
+Repeater outputs 25 MHz split paired with those in 902.125-903.000
+
+12.5 kHz channel spacing Notes 5) 6)
+
+ 
+Notes:
+1) Significant regional variations in both current band utilization and the intensity and frequency distribution of noise sources preclude one plan that is suitable for all parts of the country.  These variations will require many regional frequency coordinators to maintain band plans that differ in some respects from any national plan.  As with all band plans, locally coordinated plans always take precedence over any general recommendations such as a national band plan.
+
+2) May be used for either repeater inputs or weak-signal as regional needs dictate
+
+3) Division into channels and/or separation of uses within these segments may be done regionally based on needs and usage, such as for 2 MHz-wide digital TV.
+
+4) These segments may also be designated regionally to accommodate alternative repeater splits.
+
+5) Simplex FM calling frequency 927.500 or regionally selected alternative.
+
+6) Additional FM simplex frequencies may be designated regionally.
+
+
+23 Centimeters (1240-1300 MHz)
+Frequency Range
+
+Suggested Emission Types
+
+ Functional Use
+
+1240.00-1246.000
+
+ATV
+
+ATV Channel #1
+
+1246.000-1248.000
+
+FM, digital
+
+Point-to-point links paired with 1258.000-1260.000
+
+1248.000-1252.000
+
+Digital
+
+ 
+
+1252.000-1258.000
+
+ATV
+
+ATV Channel #2
+
+1258.000-1260.000
+
+FM, digital
+
+Point-to-point links paired with 1246.000-1248.000
+
+1240.000-1260.000
+
+FM ATV
+
+Regional option
+
+1260.000-1270.000
+
+Various
+
+Satellite uplinks, Experimental, Simplex ATV
+
+ 1270.000-1276.000
+
+ FM, digital
+
+Repeater inputs, 25 kHz channel spacing, paired with 1282.000-1288.000
+
+ 1270.000-1274.000
+
+ FM, digital
+
+Repeater inputs, 25 kHz channel spacing, paired with 1290.000-1294.000 (Regional option)
+
+1276.000-1282.000
+
+ATV
+
+ATV Channel #3
+
+ 1282.000-1288.000
+
+ FM, digital
+
+Repeater outputs, 25 kHz channel spacing, paired with 1270.000-1276.000
+
+1288.000-1294.000
+
+Various
+
+Broadband Experimental, Simplex ATV
+
+ 1290.000-1294.000
+
+ FM, digital
+
+Repeater outputs, 25 kHz channel spacing, paired with 1270.000-1274.000 (Regional option)
+
+1294.000-1295.000
+
+FM
+
+FM simplex
+
+ 
+
+FM
+
+National FM simplex calling frequency 1294.500
+
+1295.000-1297.000
+
+ 
+
+Narrow Band Segment
+
+1295.000-1295.800
+
+Various
+
+Narrow Band Image, Experimental
+
+1295.800-1296.080
+
+CW, SSB, digital
+
+EME
+
+1296.080-1296.200
+
+CW, SSB
+
+Weak Signal
+
+ 
+
+CW, SSB
+
+CW, SSB calling frequency 1296.100
+
+1296.200-1296.400
+
+CW, digital
+
+Beacons
+
+1296.400-1297.000
+
+Various
+
+General Narrow Band
+
+1297.000-1300.000
+
+Digital
+
+ 
+
+Note: The need to avoid harmful interference to FAA radars may limit amateur use of certain frequencies in the vicinity of the radars.
+
+
+13 Centimeters (2300-2310 and 2390-2450 MHz)
+Frequency Range
+
+Emission
+Bandwidth
+
+Functional Use
+
+ 2300.000-2303.000
+
+ 0.05 - 1.0 MHz                   
+
+ Analog & Digital, including full duplex; paired with 2390 - 2393 
+
+2303.000-2303.750
+
+ < 50 kHz
+
+ Analog & Digital; paired with 2393 - 2393.750
+
+2303.75-2304.000
+
+ 
+
+ SSB, CW, digital weak-signal
+
+2304.000-2304.100
+
+ 3 kHz or less
+
+ Weak Signal EME Band
+
+ 2304.10-2304.300
+
+ 3 kHz or less
+
+ SSB, CW, digital weak-signal (Note 1)
+
+ 2304.300-2304.400
+
+ 3 kHz or less
+
+ Beacons
+
+2304.400-2304.750
+
+ 6 kHz or less
+
+ SSB, CW, digital weak-signal & NBFM
+
+ 2304.750-2305.000
+
+ < 50 kHz
+
+ Analog & Digital; paired with 2394.750 - 2395
+
+ 2305.000-2310.000
+
+ 0.05 - 1.0 MHz
+
+ Analog & Digital, paired with 2395 - 2400 (Note 2)
+
+ 2310.000-2390.000                                                      NON-AMATEUR
+
+2390.000-2393.000
+
+0.05 - 1.0 MHz
+
+Analog & Digital, including full duplex; paired with 2300- 2303
+
+ 2393.000-2393.750
+
+ < 50 kHz
+
+ Analog & Digital; paired with 2303 - 2303.750
+
+ 2393.750-2394.750
+
+
+
+ Experimental
+
+ 2394.750-2395.000
+
+ < 50 kHz
+
+ Analog & Digital; paired with 2304.750 - 2305
+
+ 2395.000-2400.000
+
+ 0.05 - 1.0 MHz
+
+Analog & Digital, including full duplex; paired with 2305- 2310
+
+2400.000-2410.000
+
+6 kHz or less
+
+Amateur Satellite Communications
+
+2410.000-2450.000
+
+22 MHz max.
+
+Broadband Modes (Notes 3, 4)
+
+Notes:
+1: 2304.100 is the National Weak-Signal  Calling Frequency
+2:  2305 - 2310 is allocated on a primary basis to Wireless Communications Services (Part 27). Amateur operations in this segment, which are secondary, may not be possible in all areas.
+3:  Broadband segment may be used for any combination of high-speed data (e.g. 802.11 protocols), Amateur Television and other high-bandwidth activities.  Division into channels and/or separation of uses within this segment may be done regionally based on needs and usage.
+4:  2424.100 is the Japanese EME transmit frequency
+
+ 
+Note: The following band plans were adopted by the ARRL Board of Directors in 2012.
+ 
+
+3300-3500 MHz
+Level I - Major Band Divisions	Level II - Sub-Band Divisions	Level III	Suggested	Suggested	 
+Frequency Range (MHz)	Frequency Range (MHz)	Specific Freq.	Emission Types	Emission B.W.	 
+From	To	Width	From	To	Width	MHz	(Note 1)	(Note 1)	Functional Use
+3300.000	3309.000	9.0	 	 	 	 	Analog & Digital, including Full Duplex	0.1 - 1.0 MHz	Analog & Digital; paired with 3430.0-3439.0; 130 MHz Split
+3309.000	3310.000	1.0	 	 	 	 	 	 	Experimental
+3310.000	3330.000	20.0	 	 	 	 	Analog & Digital, including Full Duplex	>1.0 MHz	Analog & Digital; paired with 3410.0-3430.0; 100 MHz Split
+3330.000	3332.000	2.0	 	 	 	 	 	 	Experimental
+3332.000	3339.000	7.0	 	 	 	 	 	 	RADIO ASTRONOMY PROTECTED BAND (Note 4)
+3339.000	3345.800	6.8	 	 	 	 	Analog & Digital, including Full Duplex	0.1 - 1.0 MHz	Analog & Digital; paired with 3439.0-3445.8; 100 MHz Split
+3345.800	3352.500	6.7	 	 	 	 	 	 	RADIO ASTRONOMY PROTECTED BAND (Note 4)
+3352.500	3355.000	2.5	 	 	 	 	Analog & Digital, including Full Duplex	0.05 - 0.2 MHz	Analog & Digital; paired with 3452.5-3455.0; 100 MHz Split
+3355.000	3357.000	2.0	 	 	 	 	 	 	Experimental
+3357.000	3360.000	3.0	 	 	 	 	Analog & Digital, including Full Duplex	50 kHz or less	Analog & Digital; paired with 3457.0-3460.0
+3360.000	3400.000	40.0	 	 	 	 	OFDM, others	22 MHz max.	Broadband Modes (Note 3)
+ 	 	 	3360.000	3380.000	20.0	 	ATV	 	Amateur Television of all authorized modulation standards/formats at local option
+3400.000	3410.000	10.0	 	 	 	 	CW, SSB, NBFM	6 kHz or less	Amateur Satellite Communications
+ 	 	 	3400.000	3400.300	0.3	 	CW, SSB, Digital	3 kHz or less	Weak Signal EME Band 
+ 	 	 	3400.300	3401.000	0.7	 	CW, SSB, Digital	3 kHz or less	Terrestrial Weak Signal Band - Future (Note 2)
+ 	 	 	 	 	 	3400.100	CW, SSB, Digital	 	EME Calling Frequency
+3410.000	3430.000	20.0	 	 	 	 	Analog & Digital, including Full Duplex	>1.0 MHz	Analog & Digital; paired with 3310.0-3330.0; 100 MHz Split
+3430.000	3439.000	9.0	 	 	 	 	Analog & Digital, including Full Duplex	0.1 - 1.0 MHz	Analog & Digital; paired with 3300.0-3309.0; 130 MHz Split
+3439.000	3445.800	6.8	 	 	 	 	Analog & Digital, including Full Duplex	0.1 - 1.0 MHz	Analog & Digital; paired with 3339.0-3345.8; 100 MHz Split
+3445.800	3452.500	6.7	 	 	 	 	 	 	Experimental
+3452.500	3455.000	2.5	 	 	 	 	Analog & Digital, including Full Duplex	0.05 - 0.2 MHz	Analog & Digital; paired with 3352.5-3355.0; 100 MHz Split
+3455.000	3455.500	0.5	 	 	 	 	 	100 kHz or less	Crossband linear translator (input or output)
+3455.500	3457.000	1.5	 	 	 	 	CW, SSB, NBFM, Digital	6 kHz or less	Terrestrial Weak Signal Band - Legacy (Note 2)
+ 	 	 	 	 	 	3456.100	 	6 kHz or less	Weak Signal Terrestrial Calling Frequency
+ 	 	 	3456.300	3457.000	0.1	 	CW, Digital	1 kHz or less	Propagation Beacons
+3457.000	3460.000	3.0	 	 	 	 	Analog & Digital, including Full Duplex	50 kHz or less	Analog & Digital; paired with 3357.0-3360.0; 100 MHz Split
+3460.000	3500.000	40.0	 	 	 	 	OFDM, others	22 MHz max.	Broadband Modes (Note 3)
+ 	 	 	3460.000	3480.000	20.0	 	ATV	 	Amateur Television of all authorized modulation standards/formats at local option
+9 cm Band Plan Notes 
+
+Note 1 – Includes all other emission modes authorized in the 9 cm amateur band whose necessary bandwidth does not exceed the suggested bandwidths listed.
+
+Note 2 – Weak Signal Terrestrial legacy users are encouraged to move to 3400.3 to 3401.0 MHz as time and resources permit.
+
+Note 3 – Broadband segments may be used for any combination of high-speed data (e.g. 802.11 protocols), Amateur Television and other high-bandwidth activities.  Division into channels and/or separation of uses within these segments may be done regionally based on need and usage.
+
+ Note 4 – Per ITU RR 5.149 from WRC-07, these band segments are also used for Radio Astronomy.  Amateur use of these frequencies should be first coordinated with the National Science Foundation (esm@nsf.gov).
+
+ 
+
+5 Centimeters (5650.0-5925.0 MHz)
+
+Frequency Range
+
+Emission
+Bandwidth
+
+Functional Use
+
+5650.0-5670.0
+
+              
+
+Amateur Satellite; Up-Link Only 
+
+5650.0-5675.0
+
+ 0.05 - 1.0 MHz
+
+Experimental
+
+5675.0-5750.0
+
+ >= 1.0 MHz
+
+Analog & Digital; paired with 5850-5925 MHz (Note 2)
+
+5750.0-5756.0
+
+ >= 25 kHz and <1 MHz
+
+Analog & Digital; paired with 5820-5826 MHz
+
+5756.0-5759.0
+
+ <= 50 kHz
+
+Analog & Digital; paired with 5826-5829 MHz
+
+5759.0-5760.0
+
+< 6 kHz
+
+SSB, CW, Digital Weak-Signal
+
+5760.0-5760.1
+
+< 3kHz
+
+EME
+
+5760.1-5760.3
+
+< 6 KHz
+
+SSB, CW, Digital Weak-Signal (Note 1)
+
+5760.3-5760.4
+
+< 3 KHz
+
+Beacons
+
+5760.4-5761.0
+
+< 6 KHz
+
+SSB, CW, Digital Weak-Signal
+
+5761.0-5775.0
+
+<=50 kHz
+
+Experimental
+
+5775.0-5800.0
+
+>=100 kHz
+
+Experimental
+
+5800.0-5820.0
+
+ 
+
+Experimental
+
+ 5820.0-5826.0
+
+ >=25 kHz and <1 MHz
+
+Analog & Digital; paired with 5750-5756 MHz
+
+5826.0-5829.0
+
+<=50 kHz
+
+Analog & Digital; paired with 5756-5759 MHz
+
+5829.0-5850.0
+
+0.05-1.0 MHz
+
+Experimental
+
+5830.0-5850.0	 	Amateur Satellite; Down-Link Only
+5850.0-5925.0	>=1.0 MHz	Analog & Digital; paired with 5675-5750 MHz (Note 2)
+Note 1: 5760.1 is the National Weak-Signal Calling Frequency
+
+Note 2: Broadband segment may be used for any combination of high-speed data (eg: 802.11 protocols), Amateur Television and other high-bandwidth activities. Division into channels and/or separation of uses within this segment may be done regionally based on needs and usage.
+
+
+3 Centimeters (10000.000-10500.000 MHz )
+Frequency Range
+
+Emission
+Bandwidth
+
+Functional Use
+
+10000.00 - 10050.000	 	Experimental
+10050.000-10100.000	<=100 kHz	Analog & Digital; paired with 10300-10350
+10100.000-10115.000	>=25 kHz and <1 MHz	Analog & Digital; paired with 10350-10365
+10115.000-10117.000	<=50 kHz	Analog & Digital; paired with 10365-10367
+10117.000-10120.000	 	Experimental
+10120.000-10125.000	<=50 kHz	Analog & Digital; paired with 10370-10375
+10125.000-10200.000	>=1 MHz	Analog & Digital; paired with 10375-10450 (Note 2)
+10200.000-10300.000	 	Wideband Gunnplexers
+10300.000-10350.000	<=100 kHz	Analog & Digital; paired with 10050-10100
+10350.000-10365.000	>=25 kHz and <1 MHz	Analog & Digital; paired with 10100-10115
+10365.000-10367.000	<=50 kHz	Analog & Digital; paired with 10115-10117
+10367.000-10368.300	6 kHz or less	SSB, CW, Digital Weak-Signal & NBFM (Note 1
+10368.300-10368.400	6 kHz or less	Beacons
+10368.400-10370.000	6 kHz or less	SSB, CW, Digital Weak-Signal & NBFM
+10370.000-10375.000	<=50 kHz	Analog & Digital; paired with 10120-10125
+10375.000-10450.000	>=1 MHz	Analog & Digital; paired with 10125-10200 (Note 2)
+10450.000-10500.000	 	Space, Earth & Telecommand Stations
+Note 1: 10368.100 is the National Weak-Signal Calling Frequency
+
+Note 2: Broadband segment may be used for any combination of high-speed data (eg: 802.11 protocols), Amateur Television and other high-bandwidth activities. Division into channels and/or separation of uses within this segment may be done regionally based on needs and usage.
+
+Above 10.50 GHz*
+All modes and licensees (except Novices) are authorized Amateur Bands above 10.5 GHz.
+
+* US amateurs must check Sections 97.301, 97.303, 97.305 and 97.307 for sharing requirements before operating.
