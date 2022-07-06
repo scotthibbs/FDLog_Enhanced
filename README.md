@@ -44,7 +44,7 @@ Ideas and things to Do:
 
 2022_Beta_2 05Jul2022
 
- 80 Found our memory leak - removed unnecessary root.update() and root.deiconify() - Scott Hibbs KD4SIR 03Mar2022
+ 80 Found our memory leak - removed unnecessary root.update() and root.deiconify() - Scott Hibbs KD4SIR 03Mar2022    
  79 Major code restructure!! (and updating with pycharm suggestions) Moved main program elements to be more 
 	readable. - 05Jul2022  
 
