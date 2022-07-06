@@ -10,6 +10,11 @@ print "\nMiniWeb $Revision: 1.6 $ $Date: 2005/06/17 23:56:23 $ \n\n"
 release_log = """\
 
 $Log: miniweb.py,v $
+
+Revision 1.7 27Jun2022 Scott Hibbs KD4SIR
+Preparing for FDLog_Enhanced v2023
+Had to change ports as Win10 blocks 80. 
+
 Revision 1.6  2005/06/17 23:56:23  Alan Biocca
 Preparing for 2005-1 release.
 
@@ -31,7 +36,7 @@ HandlerClass = SimpleHTTPServer.SimpleHTTPRequestHandler
 ServerClass = BaseHTTPServer.HTTPServer
 
 protocol="HTTP/1.0"
-port = 80
+port = 55555
 server_address = ('', port)
 
 HandlerClass.protocol_version = protocol

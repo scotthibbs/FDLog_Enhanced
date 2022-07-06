@@ -16,7 +16,7 @@ The code here is what is in progress for a 2023 stable release.
 The release log has more detailed information. This "seems" stable. 
  This needs to be tested on different networks and cross platform.
 
-Last updated 18Jun2022 Scott Hibbs KD4SIR
+Last updated 05Jul2022 Scott Hibbs KD4SIR
 scotthibbs at gmail.com (email ideas for enhancements/bugs)
 
 	Started looking at the program again out of curiosity around 2022 Field Day. Joined Tristate Amateur Radio Society in Evansville Indiana a couple years ago and they successfully use N3FJP-FD version. This will never replace that program as long as it doesn't integrate with other programs or do cw keying etc. But I miss programming, it's fun.
@@ -32,15 +32,24 @@ Ideas and things to Do:
 	KD4SIR - Will probably work on copy/paste functionality
 	KC7SDA - Will check network and platform compatibility and upper/lower case entry
 	*option to auto time out nodes from the band select 15m/30m/45m/1hr
-	*Fix so reports another's last contact time
-	*Change natural to battery
-	*Work on States worked to the side
-	*Work on Phonetic helper
+	*Fix so reports another's last contact time - this now reports node last heard. 
+	*Change natural to battery?
+	*Try showing all sections to the side - marking those worked.
+	*Work on Phonetic helper for GOTA station
 	*believe prefix check only returns first prefix in the log. Actually there is a note in the code from
 		Alan Biocca to fix this as foreign callsigns are not supported properly.
 	*Dupe check for requested fills - 2 UNconnected nodes can dupe and both count when connected. (currently dupe checking is at entry - not on fills)
 	*Need to rewrite all the documentation. It's everywhere...
 	*Make font size a setting before Tkinker loads? 10,12,14 pt font. 
+
+2022_Beta_2 05Jul2022
+
+ 80 Found our memory leak - removed unnecessary root.update() and root.deiconify() - Scott Hibbs KD4SIR 03Mar2022
+ 79 Major code restructure!! (and updating with pycharm suggestions) Moved main program elements to be more 
+	readable. - 05Jul2022  
+
+ *  Although a different program included with FDLog, I corrected a compatibility issue with Win10 so miniweb.py would work. Changed from blocked port 80 to five fives - 55555. Adding a zip file of this project in the same folder makes it easy to share accross the same network as computers show up for field day. - Scott
+
 
 2022_Beta_1.1 (Working toward a stable 2023_Field_Day Release)
  
