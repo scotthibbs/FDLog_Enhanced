@@ -43,11 +43,9 @@ Ideas and things to Do:
 
 2022_Beta 2.1 09Jul2022
 
- 81 Mouse Copy and Paste now work!! Tested on windows 10, must use the same format as the program entry which 
-	is "kd4sir 1d in" or it will reject, also checks dupes, section etc. Keyboard shortcuts 
-	(Control c,and v) will be easy to add next. - Thanks to Weo's suggestion (found in code notes probably in the 90's) - Scott Hibbs KD4SIR 08Jul2022    
- 79 update: Restructured again. The main program is now located at bottom of the file. All major pycharm errors have
-	been corrected. Minor errors will be worked on next when porting to python 3. 
+ 81 Mouse Copy and Paste now work!! Tested on windows 10, must use the same format as the program entry which is "kd4sir 1d in" or it will reject, also checks dupes, section etc. Keyboard shortcuts (Control c,and v) will be easy to add next. - Thanks to Weo's suggestion (found in code notes probably in the 90's) - Scott Hibbs KD4SIR 08Jul2022        
+       
+ 79 update: Restructured again. The main program is now located at bottom of the file. All major pycharm errors have been corrected. Minor errors will be worked on next when porting to python 3.     
 	
 2022_Beta_2 05Jul2022
 
