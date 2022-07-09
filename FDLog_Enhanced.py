@@ -12,22 +12,12 @@ import random
 # import calendar
 import sqlite3
 from Tkinter import END, NORMAL, DISABLED, re, sys, Toplevel, Frame, Label, Entry, Button, \
-    W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, Checkbutton, RAISED, IntVar
+    W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
+    Checkbutton, RAISED, IntVar
 
-# Main program starts about line 3325
 
-#   =============Possible way to add copy/paste==================================================================
-#    from Tkinter import Tk
-#    r = Tk()
-#    r.withdraw()
-#    r.clipboard_clear()
-#    r.clipboard_append('i can has clipboardz?')
-#    r.update() # now it stays on the clipboard after the window is closed
-#    r.destroy()
-#   ===============================================================================
-
-# all history moved to readme.md
-
+#  Main program starts about line 3650
+#  all history moved to readme.md
 prog = 'FDLog_Enhanced v2023_Field_Day \n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2023. \n' \
@@ -379,14 +369,6 @@ class SQDB:
                                 r['oper'], r['logr'], '')))
         # print nl
         return nl
-
-    # Removed next(self) function. There is no self.result
-    # and nothing calls sqdb.next() -Scott Hibbs 07/27/2015
-
-    # def next(self):  # get next item from db in text format
-    #     n = self.result
-    #     nl = "|".join(n.src, n['seq'], n['date'], n['band'], n['call'], n['rept'], n['powr'], n['oper'], n['logr'])
-    #     return nl
 
     def log(self, n):  # add item to journal logfile table (and other tables...)
         parms = (n.src, n.seq, n.date, n.band, n.call, n.rept, n.powr, n.oper, n.logr)
@@ -755,7 +737,6 @@ class QsoDb:
             # Redraw the logw text window (on delete) to only show valid calls in the log. 
             # This avoids confusion by only listing items in the log to edit in the future.
             # Scott Hibbs KD4SIR - July 3, 2018
-            #  ****************************** this doesn't work right ****************************
             l = []
             for i in sorted(a.values()):
                 if i.seq == seq:
@@ -1307,10 +1288,10 @@ class node_info:
 class netsync:
     """network database synchronization"""
     # removed netmask - it isn't used anywhere in the program from what I can tell (do a search for 'netmask'
-    # this is the only place you find it)
-    # re-coded the ip address calculation to smooth it out and make it cross-platform compatible.
-    # - Art Miller KC7SDA Jul/01/2018
+    # this is the only place you find it) re-coded the ip address calculation to smooth it out
+    # and make it cross-platform compatible. - Art Miller KC7SDA Jul/01/2018
     # netmask = '255.255.255.0'
+
     def __init__(self):
         pass
 
@@ -2124,6 +2105,7 @@ class NewParticipantDialog:
         self.initials = None
 
     def dialog(self):
+        """ the gui of the new participant window"""
         if node == "":
             txtbillb.insert(END, "err - no node\n")
             return
@@ -2154,8 +2136,7 @@ class NewParticipantDialog:
         fr2.grid(row=1, column=0, sticky=EW, pady=3)
         fr2.grid_columnconfigure((0, 1), weight=1)
         # Added Save label - Curtis E. Mills WE7U 25Jun2019
-        Label(fr2, text='Save = <Enter>', font=fdbfont, foreground='red').grid(row=3, column=0,
-                                                                               sticky=W)
+        Label(fr2, text='Save = <Enter>', font=fdbfont, foreground='red').grid(row=3, column=0, sticky=W)
         # Button(fr2, text='Save', font=fdbfont, command=s.applybtn) .grid(row=3, column=1, sticky=EW, padx=3)
         # Button renamed to Dismiss - Curtis E. Mills WE7U 25Jun2019
         Button(fr2, text='Dismiss', font=fdbfont, command=s.quitbtn).grid(row=3, column=1, sticky=EW, padx=3)
@@ -2163,7 +2144,7 @@ class NewParticipantDialog:
         s.t.bind('<Return>', lambda event: s.applybtn)
 
     def lookup(self):
-        # constrain focus to initials until they are ok
+        # constrain focus to initials until they are ok -slightly annoying - may change in future
         initials = string.lower(self.initials.get())
         if not re.match(r'[a-zA-Z]{2,3}$', initials):
             # self.initials.delete(0,END)
@@ -2198,7 +2179,7 @@ class NewParticipantDialog:
         return 1
 
     @property  # This added, so I can use the <Return> binding -Scott Hibbs KD4SIR Mar/30/2017
-    def applybtn(self):  # pycharm states "Getter should return or yield something"
+    def applybtn(self):
         global participants
         # print "store"
         initials = self.initials.get().lower()
@@ -2259,6 +2240,7 @@ class NewParticipantDialog:
             self.vist.delete(0, END)
             self.name.focus()
             buildmenus()
+        return self.applybtn  # used to avoid pycharm error "Getter should return or yield something"
 
     def quitbtn(self):
         self.t.destroy()
@@ -2781,6 +2763,7 @@ def topper():
     """This will reset the display for input. Added Jul/01/2016 KD4SIR Scott Hibbs"""
     txtbillb.insert(END, "\n")
     txtbillb.insert(END, "-Call-Class-Sect- \n")
+    txtbillb.see("end")  # added to always show the bottom line. Scott Hibbs KD4SIR 08Jul2022
 
 
 def showthiscall(call):
@@ -2818,9 +2801,7 @@ def readSections():
             if ln[0] == '#':
                 continue
             try:
-                sec, dummy, dummy, dummy = string.split(ln, None, 3)
-                #  pycharm states "Expected type 'str' (matched generic type
-                #  'AnyStr'), got 'None' instead"
+                sec, dummy, dummy, dummy = string.split(ln, " ", 3)
                 secName[sec] = sec
             except ValueError, e:
                 print "read Arrl section data error, item skipped: ", e
@@ -2861,7 +2842,8 @@ def proc_key(ch):
                 .st                this station status
                 .re                summary band report
                 .ba                station band report
-                .pr                generate entry and log files"""
+                .pr                generate entry and log files
+                """
             viewtextv(m, 'Command Help')
             kbuf = ""
             txtbillb.insert(END, '\n')
@@ -3017,6 +2999,7 @@ def proc_key(ch):
                     # no op, and no logger -- KD4SIR Scott Hibbs Jul/15/2013
                     # Added warning against 1D to 1D contacts being
                     # logged but not counting points -- KD4SIR Scott Hibbs Oct/13/2013
+                    """ 1d to 1d Rule change - to be corrected."""
                     # Checking Contestant or Logger has a license - Scott Hibbs Mar/28/2017
                     legal = 0
                     if re.match(r'[a-z :]+ [a-zA-Z ]+, ([a-z\d]+)', operator):
@@ -3054,8 +3037,7 @@ def proc_key(ch):
                         #     if clas in rept1:
                         #         txtbillb.insert(END, "\n 1D to 1D contacts are logged, but zero points! \n")
                         #         topper()
-                        # check the report for valid fd or wfd classes: note according to the cheat sheet,
-                        # \d is a digit - Art Miller KC7SDA
+                        # check the report for valid fd or wfd classes - Art Miller KC7SDA
                         reptclass, dummy = rept.split(" ")
                         m = ""
                         if gd.getv('contst') == "fd":
@@ -3215,7 +3197,7 @@ def focevent(e):
 
 def edit_dialog(node, seq):
     """edit log entry"""
-    dummy = Edit_Dialog(root, node, seq)
+    dummy = EditDialog(root, node, seq)
 
 
 def log_select(e):
@@ -3269,8 +3251,373 @@ def log_select(e):
     return 'break'
 
 
+def mouse_popup(event):
+    """Copy and Paste functions"""
+    #  txtbillb.bind('<Button-3>', mouse_popup) # Binds the right click function in the main program
+    #  modified from www.stackoverflow.com by Delrius Euphoria 07Mar2021 - Added by Scott Hibbs KD4SIR 07Jul2022
+
+    local_menu1 = Menu(root, tearoff=0)  # Create a menu
+    local_menu1.add_command(label='Copy', command=copy)  # Create labels and commands
+    local_menu1.add_command(label='Paste', command=paste)
+    try:
+        local_menu1.tk_popup(event.x_root, event.y_root)  # Pop the menu up in the given coordinates
+    finally:
+        local_menu1.grab_release()  # Release it once an option is selected
+
+
+def paste():
+    """Needed for mouse_popup function"""
+    #  Added by KD4SIR Scott Hibbs 08Jul2022
+    global stat, kbuf, power, operator, logger, debug, band, node, suffix, tdwin, goBack
+    clipboard = root.clipboard_get()  # Get the copied item from system clipboard
+    pasteclip = clipboard
+    txtbillb.insert('end', pasteclip)  # Insert the item
+    #  The program needs to interpret the paste event.
+    for pastebuf in pasteclip:
+        if pastebuf.isupper():
+            txtbillb.insert(END, "\n LOWERCAPS PLEASE \n")
+            txtbillb.insert(END, "Paste must be in -Call-Class-Sect- format only\n")
+            kbuf = ""
+            topper()
+            return
+    stat, ftm, pfx, sfx, call, xcall, rept = 0, '', '', '', '', '', ''
+    stat, ftm, pfx, sfx, call, xcall, rept = qdb.qparse(pasteclip)
+    if debug:
+        print stat, ftm, pfx, sfx, call, xcall, rept
+    if stat == 5:  # whole qso parsed
+        kbuf = ""
+        if len(node) < 3:
+            txtbillb.insert(END, " ERROR, set .node <call> before logging\n")
+            topper()
+        elif qdb.dupck(xcall, band):  # dupe check
+            txtbillb.insert(END, "\n\n DUPE on band %s\n" % band)
+            topper()
+        elif qdb.partck(xcall):  # Participant check
+            txtbillb.insert(END, "\n Participant - not allowed \n")
+            topper()
+        elif xcall == string.lower(gd.getv('fdcall')):
+            txtbillb.insert(END, "\n That's us - not allowed \n")
+            topper()
+        elif xcall == string.lower(gd.getv('gcall')):
+            txtbillb.insert(END, "\n That's us - not allowed \n")
+            topper()
+        else:
+            # Added database protection against no band, no power, no op, and no logger -Scott Hibbs Jul/15/2013
+            # Checking Contestant or Logger has a license - Scott Hibbs Mar/28/2017
+            legal = 0
+            if re.match(r'[a-z :]+ [a-zA-Z ]+, ([a-z\d]+)', operator):
+                # print "%s has a license" % operator
+                legal = legal + 1
+            if re.match(r'[a-z :]+ [a-zA-Z ]+, ([a-z\d]+)', logger):
+                # print "%s has a license" % logger
+                legal = legal + 1
+            if legal == 0:
+                txtbillb.insert(END, "\n - WARNING: Contestant or the logger needs a license\n")
+                txtbillb.insert(END, "Correct before repasting again\n")
+                topper()
+                return
+            # checking for band, power, contestant or logger
+            em = ''
+            if band == "off":
+                em += " Band "
+            if power == 0:
+                em += " Power "
+            if len(operator) < 2:
+                em += " Contestant "
+            if len(logger) < 2:
+                em += " Logger "
+            if em != '':
+                txtbillb.insert(END, "\n - WARNING: ( %s ) NOT SET" % em)
+                txtbillb.insert(END, "Correct before repasting again\n")
+                topper()
+                return
+            if em == '':
+                rept1 = string.upper(rept)
+                # check the report for valid fd or wfd classes - Art Miller KC7SDA
+                try:
+                    reptclass, reptsec = rept.split(" ")
+                except ValueError:
+                    txtbillb.insert(END, "\n - ERROR: incomplete exchange ( %s ) Correct before "
+                                         "repasting again\n" % rept)
+                    topper()
+                    return
+                m = ""
+                if gd.getv('contst') == "fd":
+                    # field day, report in: #+a-f
+                    m = re.match(r'\d[a-fA-F]', reptclass)
+                elif gd.getv('contst') == "wfd":
+                    # WFD
+                    m = re.match(r'\d[ihoIHO]', reptclass)
+                else:
+                    # vhf or other contest
+                    # allow everything
+                    m = "something"
+                if m is None:  # match failed, do not allow and abort logging
+                    txtbillb.insert(END, " - ERROR: Bad exchange ( %s ) Correct before repasting again\n" % rept)
+                    topper()
+                    return
+                # Check for valid section in report added by Scott Hibbs Feb/6/2017
+                aaaaa = len(rept1)
+                # print "aaaaa is %s" % aaaaa
+                rept2 = rept1[3:aaaaa].strip()
+                # print "rept2 is %s" % rept2
+                if rept2 in secName:
+                    pass
+                else:
+                    print "\n Use one of these for the section:"
+                    kk = ""
+                    nx = 0
+                    ny = 0
+                    for k in sorted(secName):
+                        if ny == 0:
+                            kk += "\n  "
+                            ny = ny + 1
+                        kk += str(k) + ", "
+                        nx = nx + 1
+                        if nx == 17:  # how many sections to the line
+                            ny = ny + 1
+                            if ny < 6:  # last line gets the rest
+                                kk += "\n  "
+                                nx = 0
+                    print kk
+                    # print('\n'.join("{} : {}".format(k, v) for k, v in secName.items()))
+                    txtbillb.insert(END, kk)
+                    txtbillb.insert(END, "\n  correct with another section before repasting again\n.")
+                    topper()
+                    return
+                # The entry is good and ready to log
+                txtbillb.insert(END, " - QSL!  May I have another?")
+                txtbillb.insert(END, "\n")
+                topper()
+                tm = now()
+                if ftm:  # force timestamp
+                    tm = tm[0:4] + ftm[0:8] + tm[11:]  # yymmdd.hhmmss
+                qdb.qsl(tm, xcall, band, rept)
+    else:
+        kbuf = ""
+        txtbillb.insert(END, "\nPaste must be in -Call-Class-Sect- format only\n")
+        topper()
+    return
+
+
+def copy():
+    """Needed for mouse_popup function"""
+
+    inp = txtbillb.get('sel.first', 'sel.last')   # Get the mouse selection into the clipboard
+    root.clipboard_clear()  # Clear the tkinter clipboard
+    root.clipboard_append(inp)  # Append to system clipboard
+
+
+class EditDialog(Toplevel):
+    """edit log entry dialog"""
+    #  Added functionality to check for dupes and change the title to show the error - Scott Hibbs Jul/02/2016
+    #  Had to add variables for each text box to know if they changed to do dupe check.
+    crazytxt = "Edit Log Entry"
+    crazyclr = "light grey"
+    crazylbl = Label
+
+    def __init__(self, parent, node, seq):
+        s = '%s.%s' % (node, seq)
+        self.node, self.seq = node, seq
+        if qdb.byid[s].band[0] == '*':
+            return
+        top = self.top = Toplevel(parent)
+        Toplevel.__init__(self, parent)  # only needed to avoid pycharm error.
+        Toplevel.destroy(self)     # avoid showing as separate gui to avoid pycharm error above. :)
+        self.crazytxt = "Edit Log Entry"
+        self.crazyclr = "light grey"
+        self.crazylbl = tl = Label(top, text=self.crazytxt, font=fdbfont, bg=self.crazyclr, relief=RAISED)
+        # tl = Label(top, text='Edit Log Entry', font=fdbfont, bg='light grey', relief=RAISED)
+        tl.grid(row=0, columnspan=2, sticky=EW)
+        tl.grid_columnconfigure(0, weight=1)
+        Label(top, text='Date', font=fdbfont).grid(row=1, sticky=W)
+        # Label(top,text='Time',font=fdbfont).grid(row=2,sticky=W)
+        Label(top, text='Band', font=fdbfont).grid(row=3, sticky=W)
+        # Label(top,text='Mode',font=fdbfont).grid(row=4,sticky=W)
+        Label(top, text='Call', font=fdbfont).grid(row=5, sticky=W)
+        Label(top, text='Report', font=fdbfont).grid(row=6, sticky=W)
+        Label(top, text='Power', font=fdbfont).grid(row=7, sticky=W)
+        # Label(top,text='Natural',font=fdbfont).grid(row=8,sticky=W)
+        Label(top, text='Contestant', font=fdbfont).grid(row=9, sticky=W)
+        Label(top, text='Logger', font=fdbfont).grid(row=10, sticky=W)
+        self.de = Entry(top, width=13, font=fdbfont)
+        self.de.grid(row=1, column=1, sticky=W, padx=3, pady=2)
+        self.de.insert(0, qdb.byid[s].date)
+        self.chodate = qdb.byid[s].date
+        self.be = Entry(top, width=5, font=fdbfont)
+        self.be.grid(row=3, column=1, sticky=W, padx=3, pady=2)
+        # self.be.configure(bg='gold') # test yes works
+        self.be.insert(0, qdb.byid[s].band)
+        self.choband = qdb.byid[s].band
+        self.ce = Entry(top, width=11, font=fdbfont)
+        self.ce.grid(row=5, column=1, sticky=W, padx=3, pady=2)
+        self.ce.insert(0, qdb.byid[s].call)
+        self.chocall = qdb.byid[s].call
+        self.re = Entry(top, width=24, font=fdbfont)
+        self.re.grid(row=6, column=1, sticky=W, padx=3, pady=2)
+        self.re.insert(0, qdb.byid[s].rept)
+        self.chorept = qdb.byid[s].rept
+        self.pe = Entry(top, width=5, font=fdbfont)
+        self.pe.grid(row=7, column=1, sticky=W, padx=3, pady=2)
+        self.pe.insert(0, qdb.byid[s].powr)
+        self.chopowr = qdb.byid[s].powr
+        self.oe = Entry(top, width=3, font=fdbfont)
+        self.oe.grid(row=9, column=1, sticky=W, padx=3, pady=2)
+        self.oe.insert(0, qdb.byid[s].oper)
+        self.chooper = qdb.byid[s].oper
+        self.le = Entry(top, width=3, font=fdbfont)
+        self.le.grid(row=10, column=1, sticky=W, padx=3, pady=2)
+        self.le.insert(0, qdb.byid[s].logr)
+        self.chologr = qdb.byid[s].logr
+        bf = Frame(top)
+        bf.grid(row=11, columnspan=2, sticky=EW, pady=2)
+        bf.grid_columnconfigure((0, 1, 2), weight=1)
+        db = Button(bf, text=' Delete ', font=fdbfont, command=self.dele)
+        db.grid(row=1, sticky=EW, padx=3)
+        sb = Button(bf, text=' Save ', font=fdbfont, command=self.submit)
+        sb.grid(row=1, column=1, sticky=EW, padx=3)
+        # Button renamed to Dismiss - Curtis E. Mills WE7U 25Jun2019
+        qb = Button(bf, text=' Dismiss ', font=fdbfont, command=self.quitb)
+        qb.grid(row=1, column=2, sticky=EW, padx=3)
+        # self.wait_window(top)
+
+    def submit(self):
+        """submit edits"""
+        global newdate, newcall, newband, newrept, newopr, newlogr, newpowr
+        error = 0
+        changer = 0  # 0 = no change. 1= change except band and call. 2 = change in call or band
+        t = self.de.get().strip()  # date time
+        if self.chodate != t:
+            # print "The date has changed."
+            changer = 1
+        self.de.configure(bg='white')
+        m = re.match(r'\d{6}\.\d{4,6}$', t)
+        if m:
+            newdate = t + '00'[:13 - len(t)]
+            # print newdate
+        else:
+            self.de.configure(bg='gold')
+            error += 1
+        t = self.be.get().strip()  # band mode
+        if self.choband != t:
+            # print "the band has changed"
+            changer = 2
+        self.be.configure(bg='white')
+        m = re.match(r'(160|80|40|20|15|10|6|2|220|440|900|1200|sat)[cdp]$', t)
+        if m:
+            newband = t
+            # print newband
+        else:
+            self.be.configure(bg='gold')
+            error += 1
+        t = self.ce.get().strip()  # call
+        if self.chocall != t:
+            # print "the call has changed"
+            changer = 2
+        self.ce.configure(bg='white')
+        m = re.match(r'[a-z\d/]{3,11}$', t)
+        if m:
+            newcall = t
+            # print newcall
+        else:
+            self.ce.configure(bg='gold')
+            error += 1
+        t = self.re.get().strip()  # report
+        if self.chorept != t:
+            print "the section is not verified - please check."
+            changer = 1
+        self.re.configure(bg='white')
+        m = re.match(r'.{4,24}$', t)
+        if m:
+            newrept = t
+            # print newrept
+        else:
+            self.re.configure(bg='gold')
+            error += 1
+        t = self.pe.get().strip().lower()  # power
+        if self.chopowr != t:
+            # print "the power has changed."
+            changer = 1
+        self.pe.configure(bg='white')
+        m = re.match(r'\d{1,4}n?$', t)
+        if m:
+            newpowr = t
+            # print newpowr
+        else:
+            self.pe.configure(bg='gold')
+            error += 1
+        t = self.oe.get().strip().lower()  # operator
+        if self.chooper != t:
+            # print "the Contestant has changed."
+            changer = 1
+        self.oe.configure(bg='white')
+        # if participants.has_key(t): # has_key deprecated here
+        if t in participants:
+            newopr = t
+            # print newopr
+        else:
+            self.oe.configure(bg='gold')
+            error += 1
+        t = self.le.get().strip().lower()  # logger
+        if self.chologr != t:
+            # print "the logger has changed."
+            changer = 1
+        self.le.configure(bg='white')
+        # if participants.has_key(t): # has_key deprecated here
+        if t in participants:
+            newlogr = t
+            # print newlogr
+        else:
+            self.le.configure(bg='gold')
+            error += 1
+        if error == 0:
+            # There was no dupe check on the edited qso info. This was added. Scott Hibbs Jul/01/2016
+            if changer == 0:
+                print 'Nothing changed. No action performed.'
+                self.crazytxt = "nothing changed?"
+                self.crazyclr = "red"
+                self.crazylbl.configure(bg=self.crazyclr, text=self.crazytxt)
+                error += 1
+            if changer == 1:
+                # delete and enter new data because something other than band or call has changed.
+                # print "no errors, enter data"
+                reason = "edited"
+                qdb.delete(self.node, self.seq, reason)
+                qdb.postnew(newdate, newcall, newband, newrept, newopr, newlogr, newpowr)
+                self.top.destroy()
+                txtbillb.insert(END, " EDIT Successful\n")
+                topper()
+            if changer == 2:
+                # band or call changed so check for dupe before submitting to log.
+                if qdb.dupck(newcall, newband):  # dup check for new data
+                    print 'Edit is a DUPE. No action performed.'
+                    self.crazytxt = "This is a DUPE"
+                    self.crazyclr = "red"
+                    self.crazylbl.configure(bg=self.crazyclr, text=self.crazytxt)
+                    error += 1
+                else:
+                    # delete and enter new data
+                    # print "no errors, enter data"
+                    reason = "edited"
+                    qdb.delete(self.node, self.seq, reason)
+                    qdb.postnew(newdate, newcall, newband, newrept, newopr, newlogr, newpowr)
+                    self.top.destroy()
+                    txtbillb.insert(END, " EDIT Successful\n")
+                    topper()
+
+    def dele(self):
+        print "delete entry"
+        reason = 'deleteclick'
+        qdb.delete(self.node, self.seq, reason)
+        self.top.destroy()
+
+    def quitb(self):
+        print 'Dismissed - edit aborted'
+        self.top.destroy()
+
+
 def update():
-    """timed updater"""
+    """Main program's timed updater"""
     # This function updated from 152i
     global updatect
     root.after(1000, update)  # reschedule early for reliability
@@ -3292,7 +3639,7 @@ def update():
         updatect = 0
 
 
-""" Main Program """
+""" ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print prog
 version = "v23b"
@@ -3354,8 +3701,6 @@ participants = {}
 #        phocall = phocall.join(char)
 
 # band set buttons
-# this can be customized -Only here customizing this in program will break from compatibility with
-# original fdlog.py -Scott Hibbs Oct/13/2013
 bands = ('160', '80', '40', '20', '15', '10', '6', '2', '220', '440', '900', '1200', 'sat', 'off')
 modes = ('c', 'd', 'p')
 bandb = {}  # band button handles
@@ -3552,17 +3897,10 @@ f1.grid(row=0, columnspan=2, sticky=NSEW)
 f1b = Frame(root, bd=0)  # oper logger power and network windows
 #  Changed the color of the user buttons to red until assigned - KD4SIR Scott Hibbs 7/14/2013
 #  Changed colors to be less garish: Yellow to gold, orange to dark orange, green to pale green,
-# 	grey to light grey. - Curtis E. Mills WE7U 21Jun2019
+#  grey to light grey. - Curtis E. Mills WE7U 21Jun2019
 ocolor = 'red'
 lcolor = 'red'
 pcolor = 'red'
-
-# Add "who" button to display messagebox with operators on band when clicked.
-# Determined that this is not needed now that the mouse over report is cleaner.
-# opwho = Menubutton(f1b, text='WHO ', font=fdfont, relief='raised',
-#                   background='light grey', foreground='blue')
-# opwho.grid(row=0, column=0, sticky=NSEW)
-
 # Operator
 opmb = Menubutton(f1b, text='Contestant', font=fdfont, relief='raised', background=ocolor)
 opmb.grid(row=0, column=1, sticky=NSEW)
@@ -3591,7 +3929,9 @@ pwrmb = Menubutton(f1b, text="Power", font=fdfont, relief='raised',
 pwrmb.grid(row=0, column=6, sticky=NSEW)
 pwrmu = Menu(pwrmb, tearoff=0)
 pwrmb.config(menu=pwrmu, direction='below')
-# rearranged this menu - Scott Hibbs Mar/23/2017
+#  rearranged this menu - Scott Hibbs Mar/23/2017
+
+#  Rule change on power now limits to 100w - this needs to be fixed #########################################
 pwrmu.add_command(label='     0 Watts', command=lambda: (setpwr('0')))
 pwrmu.add_command(label='     5 Watts', command=lambda: (setpwr('5')))
 pwrmu.add_command(label='    50 Watts', command=lambda: (setpwr('50')))
@@ -3605,6 +3945,7 @@ pwrmu.add_command(label='     5W Natural', command=lambda: (setpwr('5n')))
 pwrmu.add_command(label='   50W Natural', command=lambda: (setpwr('50n')))
 pwrmu.add_command(label=' 100W Natural', command=lambda: (setpwr('100n')))
 pwrmu.add_command(label=' 150W Natural', command=lambda: (setpwr('150n')))
+
 pwrnt = Entry(f1b, width=4, font=fdfont, background=pcolor, validate='focusout', validatecommand=ckpowr)
 pwrnt.grid(row=0, column=7, sticky=NSEW)
 powlbl = Label(f1b, text="W", font=fdfont, background=pcolor)
@@ -3705,7 +4046,8 @@ txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 txtbillb.insert(END, "                              Dialogue Window\n", "b")
 txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", "b")
 txtbillb.insert(END, "Use space to check a prefix, suffix, or a call. \n")
-txtbillb.insert(END, "Please select the Contestant, Logger, Power and Band/Mode in red above.\n\n")
+txtbillb.insert(END, "Paste contacts in call class section only for ex: 'kd4sir 1d in'  \n")
+txtbillb.insert(END, "To begin select a Contestant, a Logger, Power and Band/Mode in red above.\n\n")
 txtbillb.insert(END, "-Call-Class-Sect- \n")
 txtbillb.config(insertwidth=3)
 txtbillb.focus_set()
@@ -3714,6 +4056,7 @@ readSections()
 updatect = 0
 root.bind('<ButtonRelease-1>', focevent)
 txtbillb.bind('<KeyPress>', kevent)
+txtbillb.bind('<Button-3>', mouse_popup)  # Binds the right click function
 logw.bind('<KeyPress>', kevent)  # use del key for?xx
 logw.bind('<Button-1>', log_select)  # start of log edit
 root.after(1000, update)  # 1 hz activity
@@ -3731,236 +4074,19 @@ time.sleep(0.5)
 exit(1)
 
 
-class Edit_Dialog(Toplevel):
-    """edit log entry dialog"""
-    """Added functionality to check for dupes and change the title to show the error - Scott Hibbs Jul/02/2016"""
-    #  Moving this above the main program causes errors.
-    #  Had to add variables for each text box to know if they changed to do dupe check.
-    global editedornot
-    #  editedornot = StringVar # declared above without usage
-    crazytxt = StringVar()
-    crazytxt.set('Edit Log Entry')
-    crazyclr = StringVar()
-    crazyclr.set('light grey')
-    crazylbl = Label
-
-    def __init__(self, parent, node, seq, **kw):
-        # Toplevel.__init__(self, **kw)
-        s = '%s.%s' % (node, seq)
-        self.node, self.seq = node, seq
-        if qdb.byid[s].band[0] == '*':
-            return
-        top = self.top = Toplevel(parent)
-        # Toplevel.__init__(self,parent)
-        # self.transient(parent)     # avoid showing as separate item
-        self.crazytxt.set('Edit Log Entry')
-        self.crazyclr.set('light grey')
-        self.crazylbl = tl = Label(top, text=self.crazytxt.get(), font=fdbfont, bg=self.crazyclr.get(), relief=RAISED)
-        # tl = Label(top, text='Edit Log Entry', font=fdbfont, bg='light grey', relief=RAISED)
-        tl.grid(row=0, columnspan=2, sticky=EW)
-        tl.grid_columnconfigure(0, weight=1)
-        Label(top, text='Date', font=fdbfont).grid(row=1, sticky=W)
-        # Label(top,text='Time',font=fdbfont).grid(row=2,sticky=W)
-        Label(top, text='Band', font=fdbfont).grid(row=3, sticky=W)
-        # Label(top,text='Mode',font=fdbfont).grid(row=4,sticky=W)
-        Label(top, text='Call', font=fdbfont).grid(row=5, sticky=W)
-        Label(top, text='Report', font=fdbfont).grid(row=6, sticky=W)
-        Label(top, text='Power', font=fdbfont).grid(row=7, sticky=W)
-        # Label(top,text='Natural',font=fdbfont).grid(row=8,sticky=W)
-        Label(top, text='Contestant', font=fdbfont).grid(row=9, sticky=W)
-        Label(top, text='Logger', font=fdbfont).grid(row=10, sticky=W)
-        self.de = Entry(top, width=13, font=fdbfont)
-        self.de.grid(row=1, column=1, sticky=W, padx=3, pady=2)
-        self.de.insert(0, qdb.byid[s].date)
-        self.chodate = qdb.byid[s].date
-        self.be = Entry(top, width=5, font=fdbfont)
-        self.be.grid(row=3, column=1, sticky=W, padx=3, pady=2)
-        # self.be.configure(bg='gold') # test yes works
-        self.be.insert(0, qdb.byid[s].band)
-        self.choband = qdb.byid[s].band
-        self.ce = Entry(top, width=11, font=fdbfont)
-        self.ce.grid(row=5, column=1, sticky=W, padx=3, pady=2)
-        self.ce.insert(0, qdb.byid[s].call)
-        self.chocall = qdb.byid[s].call
-        self.re = Entry(top, width=24, font=fdbfont)
-        self.re.grid(row=6, column=1, sticky=W, padx=3, pady=2)
-        self.re.insert(0, qdb.byid[s].rept)
-        self.chorept = qdb.byid[s].rept
-        self.pe = Entry(top, width=5, font=fdbfont)
-        self.pe.grid(row=7, column=1, sticky=W, padx=3, pady=2)
-        self.pe.insert(0, qdb.byid[s].powr)
-        self.chopowr = qdb.byid[s].powr
-        self.oe = Entry(top, width=3, font=fdbfont)
-        self.oe.grid(row=9, column=1, sticky=W, padx=3, pady=2)
-        self.oe.insert(0, qdb.byid[s].oper)
-        self.chooper = qdb.byid[s].oper
-        self.le = Entry(top, width=3, font=fdbfont)
-        self.le.grid(row=10, column=1, sticky=W, padx=3, pady=2)
-        self.le.insert(0, qdb.byid[s].logr)
-        self.chologr = qdb.byid[s].logr
-        bf = Frame(top)
-        bf.grid(row=11, columnspan=2, sticky=EW, pady=2)
-        bf.grid_columnconfigure((0, 1, 2), weight=1)
-        db = Button(bf, text=' Delete ', font=fdbfont, command=self.dele)
-        db.grid(row=1, sticky=EW, padx=3)
-        sb = Button(bf, text=' Save ', font=fdbfont, command=self.submit)
-        sb.grid(row=1, column=1, sticky=EW, padx=3)
-        # Button renamed to Dismiss - Curtis E. Mills WE7U 25Jun2019
-        qb = Button(bf, text=' Dismiss ', font=fdbfont, command=self.quitb)
-        qb.grid(row=1, column=2, sticky=EW, padx=3)
-        # self.wait_window(top)
-
-    def submit(self):
-        """submit edits"""
-        global editedornot, newdate, newcall, newband, newrept, newopr, newlogr, newpowr
-        error = 0
-        changer = 0  # 0 = no change. 1= change except band and call. 2 = change in call or band
-        t = self.de.get().strip()  # date time
-        if self.chodate != t:
-            # print "The date has changed."
-            changer = 1
-        self.de.configure(bg='white')
-        m = re.match(r'\d{6}\.\d{4,6}$', t)
-        if m:
-            newdate = t + '00'[:13 - len(t)]
-            # print newdate
-        else:
-            self.de.configure(bg='gold')
-            error += 1
-        t = self.be.get().strip()  # band mode
-        if self.choband != t:
-            # print "the band has changed"
-            changer = 2
-        self.be.configure(bg='white')
-        m = re.match(r'(160|80|40|20|15|10|6|2|220|440|900|1200|sat)[cdp]$', t)
-        if m:
-            newband = t
-            # print newband
-        else:
-            self.be.configure(bg='gold')
-            error += 1
-        t = self.ce.get().strip()  # call
-        if self.chocall != t:
-            # print "the call has changed"
-            changer = 2
-        self.ce.configure(bg='white')
-        m = re.match(r'[a-z\d/]{3,11}$', t)
-        if m:
-            newcall = t
-            # print newcall
-        else:
-            self.ce.configure(bg='gold')
-            error += 1
-        t = self.re.get().strip()  # report
-        if self.chorept != t:
-            print "the section is not verified - please check."
-            changer = 1
-        self.re.configure(bg='white')
-        m = re.match(r'.{4,24}$', t)
-        if m:
-            newrept = t
-            # print newrept
-        else:
-            self.re.configure(bg='gold')
-            error += 1
-        t = self.pe.get().strip().lower()  # power
-        if self.chopowr != t:
-            # print "the power has changed."
-            changer = 1
-        self.pe.configure(bg='white')
-        m = re.match(r'\d{1,4}n?$', t)
-        if m:
-            newpowr = t
-            # print newpowr
-        else:
-            self.pe.configure(bg='gold')
-            error += 1
-        t = self.oe.get().strip().lower()  # operator
-        if self.chooper != t:
-            # print "the Contestant has changed."
-            changer = 1
-        self.oe.configure(bg='white')
-        # if participants.has_key(t): # has_key deprecated here
-        if t in participants:
-            newopr = t
-            # print newopr
-        else:
-            self.oe.configure(bg='gold')
-            error += 1
-        t = self.le.get().strip().lower()  # logger
-        if self.chologr != t:
-            # print "the logger has changed."
-            changer = 1
-        self.le.configure(bg='white')
-        # if participants.has_key(t): # has_key deprecated here
-        if t in participants:
-            newlogr = t
-            # print newlogr
-        else:
-            self.le.configure(bg='gold')
-            error += 1
-        if error == 0:
-            # There was no dupe check on the edited qso info. This was added. Scott Hibbs Jul/01/2016
-            if changer == 0:
-                print 'Nothing changed. No action performed.'
-                self.crazytxt.set('nothing changed?')
-                self.crazyclr.set('red')
-                self.crazylbl.configure(bg=self.crazyclr.get(), text=self.crazytxt.get())
-                error += 1
-            if changer == 1:
-                # delete and enter new data because something other than band or call has changed.
-                # print "no errors, enter data"
-                reason = "edited"
-                qdb.delete(self.node, self.seq, reason)
-                qdb.postnew(newdate, newcall, newband, newrept, newopr, newlogr, newpowr)
-                self.top.destroy()
-                txtbillb.insert(END, " EDIT Successful\n")
-                topper()
-            if changer == 2:
-                # band or call changed so check for dupe before submitting to log.
-                if qdb.dupck(newcall, newband):  # dup check for new data
-                    print 'Edit is a DUPE. No action performed.'
-                    self.crazytxt.set("This is a DUPE")
-                    self.crazyclr.set('red')
-                    self.crazylbl.configure(bg=self.crazyclr.get(), text=self.crazytxt.get())
-                    error += 1
-                else:
-                    # delete and enter new data
-                    # print "no errors, enter data"
-                    reason = "edited"
-                    qdb.delete(self.node, self.seq, reason)
-                    qdb.postnew(newdate, newcall, newband, newrept, newopr, newlogr, newpowr)
-                    self.top.destroy()
-                    editedornot = "1"
-                    txtbillb.insert(END, " EDIT Successful\n")
-                    topper()
-
-    def dele(self):
-        print "delete entry"
-        reason = 'deleteclick'
-        qdb.delete(self.node, self.seq, reason)
-        self.top.destroy()
-
-    def quitb(self):
-        print 'Dismissed - edit aborted'
-        self.top.destroy()
-
-
 
 
 # Suggestions/To Do:
 #
-#  Grab out of order entry from Alan Biocca's FDLog. 
 #
-#  Change Participant entry so the name is on top. (It's odd to ask their initials first.) Scott 2018 Field Day notes
 #
-#  Would love another file to use for the "InfoNode" computer. Scott 2017 Field Day notes
-# It will allow visitors/participants to log in
-# It will show top 5 operators and top 5 loggers
-# It will show worked all states
-# Provide info on Amateur Radio (video and/or short articles to print?)
-# Provide info on the local club
-# fool-proof - no logging from this node.
+# Would love another file to use for the "InfoNode" computer. Scott 2017 Field Day notes
+#       It will allow visitors/participants to log in
+#       It will show top 5 operators and top 5 loggers
+#       It will show worked all states
+#       Provide info on Amateur Radio (video and/or short articles to print?)
+#       Provide info on the local club
+#       fool-proof - no logging from this node.
 #
 #  add node list display after db read during startup?
 #
@@ -3968,7 +4094,8 @@ class Edit_Dialog(Toplevel):
 #
 #  Weo suggested making Control-C text copy/paste work. (suggestion from original group - FDLog)
 #
-#  Tried and tried to get wof (whoseonfirst) to return only one value for the mouse over.
+#
+#  Tried and tried to get wof (whoseonfirst) to return only the one value for the mouse over.
 #    I don't have the python skilz... If you can awesome!!! -Scott Mar/18/2017
 #
 # eof

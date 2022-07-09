@@ -1,24 +1,25 @@
-Release Log for FDLog and FDLog_Enhanced (80 Enhancements so far)
+Release Log for FDLog and FDLog_Enhanced (81 Enhancements so far)
 From the present back to 1984. 
 
-Last updated 05Jul2022 Scott Hibbs KD4SIR
+Last updated 09Jul2022 Scott Hibbs KD4SIR
 scotthibbs at gmail.com (email ideas for enhancements/bugs)
 
 	Started looking at the program again out of curiosity around 2022 Field Day. Joined Tristate Amateur Radio Society in Evansville Indiana a couple years ago and they successfully use N3FJP-FD version. This will never replace that program as long as it doesn't integrate with other programs or do cw keying etc. But I miss programming, it's fun.
 
 Ideas and things to Do: 
 
+	Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, we may soon port this project to Python 3
+		I'll be working on this next actually after control-c and control-v. 
+	
+	* Add Control-c and Control-v to the mouse copy and paste 
 	* An Information Table node that will allow sign in, show our group score, 
 			the top 5 Contestors, the top 5 visitors, Worked All States etc.
 	* Add more scoring: 
 			complex gota points, youth, information table, official visitors, 
 			max 20 radios, power multipliers, educational activity... 
-	* Change the visitor/participant entry so the initials are not first.
-	KD4SIR - Will probably work on copy/paste functionality
-	KC7SDA - Will check network and platform compatibility and upper/lower case entry
 	*option to auto time out nodes from the band select 15m/30m/45m/1hr
 	*Fix so reports another's last contact time - this now reports node last heard. 
-	*Change natural to battery?
+	*Change natural to battery? or add a battery button?
 	*Try showing all sections to the side - marking those worked.
 	*Work on Phonetic helper for GOTA station
 	*believe prefix check only returns first prefix in the log. Actually there is a note in the code from
@@ -26,6 +27,15 @@ Ideas and things to Do:
 	*Dupe check for requested fills - 2 UNconnected nodes can dupe and both count when connected. (currently dupe checking is at entry - not on fills)
 	*Need to rewrite all the documentation. It's everywhere...
 	*Make font size a setting before Tkinker loads? 10,12,14 pt font. 
+
+2022_Beta 2.1 09Jul2022
+
+ 81 Mouse Copy and Paste now work!! Tested on windows 10, must use the same format as the program entry which 
+	is "kd4sir 1d in" or it will reject, also checks dupes, section etc. Keyboard shortcuts 
+	(Control c,and v) will be easy to add next. - Thanks to Weo's suggestion (found in code notes probably in the 90's) - Scott Hibbs KD4SIR 08Jul2022    
+ 79 update: Restructured again. The main program is now located at bottom of the file. All major pycharm errors have
+	been corrected. Minor errors will be worked on next when porting to python 3. 
+	
 
 2022_Beta_2 05Jul2022
 
