@@ -14,38 +14,63 @@ Download a stable release from the release section to enjoy!
 The code here is what is in progress for a 2023 stable release.  
 
 The release log has more detailed information. This "seems" stable. 
- This needs to be tested on different networks and cross platform.
+This needs to be tested on different networks and cross platform.
 
-Last updated 09Jul2022 Scott Hibbs KD4SIR
+Release Log for FDLog and FDLog_Enhanced (82 Enhancements so far)
+From the present back to 1984. 
+
+Last updated 12Jul2022 Scott Hibbs KD4SIR
 scotthibbs at gmail.com (email ideas for enhancements/bugs)
 
 Ideas and things to Do: 
 
 	Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, we may soon port this project to Python 3
-		I'll be working on this next actually. 
+		I'll be working on this after making this stable enough for another release
 	
-	* Add Control-c and Control-v to the mouse copy and paste 
 	* An Information Table node that will allow sign in, show our group score, 
 			the top 5 Contestors, the top 5 visitors, Worked All States etc.
 	* Add more scoring: 
 			complex gota points, youth, information table, official visitors, 
 			max 20 radios, power multipliers, educational activity... 
-	*option to auto time out nodes from the band select 15m/30m/45m/1hr
-	*Fix so reports another's last contact time - this now reports node last heard. 
-	*Change natural to battery? or add a battery button?
-	*Try showing all sections to the side - marking those worked.
-	*Work on Phonetic helper for GOTA station
-	*believe prefix check only returns first prefix in the log. Actually there is a note in the code from
+	* option to auto time out nodes from the band select 15m/30m/45m/1hr
+	* Fix so reports another's last contact time - this now reports node last heard on network. 
+	* Change natural to battery? or add a battery button?
+	* Try showing all sections to the side - marking those worked.
+	* Work on Phonetic helper for GOTA station
+	* believe prefix check only returns first prefix in the log. Actually there is a note in the code from
 		Alan Biocca to fix this as foreign callsigns are not supported properly.
-	*Dupe check for requested fills - 2 UNconnected nodes can dupe and both count when connected. (currently dupe checking is at entry - not on fills)
-	*Need to rewrite all the documentation. It's everywhere...
-	*Make font size a setting before Tkinker loads? 10,12,14 pt font. 
+	* Dupe check for requested fills - 2 UNconnected nodes can dupe and both count when connected. (currently dupe checking is at entry - not on fills)
+	* Need to rewrite all the documentation. It's everywhere...
+	* Make font size a setting before Tkinker loads? 10,12,14 pt font. 
+	* Logs menu gives logs for each mode by band, add setting for "ALL" contacts per mode
+	* Should protect from Contestant being on multiple nodes (can't operate two radios at a time) 
+	* left arrow act like backspace instead of nothing.
+	
+	Windows Need Fixed: 
+	* After QSO edit display log prints all blue 
+	
+	Linux Need Fixed: 
+		Off buttons keep the red background color when not selected, should turn grey
+		on my raspberry pi: pdf files are not found but can be opened.
+		on my raspberry pi: read error in file readme.txt
+		
+2022_Beta 2.3 12Jul2022
+
+	Finished python corrections as recommended by pycharm. I learned a ton! I will now test this to see if it is stable for a release - Scott Hibbs KD4SIR 
+	
+	Updated miniweb.py to version 1.8 - Removed unused import, restructure, beautification.  - Scott Hibbs KD4SIR 
+
+2022_Beta 2.2 10Jul2022
+
+ 82 Control-v and Control-c now both work. With the up arrow too. More python corrections. Fixed WAS report (Can't have multiple spaces in this file). Entry window will now always show the bottom line.  
 
 2022_Beta 2.1 09Jul2022
 
- 81 Mouse Copy and Paste now work!! Tested on windows 10, must use the same format as the program entry which is "kd4sir 1d in" or it will reject, also checks dupes, section etc. Keyboard shortcuts (Control c,and v) will be easy to add next. - Thanks to Weo's suggestion (found in code notes probably in the 90's) - Scott Hibbs KD4SIR 08Jul2022        
-       
- 79 update: Restructured again. The main program is now located at bottom of the file. All major pycharm errors have been corrected. Minor errors will be worked on next when porting to python 3.     
+ 81 Mouse Copy and Paste now work!! Tested on windows 10, must use the same format as the program entry which 
+	is "kd4sir 1d in" or it will reject, also checks dupes, section etc. Keyboard shortcuts 
+	(Control c,and v) will be easy to add next. - Thanks to Weo's suggestion (found in code notes probably in the 90's) - Scott Hibbs KD4SIR 08Jul2022    
+ 79 update: Restructured again. The main program is now located at bottom of the file. All major pycharm errors have
+	been corrected.
 	
 2022_Beta_2 05Jul2022
 
@@ -65,8 +90,8 @@ Ideas and things to Do:
  75 Spell check and comment cleanup - Curtis E. Mills WE7U 25Jun2019 and Scott Hibbs 18Jun2022     
  74 Added reminder that the space bar will check prefix, suffix and calls for dupes.    
  73 Changed New Participant window to be more user freindly - Curtis E. Mills WE7U 25Jun2019   
- 72 Worked on other bands and dupe checking responses are nicer and are more readable, also reminds to up    arrow.      
- 71 Fixed dupe checking against club call and gota call that could have been entered with upper case and     missed.   
+ 72 Worked on other bands and dupe checking responses are nicer and are more readable, also reminds to up arrow.      
+ 71 Fixed dupe checking against club call and gota call that could have been entered with upper case and missed.   
  70 Changed the file name from FDLog_SCICSG to FDLog_Enhanced.   
 	Two reasons, it's slightly confusing and I moved away from this awesome group of hams. :(    
  
