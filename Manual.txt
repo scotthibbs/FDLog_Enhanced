@@ -1,6 +1,6 @@
 Field Day Log Program Manual
 
-Last updated Mar/30/2017 by Scott Hibbs KD4SIR
+Last updated 21Jul2022 by Scott Hibbs KD4SIR
 If you have any questions or suggestions for the program please email me. 
 
 Thanks for using the program,
@@ -19,6 +19,8 @@ In a Nutshell:
 	Don't hit enter until after the contact is made.
 	Without "QSL - May I have another?" it didn't work.
 	Hit <Escape> to start over.
+	You can use the up arrow to retype the last contact.
+	You can now copy/past full entries. 
 	Type ? for help. 
 
 
@@ -79,22 +81,33 @@ PROGRAM SETUP:
 	leave it open without a password. This will be what everyone will connect
 	to on field day. Test it to make sure it works. And don't leave it home. 
 	I've had to buy cheap routers the morning of - I got a collection.
+	
+	You will need a copy of python 2.7 from python.org for windows, Mac, & Linux. 
+	Python because someone will not have python installed and you may be offline.
+	
+	With a USB flash drive:
+		Find a blank USB Flash Drive. You will need this program folder, and the python
+		2.7 install files on a on a flash drive. Once the USB flash drive is created, copy 
+		the program folder to your desktop and install python or unzip the program as needed. 
+	Without a USB flash drive:
+		Have a zip and/or tar of the folder in the same folder as miniweb.py along with the
+		python install files. Start miniweb.py after a connection to a network is made. 
+		Navigate all the other computers to this server to download/share the zip 
+		and/or tar to the new computers. 
 
-	Find a blank USB Flash Drive. You will need this program folder, and a 
-	copy of python 2.7 from python.org for windows, Mac, & Linux on a flash drive.
-	Python because someone will not have python installed and you may be 
-	offline - without Internet. Once the USB flash drive is created, copy 
-	the program folder to your desktop. It is a good habit to check the time
-	before starting the program, because this program can not change the 
-	computer's clock. We start habits now. Check the clock. Now. 
-	 
-	Start FDLog_SCICSG.py. It will ask you some questions. Enter your name
-	or the name of your station (others will see this) and the last two digits
-	of the contest year like 17. Next it will ask if you need to set up for
-	Field Day. Say yes and answer the questions. Don't worry if you don't know 
-	the class or other things as this can be set later too. Importantly,
-	it will ask if this computer is the time master. Select yes. Don't add 
-	anything to the log that you don't want in your contest log at this point.
+	We get this base copy ready for all the other computers first to avoid copying the database 
+	files this creates when it is first run. The person setting up 
+	this program on Field Day will want to run this program first and answer the basic questions.
+	Start FDLog_Enhanced.py. It will ask you some questions. Enter your name or the name of your station 
+	(others will see this) and the last two digits of the contest year like 23. 
+	Next it will ask if you need to set up for Field Day. Say yes and answer the questions. 
+	Don't worry if you don't know the class or other things as this can be set later too. 
+	Importantly, it will ask if this computer is the time master. Select yes. Don't add 
+	anything to the log that you don't want in your contest log at this point. This is your 
+	Time Master computer all the others will check against.
+	
+	It is a good habit to check the time efore starting the program, because this program 
+	can not change the computer's clock. We start habits now. Check the clock. Now. 
 
 	At Field Day:
 	
@@ -104,16 +117,15 @@ PROGRAM SETUP:
 	time source - your cell phone, GPS clock, atomic clock, change the time on the 
 	computer to match this time source to within a second or two. Connect to
 	the router network if wireless (you could also be wired). Start the 
-	program. If you need to change the class or other information you added
+	program on your time master. If you need to change the class or other information you added
 	earlier, this can be done with the .set commands found in the help menu. 
 
-	Next you want a copy of the program on every computer. Using the USB Flash
-	Drive, copy the program folder to the desktop. Before starting the program, 
-	set the time on the computer with your accurate time source within a second 
-	or two. If you forget this step, the program will spend time adjusting it's 
-	time to the others. Start the program and set the name and year's digits. 
+	Next you want a copy of the program on every computer. Using the methods above.
+	Before starting the program, set the time on the computer with your accurate time 
+	source within a second or two. If you forget this step, the program will spend time 
+	adjusting it's time to the others. Start the program and set the name and year's digits. 
 	Answer NO to the setup question. If connected to the network, it should see 
-	your computer and grab all it's information. Rinse and Repeat for the others. 
+	your time master pc and grab all it's information. Rinse and Repeat for the others. 
 	
 	The port that the program uses is listed in the program's heading at the top, this 
 	port number does change from year to year. Make sure to allow the port it uses 
@@ -165,6 +177,10 @@ LOGGING LIKE A PRO:
 	Many times the logging program will think you are getting fancy and try to be
 	fancy itself. If either of you are confused, just hit Escape to clear the 
 	entry and start over - try not to get too fancy. 
+	
+	The up arrow will recall an entry previously typed before. 
+	
+	Complete contacts like "kd4sir 1d IN" can be now copy or pasted into the entry window.
 	
 
 COMMANDS: 

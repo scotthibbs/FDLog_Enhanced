@@ -11,10 +11,11 @@ All computers have a copy of the database and tracks operations so everyone can 
 
 Download a stable release from the release section to enjoy! 
 
-The code here is what is in progress for a 2023 stable release.  
+This is the last Python 2.7 version for the 2023 stable release.  
 
-The release log has more detailed information. This "seems" stable. 
-This needs to be tested on different networks and cross platform.
+The release log has more detailed information. This was tested on windows and linux 
+on a 192.168.x.x network and seemed fine. 
+This needs to be tested on different networks and with Macs.
 
 Release Log for FDLog and FDLog_Enhanced (82 Enhancements so far)
 From the present back to 1984. 
@@ -58,7 +59,7 @@ Ideas and things to Do:
 
 	Finished python corrections as recommended by pycharm. I learned a ton! I will now test this to see if it is stable for a release - Scott Hibbs KD4SIR 
 	
-	Updated miniweb.py to version 1.8 - Removed unused import, restructure, beautification.  - Scott Hibbs KD4SIR 
+	Updated miniweb.py to version 1.8 - Removed unused import, restructured, and beautification.  - Scott Hibbs KD4SIR 
 
 2022_Beta 2.2 10Jul2022
 

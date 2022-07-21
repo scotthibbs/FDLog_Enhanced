@@ -12,9 +12,10 @@ In a Nutshell:
 	Hit <Escape> to start over. 
 	The up arrow will retype the previous entry.
 	The space will look up prefix, suffix or calls.
+	Complete contacts can now be copy or pasted too. 
        
-
--Call-Class-Sect- is seperated by spaces so  
+A complete contact is in the format of
+-Call-Class-Sect- and is seperated by spaces so  
 kd4sir 1d ky <Enter> (Will log a contact)
 
 Optionally you can: 
