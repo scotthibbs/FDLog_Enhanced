@@ -1,13 +1,10 @@
-Release Log for FDLog and FDLog_Enhanced (82 Enhancements so far)
+Release Log for FDLog and FDLog_Enhanced (83 Enhancements so far)
 From the present back to 1984. 
 
-Last updated 12Jul2022 Scott Hibbs KD4SIR
+Last updated 21Jul2022 Scott Hibbs KD4SIR
 scotthibbs at gmail.com (email ideas for enhancements/bugs)
 
 Ideas and things to Do: 
-
-	Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, we may soon port this project to Python 3
-		I'll be working on this after making this stable enough for another release
 	
 	* An Information Table node that will allow sign in, show our group score, 
 			the top 5 Contestors, the top 5 visitors, Worked All States etc.
@@ -35,8 +32,15 @@ Ideas and things to Do:
 		Off buttons keep the red background color when not selected, should turn grey
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
-		
-2022_Beta 2.3 12Jul2022
+
+2022_Beta 3.0 21Jul2022
+ 83 Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, I have finished porting this to 
+	Python 3. - Scott Hibbs KD4SIR
+	
+	updated miniweb.py to version 2.0 - now also ported to python 3. - Scott Hibbs kd4sir
+	
+	
+2022_v2.3 12Jul2022 (Last Python 2.7 version) Released
 	Finished all python corrections as recommended by pycharm. I learned a ton! Fixed copy/paste errors when nothing was selected. Fixed an error if a person typed (not pasted) a bad exchange.  I will now test this to see if it is stable enough for a release. Maybe work on documentation? - Scott Hibbs KD4SIR 
 	
 	Updated miniweb.py to version 1.8 - Removed unused import, restructure, and beautification.  - Scott Hibbs KD4SIR 
@@ -120,7 +124,7 @@ SCICSG will be at The Rock Church for our third year.
 
                 The Operator field caused debate on if the person was Control Operator. We made a version that required a license for the operator. The problem then, was that a ham & non-ham pair had no idea who operated the radio or logged since it could only be entered one way. The ham got credit for contacts while logging and the non-ham had no idea the number they logged or contacted (added together). So the Radio Operator and Control Operator are different and confusing. Non-hams are after all allowed and encouraged to operate with a Control Operator logging. This program has always tracked who's the logger. So the Operator field is renamed Contestant for person at radio. Thus, we can track the number of contacts or data entries, and accurate logs for everyone, even for non-hams. Hams can accurately know how many contacts they worked and logged for themselves or someone else and know who. This maintains a score for contacts and a score for logging them. The program will check for a Control Operator (license needed for Contestant or logger) before allowing a contact. - Scott Hibbs KD4SIR Mar/29/2017
 
-    	39 "Add New Participant" window uses the Enter key to save to facilitate multiple entries.
+    39 "Add New Participant" window uses the Enter key to save to facilitate multiple entries.
 	38 Can not edit previously EDITED log entries. 
 2017-beta-5 (stable needs testing)
 	37 Can enter official visitors and youth (not the points yet) with age and title.

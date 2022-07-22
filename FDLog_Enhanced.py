@@ -1,30 +1,31 @@
 #!/usr/bin/python 
 # Added by Art Miller KC7SDA May/5/2017
 #
-import Tkinter
+import tkinter
 import os
 import time
-import string
-import thread
+import sys
+import re
+import _thread
 import threading
 import socket
 import hashlib
 import random
-# import calendar
 import sqlite3
-from Tkinter import END, NORMAL, DISABLED, re, sys, Toplevel, Frame, Label, Entry, Button, \
+from tkinter import END, NORMAL, DISABLED, Toplevel, Frame, Label, Entry, Button, \
     W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
     Checkbutton, RAISED, IntVar
 
-#  Current version 2022_Beta 2.3 12Jul2022
+#  Current version 2022_Beta 3.0 21Jul2022 (first Python 3 version)
+#  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
+#  These "noinspection PyMethodMayBeStatic" errors are supressed because they are beyond my python skills
+#  if someone can look at these and correct it would be great. -Scott
 
-#  Main program starts about line 3700
-
-# These "noinspection PyMethodMayBeStatic" errors are supressed because they are beyond my python skills
-# if someone can look at these and correct it would be great. -Scott
+#  Main program starts about line 3752
 
 #  all history moved to readme.md
-prog = 'FDLog_Enhanced v2023_Field_Day \n\n' \
+
+prog = 'FDLog_Enhanced v2023_Beta 3.0 \n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2023. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
@@ -39,7 +40,8 @@ Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017
 
 FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2023.
     Copyright also shared with Code Contributors:
-    Art Miller KC7SDA 2019   Curtis E. Mills WE7U 2019
+    Art Miller KC7SDA 2019              Curtis E. Mills WE7U 2019
+    David (github.com/B1QUAD) 2022
     
 """
 
@@ -57,8 +59,9 @@ FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2023.
 def fingerprint():
     t = open('FDLog_Enhanced.py').read()
     h = hashlib.md5()
+    t = t.encode()
     h.update(t)
-    print " FDLog_Enhanced Fingerprint", h.hexdigest()
+    print(" FDLog_Enhanced Fingerprint", h.hexdigest())
 
 
 def ival(s):
@@ -88,9 +91,9 @@ class ClockClass:
         """periodic clock update every 30 seconds"""
         #  Add line to get tmast variable (self.offset=float(gd.get('tmast',0)) from global database
         self.lock.acquire()  # take semaphore
-        if node == string.lower(gd.getv('tmast')):
+        if node == str.lower(gd.getv('tmast')):
             if self.level != 0:
-                print "Time Master"
+                print("Time Master")
             self.offset = 0
             self.level = 0
         else:
@@ -107,8 +110,8 @@ class ClockClass:
             if self.srclev > 8:
                 self.adjusta = 0  # require master to function
             if abs(self.adjusta) > 1:
-                print "Adjusting Clock %.1f S, src level %d, total offset %.1f S, at %s" % \
-                      (self.adjusta, self.level, self.offset + self.adjusta, now())
+                print("Adjusting Clock %.1f S, src level %d, total offset %.1f S, at %s" %
+                      (self.adjusta, self.level, self.offset + self.adjusta, now()))
             self.srclev = 10
         self.lock.release()  # release sem
         # Add line to put the offset time in global database (gd.put('tmast',self.offset))
@@ -141,7 +144,7 @@ class ClockClass:
         self.offset += adj
         # or self.offset = float(database.get('tmast',0)) instead of the line above.
         self.adjusta -= adj
-        print "Slewing clock", adj, "to", self.offset
+        print("Slewing clock", adj, "to", self.offset)
 
 
 def initialize():
@@ -149,26 +152,26 @@ def initialize():
     kinp = ""  # keyboard input
     anscount = ""  # answer counter
     kfd = 0  # FD indicator to skip questions
-    print "\n \n"
-    print "For the person in Charge of Logging:"
-    print "*** ONLY ONE PERSON CAN DO THIS ***"
-    print "Do you need to set up the event? Y or N"
-    print "       if in doubt select N"
+    print("\n \n")
+    print("For the person in Charge of Logging:")
+    print("*** ONLY ONE PERSON CAN DO THIS ***")
+    print("Do you need to set up the event? Y or N")
+    print("       if in doubt select N")
     while anscount != "1":
-        kinp = string.lower(string.strip(sys.stdin.readline())[:1])
+        kinp = str.lower(str.strip(sys.stdin.readline())[:1])
         if kinp == "y":
             anscount = "1"
         if kinp == "n":
             anscount = '1'
         if anscount != "1":
-            print "Press Y or N please"
+            print("Press Y or N please")
     if kinp == "y":
         # Field Day or VHF contest
         anscount = ""
-        print "Which contest is this?"
-        print "F = FD, W = WFD, and V = VHF"
+        print("Which contest is this?")
+        print("F = FD, W = WFD, and V = VHF")
         while anscount != "1":
-            kinp = string.lower(string.strip(sys.stdin.readline())[:1])
+            kinp = str.lower(str.strip(sys.stdin.readline())[:1])
             if kinp == "f":
                 anscount = "1"
             if kinp == "w":
@@ -176,162 +179,162 @@ def initialize():
             if kinp == "v":
                 anscount = '1'
             if anscount != "1":
-                print "Press F, W or V please"
+                print("Press F, W or V please")
         if kinp == "f":
             kfd = 1  # used later to skip grid square question.
             globDb.put('contst', "FD")
             qdb.globalshare('contst', "FD")  # global to db
             renew_title()
-            print "Have a nice Field Day!"
+            print("Have a nice Field Day!")
         if kinp == "w":
             kfd = 2  # used later to skip grid square question.
             globDb.put('contst', "WFD")
             qdb.globalshare('contst', "WFD")  # global to db
             renew_title()
-            print "Have a nice Field Day!"
+            print("Have a nice Field Day!")
         if kinp == "v":
             globDb.put('contst', "VHF")
             qdb.globalshare('contst', "VHF")  # global to db
             renew_title()
-            print "Enjoy the VHF contest!"
+            print("Enjoy the VHF contest!")
         # Name of the club or group
-        print "What is the NAME of your club or group?"
-        kinp = string.strip(sys.stdin.readline())
+        print("What is the NAME of your club or group?")
+        kinp = str.strip(sys.stdin.readline())
         while kinp == "":
-            print "Please type the NAME of your club or group"
-            kinp = string.strip(sys.stdin.readline())
+            print("Please type the NAME of your club or group")
+            kinp = str.strip(sys.stdin.readline())
         globDb.put('grpnam', kinp)
         qdb.globalshare('grpnam', kinp)  # global to db
         renew_title()
-        print kinp, "is a nice name."
+        print(kinp, "is a nice name.")
         # Club Call
         # Fixed lower case so Club and GOTA it would match dupe check - Scott Hibbs 18Jun2022
-        print "What will be your club call?"
-        kinp = string.strip(sys.stdin.readline())
+        print("What will be your club call?")
+        kinp = str.strip(sys.stdin.readline())
         kinp = kinp.lower()
         while kinp == "":
-            print "Please type the club call."
-            kinp = string.strip(sys.stdin.readline())
+            print("Please type the club call.")
+            kinp = str.strip(sys.stdin.readline())
             kinp = kinp.lower()
         globDb.put('fdcall', kinp)
         qdb.globalshare('fdcall', kinp)  # global to db
         renew_title()
-        print kinp, "will be the club call."
+        print(kinp, "will be the club call.")
         # Gota Call
         if kfd == 1:
-            print "What will be your GOTA call?"
-            kinp = string.strip(sys.stdin.readline())
+            print("What will be your GOTA call?")
+            kinp = str.strip(sys.stdin.readline())
             kinp = kinp.lower()
             while kinp == "":
-                print "Please type the GOTA call. (if none type none)"
-                kinp = string.strip(sys.stdin.readline())
+                print("Please type the GOTA call. (if none type none)")
+                kinp = str.strip(sys.stdin.readline())
                 kinp = kinp.lower()
             else:
                 globDb.put('gcall', kinp)
                 qdb.globalshare('gcall', kinp)  # global to db
                 renew_title()
-                print kinp, "will be the GOTA call."
+                print(kinp, "will be the GOTA call.")
         # Class
-        print "What will be your class? (like 2A)"
-        kinp = string.strip(sys.stdin.readline())
+        print("What will be your class? (like 2A)")
+        kinp = str.strip(sys.stdin.readline())
         while kinp == "":
-            print "Please type the class."
-            kinp = string.strip(sys.stdin.readline())
+            print("Please type the class.")
+            kinp = str.strip(sys.stdin.readline())
         else:
             globDb.put('class', kinp)
             qdb.globalshare('class', kinp)  # global to db
             renew_title()
-            print kinp, "will be the class."
+            print(kinp, "will be the class.")
         # Section
-        print "What will be your section? (like IN-Indiana)"
-        kinp = string.strip(sys.stdin.readline())
+        print("What will be your section? (like IN-Indiana)")
+        kinp = str.strip(sys.stdin.readline())
         while kinp == "":
-            print "Please type the section (like KY-Kentucky)."
-            kinp = string.strip(sys.stdin.readline())
+            print("Please type the section (like KY-Kentucky).")
+            kinp = str.strip(sys.stdin.readline())
         else:
             globDb.put('sect', kinp)
             qdb.globalshare('sect', kinp)  # global to db
             renew_title()
-            print kinp, "will be the section."
+            print(kinp, "will be the section.")
         if kfd == 0:
             # grid square
-            print "What will be your grid square? (if none type none)"
-            kinp = string.strip(sys.stdin.readline())
+            print("What will be your grid square? (if none type none)")
+            kinp = str.strip(sys.stdin.readline())
             while kinp == "":
-                print "Please type the grid square. (For FD type none)"
-                kinp = string.strip(sys.stdin.readline())
+                print("Please type the grid square. (For FD type none)")
+                kinp = str.strip(sys.stdin.readline())
                 kinp = kinp.upper()  # changed the init so the grid square will be caps -Art Miller KC7SDA 2019
             else:
                 globDb.put('grid', kinp)
                 qdb.globalshare('grid', kinp)  # global to db
                 renew_title()
-                print kinp, "will be the grid."
+                print(kinp, "will be the grid.")
         if kfd != 2:
             # questions for vhf and fd, skip for wfd
             # Public Place
             anscount = ""
-            print "Will the location be in a public place?"
-            print "Y = yes and N = no"
+            print("Will the location be in a public place?")
+            print("Y = yes and N = no")
             while anscount != "1":
-                kinp = string.lower(string.strip(sys.stdin.readline())[:1])
+                kinp = str.lower(str.strip(sys.stdin.readline())[:1])
                 if kinp == "y":
                     anscount = "1"
                 if kinp == "n":
                     anscount = '1'
                 if anscount == "":
-                    print "Press Y or N please"
+                    print("Press Y or N please")
             if kinp == "y":
                 globDb.put('public', "A public location")
                 qdb.globalshare('public', "A public location")  # global to db
                 renew_title()
-                print "Enjoy the public place."
+                print("Enjoy the public place.")
             if kinp == "n":
                 globDb.put('public', "")
                 qdb.globalshare('public', "")  # global to db
                 renew_title()
-                print "maybe next year..."
+                print("maybe next year...")
             # Info Booth
             anscount = ""
-            print "Will you have an info booth?"
-            print "Y = yes and N = no"
+            print("Will you have an info booth?")
+            print("Y = yes and N = no")
             while anscount != "1":
-                kinp = string.lower(string.strip(sys.stdin.readline())[:1])
+                kinp = str.lower(str.strip(sys.stdin.readline())[:1])
                 if kinp == "y":
                     anscount = "1"
                 if kinp == "n":
                     anscount = '1'
                 if anscount == "":
-                    print "Press Y or N please"
+                    print("Press Y or N please")
             if kinp == "y":
                 globDb.put('infob', "1")
                 qdb.globalshare('infob', "1")  # global to db
                 renew_title()
-                print "Love information tables!"
+                print("Love information tables!")
             if kinp == "n":
                 globDb.put('infob', "0")
                 qdb.globalshare('infob', "0")  # global to db
                 renew_title()
-                print "An information table is easy points"
+                print("An information table is easy points")
         # Time Master - oh yeah the big question
         anscount = ""
-        print "\n It is recommended that the first computer"
-        print "set up should also be the time master."
-        print "\n IS THIS COMPUTER TIME CORRECT??? \n"
-        print "Will this computer be the time master?"
-        print "Y = yes and N = no"
+        print("\n It is recommended that the first computer")
+        print("set up should also be the time master.")
+        print("\n IS THIS COMPUTER TIME CORRECT??? \n")
+        print("Will this computer be the time master?")
+        print("Y = yes and N = no")
         while anscount != "1":
-            kinp = string.lower(string.strip(sys.stdin.readline())[:1])
+            kinp = str.lower(str.strip(sys.stdin.readline())[:1])
             if kinp == "y":
                 anscount = "1"
             if kinp == "n":
                 anscount = '1'
             if anscount == "":
-                print "Press Y or N please"
+                print("Press Y or N please")
         if kinp == "y":
             globDb.put('tmast', node)
             qdb.globalshare('tmast', node)  # global to db
             renew_title()
-            print "Time travels to you!"
+            print("Time travels to you!")
         if kinp == "n":
             pass
     return
@@ -351,7 +354,6 @@ class SQDB:
 
     # sqlite3.connect(":memory:", check_same_thread = False)
     # I found this online to correct thread errors with sql locking to one thread only.
-    # I'm pretty sure I emailed this fix to Alan Biocca over a year ago. :(
     # Scott Hibbs 7/5/2015
 
     def __init__(self):
@@ -367,7 +369,7 @@ class SQDB:
         self.sqdb.commit()
 
     def readlog(self):  # ,srcId,srcIdx):            # returns list of log journal items
-        print "Loading log journal from sqlite database"
+        print("Loading log journal from sqlite database")
         sql = "select * from qjournal"
         result = self.curs.execute(sql)
         nl = []
@@ -392,7 +394,7 @@ class SQDB:
         # update sequence counts for journals?
         sqdb1.commit()  # do the commit
         if n.band == '*QST':
-            print("QST\a " + n.rept + " -" + n.logr)  # The "\a" will emit the beep sound for QST
+            print(("QST\a " + n.rept + " -" + n.logr))  # The "\a" will emit the beep sound for QST
 
 
 class QsoDb:
@@ -414,10 +416,9 @@ class QsoDb:
 
     def tolog(self):
         """ make log file entry """
-        sqdb = SQDB()
-        sqdb.log(self)  # to database
+        SQDB().log(self)  # to database
         self.lock.acquire()  # and to ascii journal file as well
-        fd = file(logdbf, "a")
+        fd = open(logdbf, "a")
         fd.write("\nq|%s|%s|%s|%s|%s|%s|%s|%s|%s|" %
                  (self.src, self.seq,
                   self.date, self.band, self.call, self.rept,
@@ -428,7 +429,7 @@ class QsoDb:
     def ldrec(self, line):  # load log entry fm text
         (dummy, self.src, self.seq,
          self.date, self.band, self.call, self.rept,
-         self.powr, self.oper, self.logr, dummy) = string.split(line, '|')
+         self.powr, self.oper, self.logr, dummy) = str.split(line, '|')
         self.seq = int(self.seq)
         self.dispatch('logf')
 
@@ -436,7 +437,7 @@ class QsoDb:
     def loadfile(self):
         """ Used to load the log file"""
         # global sqdb  # setup sqlite database connection
-        print "Loading Log File"
+        print("Loading Log File")
         icounter, s, log = 0, 0, []
         sqdb = SQDB()  # type: SQDB
         log = sqdb.readlog()  # read the database
@@ -446,18 +447,18 @@ class QsoDb:
                 try:
                     r.ldrec(ln)
                     icounter += 1
-                except ValueError, ee:
-                    print "  error, item skipped: ", ee
-                    print "    in:", ln
+                except ValueError as ee:
+                    print("  error, item skipped: ", ee)
+                    print("    in:", ln)
                     s += 1
                     # sqdb.log(r)
                     #  push a copy from the file into the
                     # database (temporary for transition)
         if icounter == 0 and s == 1:
-            print "Log file not found, must be new"
+            print("Log file not found, must be new")
             initialize()  # Set up routine - Scott Hibbs 7/26/2015
         else:
-            print "  ", icounter, "Records Loaded,", s, "Errors"
+            print("  ", icounter, "Records Loaded,", s, "Errors")
         if icounter == 0:
             initialize()
 
@@ -466,28 +467,28 @@ class QsoDb:
         d, cdict, gdict = {}, {}, {}
         fdstart, fdend = gd.getv('fdstrt'), gd.getv('fdend')
         self.lock.acquire()
-        for index in self.byid.values():  # copy, index by node, sequence
+        for index in list(self.byid.values()):  # copy, index by node, sequence
             strsrcseq = "%s|%s" % (index.src, index.seq)
             d[strsrcseq] = index
         self.lock.release()
-        for index in d.keys():  # process deletes
+        for index in list(d.keys()):  # process deletes
             # if d.has_key(i):   # deprecated so changed below
             if index in d:
                 iv = d[index]
                 if iv.rept[:5] == "*del:":
                     dummy, st, sn, dummy = iv.rept.split(':')  # extract deleted id
                     strsrcseq = "%s|%s" % (st, sn)
-                    if strsrcseq in d.keys():
+                    if strsrcseq in list(d.keys()):
                         #  print iv.rept,; iv.pr()
                         del (d[strsrcseq])  # delete it
                         # else: print "del target missing",iv.rept
                     del (d[index])
-        for index in d.keys():  # filter time window
+        for index in list(d.keys()):  # filter time window
             iv = d[index]
             if iv.date < fdstart or iv.date > fdend:
                 # print "discarding out of date range",iv.date,iv.src,iv.seq
                 del (d[index])
-        for index in d.values():  # re-index by call-band
+        for index in list(d.values()):  # re-index by call-band
             dummy, dummy, dummy, dummy, call1, dummy, dummy = self.qparse(index.call)  # extract call (not /...)
             strsrcseq = "%s-%s" % (call1, index.band)
             # filter out noncontest entries
@@ -527,14 +528,14 @@ class QsoDb:
         """Print the log, in time order"""
         llist = self.filterlog("")
         for strii in llist:
-            print strii
+            print(strii)
 
     def pradif(self):
         """print clean log in adif format"""
         pgm = "FDLog_Enhanced (https://github.com/scotthibbs/FDLog_Enhanced)"
-        print "<PROGRAMID:%d>%s" % (len(pgm), pgm)
+        print("<PROGRAMID:%d>%s" % (len(pgm), pgm))
         dummy, n, strgg = self.cleanlog()
-        for iii in n.values() + strgg.values():
+        for iii in list(n.values()) + list(strgg.values()):
             dat = "20%s" % iii.date[0:6]
             tim = iii.date[7:11]
             cal = iii.call
@@ -547,24 +548,24 @@ class QsoDb:
             elif mod == 'd':
                 mod = 'RTTY'
             com = iii.rept
-            print "<QSO_DATE:8>%s" % dat
-            print "<TIME_ON:4>%s" % tim
-            print "<CALL:%d>%s" % (len(cal), cal)
-            print "<BAND:%d>%s" % (len(bnd), bnd)
-            print "<MODE:%d>%s" % (len(mod), mod)
-            print "<QSLMSG:%d>%s" % (len(com), com)
-            print "<EOR>"
-            print
+            print("<QSO_DATE:8>%s" % dat)
+            print("<TIME_ON:4>%s" % tim)
+            print("<CALL:%d>%s" % (len(cal), cal))
+            print("<BAND:%d>%s" % (len(bnd), bnd))
+            print("<MODE:%d>%s" % (len(mod), mod))
+            print("<QSLMSG:%d>%s" % (len(com), com))
+            print("<EOR>")
+            print()
 
     def vhf_cabrillo(self):
         """output VHF contest cabrillo QSO data"""
         band_map = {'6': '50', '2': '144', '220': '222', '440': '432', '900': '902', '1200': '1.2G'}
         dummy, n, dummy = self.cleanlog()
-        mycall = string.upper(gd.getv('fdcall'))
+        mycall = str.upper(gd.getv('fdcall'))
         mygrid = gd.getv('grid')
         lllist = []
-        print "QSO: freq  mo date       time call              grid   call              grid "
-        for iiii in n.values():  # + g.values(): no gota in vhf
+        print("QSO: freq  mo date       time call              grid   call              grid ")
+        for iiii in list(n.values()):  # + g.values(): no gota in vhf
             freq = "%s" % iiii.band[:-1]  # band
             if freq in band_map:
                 freq = band_map[freq]
@@ -585,7 +586,7 @@ class QsoDb:
                 iiii.date, freq, mod, date, tim, mycall, mygrid, call2, grid))
         lllist.sort()  # sort data with prepended date.time
         for iiii in lllist:
-            print iiii[13:]  # rm sort key date.time
+            print(iiii[13:])  # rm sort key date.time
 
     def winter_fd(self):
         # added support for winter field day, this outputs the cabrillo format that is posted on their
@@ -596,14 +597,14 @@ class QsoDb:
         #              '28000', '6': '50', '2': '144', '220': '222', '440': '432', '900': '902', '1200': '1.2G'}
         dummy, n, dummy = self.cleanlog()
         somelocallist = []
-        mycall = string.upper(gd.getv('fdcall'))
+        mycall = str.upper(gd.getv('fdcall'))
         mycat = gd.getv('class')
         mystate, mysect = gd.getv('sect').split("-")
         # number of tx
         txnum = mycat[:-1]
         # data crunching:
         # QSO log generation:
-        for i5 in n.values():
+        for i5 in list(n.values()):
             freq = "%s" % i5.band[:-1]  # band
             # if freq in band_map: freq = band_map[freq]
             mod = i5.band[-1:]  # mode
@@ -636,46 +637,46 @@ class QsoDb:
         ops_calls_list = []
         # print(participants)
         # participants: {u'am': u'am, art miller, kc7sda, 37, '}
-        for i5 in participants.values():
+        for i5 in list(participants.values()):
             dummy, dummy, cs, dummy, dummy = i5.split(", ")
-            ops_calls_list.append(string.upper(cs))
+            ops_calls_list.append(str.upper(cs))
         ops_calls = ', '.join(ops_calls_list)
         # output
-        print "Winter field day Cabrillo output"
-        print "START-OF-LOG: 3.0"
-        print "Created-By: FDLog_Enhanced (https://github.com/scotthibbs/FDLog_Enhanced)"
-        print "CONTEST: WFD "
-        print "CALLSIGN: " + mycall
-        print "LOCATION: " + mystate
-        print "ARRL-SECTION: " + mysect
-        print "CATEGORY-OPERATOR: " + cat_op
-        print "CATEGORY-STATION: "  # fixed or portable
-        print "CATEGORY_TRANSMITTER: " + txnum  # how many transmitters
-        print "CATEGORY_POWER: LOW"  # qrp low or high
-        print "CATEGORY_ASSISTED: NON-ASSISTED"  # assisted or non-assisted
-        print "CATEGORY-BAND: ALL"  # leave for wfd
-        print "CATEGORY-MODE: MIXED"  # leave for wfd
-        print "CATEGORY-OVERLAY: OVER-50"  # leave for wfd
-        print "SOAPBOX: "  # fill in?
-        print "CLAIMED-SCORE: "  # figure out score and add
-        print "OPERATORS: " + ops_calls  # agregate the ops
-        print "NAME: " + gd.getv('fmname')
-        print "ADDRESS: " + gd.getv('fmad1')
-        print "ADDRESS-CITY: " + gd.getv('fmcity')
-        print "ADDRESS-STATE: " + gd.getv('fmst')
-        print "ADDRES-POSTALCODE: " + gd.getv('fmzip')  # zip
-        print "ADDRESS-COUNTRY: USA"  # hard coded for now, possibly change later
-        print "EMAIL: " + gd.getv('fmem')  # email address
+        print("Winter field day Cabrillo output")
+        print("START-OF-LOG: 3.0")
+        print("Created-By: FDLog_Enhanced (https://github.com/scotthibbs/FDLog_Enhanced)")
+        print("CONTEST: WFD ")
+        print("CALLSIGN: " + mycall)
+        print("LOCATION: " + mystate)
+        print("ARRL-SECTION: " + mysect)
+        print("CATEGORY-OPERATOR: " + cat_op)
+        print("CATEGORY-STATION: ")  # fixed or portable
+        print("CATEGORY_TRANSMITTER: " + txnum)  # how many transmitters
+        print("CATEGORY_POWER: LOW")  # qrp low or high
+        print("CATEGORY_ASSISTED: NON-ASSISTED")  # assisted or non-assisted
+        print("CATEGORY-BAND: ALL")  # leave for wfd
+        print("CATEGORY-MODE: MIXED")  # leave for wfd
+        print("CATEGORY-OVERLAY: OVER-50")  # leave for wfd
+        print("SOAPBOX: ")  # fill in?
+        print("CLAIMED-SCORE: ")  # figure out score and add
+        print("OPERATORS: " + ops_calls)  # agregate the ops
+        print("NAME: " + gd.getv('fmname'))
+        print("ADDRESS: " + gd.getv('fmad1'))
+        print("ADDRESS-CITY: " + gd.getv('fmcity'))
+        print("ADDRESS-STATE: " + gd.getv('fmst'))
+        print("ADDRES-POSTALCODE: " + gd.getv('fmzip'))  # zip
+        print("ADDRESS-COUNTRY: USA")  # hard coded for now, possibly change later
+        print("EMAIL: " + gd.getv('fmem'))  # email address
         # print log:
         for i5 in somelocallist:
-            print i5[13:]  # rm sort key date.time
-        print "END-OF-LOG:"
+            print(i5[13:])  # rm sort key date.time
+        print("END-OF-LOG:")
 
     def filterlog(self, filt):
         """list filtered (by bandm) log in time order, nondup valid q's only"""
         somelocallist2 = []
         dummy, n, gg = self.cleanlog()
-        for i6 in n.values() + gg.values():
+        for i6 in list(n.values()) + list(gg.values()):
             if filt == "" or re.match('%s$' % filt, i6.band):
                 somelocallist2.append(i6.prlogln(i6))
         somelocallist2.sort()
@@ -685,7 +686,7 @@ class QsoDb:
         """list filtered (by bandm) log in time order, including special msgs"""
         somelocallist3 = []
         mm, dummy, dummy = self.cleanlog()
-        for i7 in mm.values():
+        for i7 in list(mm.values()):
             if filt == "" or re.match('%s$' % filt, i7.band):
                 somelocallist3.append(i7.prlogln(i7))
         somelocallist3.sort()
@@ -695,7 +696,7 @@ class QsoDb:
         """list filtered (by nod) log in time order, including special msgs"""
         somelocallist4 = []
         mmm, dummy, dummy = self.cleanlog()
-        for i8 in mmm.values():
+        for i8 in list(mmm.values()):
             if re.match('%s$' % filt, i8.src):
                 somelocallist4.append(i8.prlogln(i8))
         somelocallist4.sort()
@@ -746,7 +747,7 @@ class QsoDb:
             s.seq = -1
             s.dispatch('user')
             txtbillb.insert(END, " DELETE Successful %s %s %s\n" % (tm, call6, bandmod))
-            logw.configure(state=NORMAL)
+            logw.config(state=NORMAL)
             logw.delete(0.1, END)
             logw.insert(END, "\n")
             # Redraw the logw text window (on delete) to only show valid calls in the log. 
@@ -764,7 +765,7 @@ class QsoDb:
                         somelocallist5.append(logw.insert(END, i9.prlogln(i9)))
                         somelocallist5.append(logw.insert(END, "\n"))
             logw.insert(END, "\n")
-            logw.configure(state=DISABLED)
+            logw.config(state=DISABLED)
         else:
             txtbillb.insert(END, " DELETE Ignored [%s,%s] Not Found\n" % (nod, seq))
             topper()
@@ -782,9 +783,9 @@ class QsoDb:
             r = self
         elif self.seq == current:
             if debug:
-                print "dup sequence log entry ignored"
+                print("dup sequence log entry ignored")
         else:
-            print "out of sequence log entry ignored", self.seq, current + 1
+            print("out of sequence log entry ignored", self.seq, current + 1)
         self.lock.release()
         return r
 
@@ -820,7 +821,7 @@ class QsoDb:
         cwq, digq, fonq = 0, 0, 0
         qpgop, gotaq, nat, sat = {}, 0, [], []
         dummy, c1, g3 = self.cleanlog()
-        for i10 in c1.values() + g3.values():
+        for i10 in list(c1.values()) + list(g3.values()):
             if re.search('sat', i10.band):
                 sat.append(i10)
             if 'n' in i10.powr:
@@ -875,7 +876,7 @@ class QsoDb:
         # This function from 152i
         qpb, tmlq, dummy = {}, {}, {}
         self.lock.acquire()
-        for i11 in self.byid.values():
+        for i11 in list(self.byid.values()):
             if ival(i11.powr) < 1:
                 continue
             if i11.band == 'off':
@@ -886,33 +887,33 @@ class QsoDb:
             qpb[i11.band] = qpb.get(i11.band, 0) + v  # num q's
             tmlq[i11.band] = max(tmlq.get(i11.band, ''), i11.date)  # time of last (latest) q
         self.lock.release()
-        print
-        print "Stations this node is hearing:"
+        print()
+        print("Stations this node is hearing:")
         # scan for stations on bands
-        for s in net.si.nodes.values():  # xx
+        for s in list(net.si.nodes.values()):  # xx
             # print dir(s)
-            print s.nod, s.host, s.ip, s.stm
+            print(s.nod, s.host, s.ip, s.stm)
             # nod[s.bnd] = s.nod_on_band()
             # print "%8s %4s %18s %s"%(s.nod,s.bnd,s.msc,s.stm)
             # s.stm,s.nod,seq,s.bnd,s.msc
             # i.tm,i.fnod,i.fip,i.stm,i.nod,i.seq,i.bnd,i.msc
         d = {}
-        print
-        print "Node Info"
-        print "--node-- band --opr lgr pwr----- last"
-        for t in net.si.nodinfo.values():
+        print()
+        print("Node Info")
+        print("--node-- band --opr lgr pwr----- last")
+        for t in list(net.si.nodinfo.values()):
             dummy, dummy, age1 = d.get(t.nod, ('', '', 9999))
             if age1 > t.age:
                 d[t.nod] = (t.bnd, t.msc, t.age)
         for t in d:
-            print "%8s %4s %-18s %4s" % (t, d[t][0], d[t][1], d[t][2])  # t.bnd,t.msc,t.age)
-        print
-        print "  band -------- cw ----- ------- dig ----- ------- fon -----"
-        print "          nod  Q's  tslq    nod  Q's  tslq    nod  Q's  tslq"
+            print("%8s %4s %-18s %4s" % (t, d[t][0], d[t][1], d[t][2]))  # t.bnd,t.msc,t.age)
+        print()
+        print("  band -------- cw ----- ------- dig ----- ------- fon -----")
+        print("          nod  Q's  tslq    nod  Q's  tslq    nod  Q's  tslq")
         #      xxxxxx yyyyyy xxxx xxxxx yyyyyy xxxx xxxxx yyyyyy xxxx xxxxx
         #  t1 = now()
         for b in (160, 80, 40, 20, 15, 10, 6, 2, 220, 440, 900, 1200, 'Sat'):
-            print "%6s" % b,
+            print("%6s" % b, end=' ')
             for m3 in 'cdp':
                 bm1 = "%s%s" % (b, m3)
                 # be nice to do min since q instead of time of last q --- DONE
@@ -935,10 +936,10 @@ class QsoDb:
                     nob = ''  # list take first item if any
                 else:
                     nob = nob[0]
-                print "%6s %4s %5s" % \
-                      (nob[0:6], qpb.get(bm1, ''), t2),  # was t
+                print("%6s %4s %5s" %
+                      (nob[0:6], qpb.get(bm1, ''), t2), end=' ')  # was t
                 #    (nod.get(bm,'')[0:5],qpb.get(bm,''),t),
-            print
+            print()
 
     def sfx2call(self, suffix1, band1):
         """return calls w suffix on this band"""
@@ -951,69 +952,70 @@ class QsoDb:
         # return status, time, extended call, base call, suffix, report
         # stat: 0 invalid, 1 partial, 2 suffix, 3 prefix, 4 call, 5 full qso
         # example --> :12.3456 wb4ghj/ve7 2a sf Steve in CAN
-        stat1, tm, pfx, sfx, call7, xcall, rept = 0, '', '', '', '', '', ''
+        global stat
+        stat, tm, pfx, sfx, call7, xcall, rept = 0, '', '', '', '', '', ''
         # break into basic parts: time, call, report
         m4 = re.match(r'(:([\d.]*)( )?)?(([a-z\d/]+)( )?)?([\da-zA-Z ]*)$', line)
         if m4:
             tm = m4.group(2)
             xcall = m4.group(5)
             rept = m4.group(7)
-            stat1 = 0
-            if m4.group(1) > '' or xcall > '':
-                stat1 = 1
+            stat = 0
+            if m4.group(1) is not None or xcall is not None:
+                stat = 1
             #            print; print "tm [%s] xcall [%s] rept [%s]"%(tm,xcall,rept)
-            if tm > '':
-                stat1 = 0
+            if tm is not None:
+                stat = 0
                 m4 = re.match(r'([0-3](\d([.]([0-5](\d([0-5](\d)?)?)?)?)?)?)?$', tm)
                 if m4:
-                    stat1 = 1  # at least partial time
-            if xcall > '':
-                stat1 = 0  # invalid unless something matches
+                    stat = 1  # at least partial time
+            if xcall is not None:
+                stat = 0  # invalid unless something matches
                 m4 = re.match(r'([a-z]+)$', xcall)
                 if m4:
-                    stat1 = 2  # suffix
+                    stat = 2  # suffix
                     sfx = xcall
                 m4 = re.match(r'(\d+)$', xcall)
                 if m4:
-                    stat1 = 2  # suffix
+                    stat = 2  # suffix
                     sfx = xcall
                 m4 = re.match(r'([a-z]+\d+)$', xcall)
                 if m4:
-                    stat1 = 3  # prefix
+                    stat = 3  # prefix
                     pfx = xcall
                 m4 = re.match(r'(\d+[a-z]+)$', xcall)
                 if m4:
-                    stat1 = 3  # prefix
+                    stat = 3  # prefix
                     pfx = xcall
                 m4 = re.match(r'(([a-z]+\d+)([a-z]+))(/[\da-z]*)?$', xcall)
                 if m4:
-                    stat1 = 4  # whole call
+                    stat = 4  # whole call
                     call7 = m4.group(1)
                     pfx = m4.group(2)
                     sfx = m4.group(3)
                 m4 = re.match(r'((\d+[a-z]+)(\d+))(/[\da-z]*)?$', xcall)
                 if m4:
-                    stat1 = 4  # whole call
+                    stat = 4  # whole call
                     call7 = m4.group(1)
                     pfx = m4.group(2)
                     sfx = m4.group(3)
-                if (stat1 == 4) & (rept > ''):
-                    stat1 = 0
+                if (stat == 4) & (rept > ""):
+                    stat = 0
                     m4 = re.match(r'[\da-zA-Z]+[\da-zA-Z ]*$', rept)
                     if m4:
-                        stat1 = 5  # complete qso
+                        stat = 5  # complete qso
                 if len(xcall) > 12:
-                    stat1 = 0  # limit lengths
+                    stat = 0  # limit lengths
                 if len(pfx) > 5:
-                    stat1 = 0
+                    stat = 0
                 if len(sfx) > 3:
-                    stat1 = 0
+                    stat = 0
                 if tm:  # if forced time exists
                     if len(tm) < 7:  # it must be complete
-                        stat1 = 0
+                        stat = 0
                         #        print "stat[%s] time[%s] pfx[%s] sfx[%s] call[%s] xcall[%s] rpt[%s]"%\
                         #              (stat,tm,pfx,sfx,call,xcall,rept)
-        return stat1, tm, pfx, sfx, call7, xcall, rept
+        return stat, tm, pfx, sfx, call7, xcall, rept
 
     def dupck(self, wcall, band2):
         """check for duplicate call on this band"""
@@ -1028,9 +1030,9 @@ class QsoDb:
         """ check for participants to act as dupes in this event"""
         dummy, dummy, dummy, dummy, call9, xcall, dummy = self.qparse(wcall)
         somelocallist6 = []
-        for i12 in participants.values():
+        for i12 in list(participants.values()):
             somelocallist6.append(i12)
-            dummy, dummy, dcall, dummy, dummy = string.split(i12, ', ')
+            dummy, dummy, dcall, dummy, dummy = str.split(i12, ', ')
             if dcall == xcall:
                 # to debug: print ("%s dcall matches %s xcall" % (dcall, xcall))
                 if gd.getv('contst').upper() == "VHF":
@@ -1069,7 +1071,7 @@ class QsoDb:
         self.lock.acquire()
         #        print self.bysfx
         QsoDb.bysfx = {}
-        for i13 in c2.values() + g4.values():
+        for i13 in list(c2.values()) + list(g4.values()):
             #            print i.call,i.band
             i13.logdup()
         self.lock.release()
@@ -1079,7 +1081,7 @@ class QsoDb:
         """worked all states log report in the menu"""
         sectost, stcnt, r, ee = {}, {}, [], []
         try:
-            fd = file("Arrl_sect.dat", "r")  # read section data
+            fd = open("Arrl_sect.dat", "r")  # read section data
             while 1:
                 ln = fd.readline()  # read a line
                 if not ln:
@@ -1088,17 +1090,17 @@ class QsoDb:
                 if ln[0] == '#':
                     continue
                 try:
-                    sec, st, dummy, dummy = string.split(ln, " ", 3)
+                    sec, st, dummy, dummy = str.split(ln, " ", 3)
                     sectost[sec] = st
                     stcnt[st] = 0
                     #  print sec, st
-                except ValueError, ee:
-                    print "rd arrl sec dat err, itm skpd: ", ee
+                except ValueError as ee:
+                    print("rd arrl sec dat err, itm skpd: ", ee)
             fd.close()
-        except IOError, ee:
-            print "io error during arrl section data file load", ee
+        except IOError as ee:
+            print("io error during arrl section data file load", ee)
         a, dummy, dummy = self.cleanlog()
-        for ii in a.values():
+        for ii in list(a.values()):
             sect, state = "", ""
             if ii.rept[:1] == '*':
                 continue
@@ -1111,7 +1113,7 @@ class QsoDb:
             m2 = re.match(r' *\d+[a-fiohA-FIOH] +([A-Za-z]{2,4})', ii.rept)
             if m2:
                 sect = m2.group(1)
-                sect = string.upper(sect)
+                sect = str.upper(sect)
                 state = sectost.get(sect, "")
                 #  print "sec", sect, "state", state
                 if state:
@@ -1121,7 +1123,7 @@ class QsoDb:
                 #  print "sec", sect, "state", state
                 ee.append(ii.prlogln(ii))
         h, n = [], []  # make have and need lists
-        for ii in stcnt.keys():
+        for ii in list(stcnt.keys()):
             if ii != "--":
                 if stcnt[ii] == 0:
                     n.append("%s" % ii)
@@ -1169,8 +1171,8 @@ class NodeInfoClass:
     def netnum(self, ip, mask):
         """extract net number"""
         i14, m6, r = [], [], {}
-        i14 = string.split(ip, '.')
-        m6 = string.split(mask, '.')
+        i14 = str.split(ip, '.')
+        m6 = str.split(mask, '.')
         for n in (0, 1, 2, 3):
             r[n] = ival(i14[n]) & ival(m6[n])
         return "%s.%s.%s.%s" % (r[0], r[1], r[2], r[3])
@@ -1183,7 +1185,7 @@ class NodeInfoClass:
         if nod not in self.nodes:  # create if new 
             self.nodes[nod] = NodeInfoClass()
             if nod != node:
-                print "New Node Heard", host, sip, nod, stm, stml, ver, td
+                print("New Node Heard", host, sip, nod, stm, stml, ver, td)
         i15 = self.nodes[nod]
         #        if debug: print "ssb before assign",i.nod,i.stm,i.bnd
         i15.ptm, i15.nod, i15.host, i15.ip, i15.stm, i15.age = \
@@ -1212,14 +1214,14 @@ class NodeInfoClass:
         # updates from 152i
         t = now()[7:]  # time hhmmss
         self.lock.acquire()
-        for i17 in self.nodinfo.values():
+        for i17 in list(self.nodinfo.values()):
             if i17.age < 999:
                 i17.age += 1
                 # if debug: print "aging nodinfo",i.fnod,i.nod,i.bnd,i.age
             if i17.age > 55 and i17.bnd:
-                print t, "age out info from", i17.fnod, "about", i17.nod, "on", i17.bnd, "age", i17.age
+                print(t, "age out info from", i17.fnod, "about", i17.nod, "on", i17.bnd, "age", i17.age)
                 i17.bnd = ""
-        for i17 in self.nodes.values():
+        for i17 in list(self.nodes.values()):
             if i17.age < 999:
                 i17.age += 1
         self.lock.release()
@@ -1228,7 +1230,7 @@ class NodeInfoClass:
         """return list of fills needed"""
         r = []
         self.lock.acquire()
-        for i18 in self.nodinfo.values():  # for each node
+        for i18 in list(self.nodinfo.values()):  # for each node
             j1 = qdb.hiseq.get(i18.nod, 0)
             if int(i18.seq) > j1:  # if they have something we need
                 r.append((i18.fip, i18.nod, j1 + 1))  # add req for next to list
@@ -1244,7 +1246,7 @@ class NodeInfoClass:
         i19.nod, i19.bnd, i19.age = node, band, 0
         i19.msc = "%s %s %sW" % (exin(operator), exin(logger), power)
         summ1[node] = i19
-        for i19 in qdb.hiseq.keys():  # insure all db nod on list
+        for i19 in list(qdb.hiseq.keys()):  # insure all db nod on list
             #  if not sum.has_key(i):  # has_key deprecated here
             #  if not i19 in summ1:  # more pythonic to read it the following way
             if i19 not in summ1:  # add if new
@@ -1252,7 +1254,7 @@ class NodeInfoClass:
                 j2.nod, j2.bnd, j2.msc, j2.age = i19, '', '', 999
                 summ1[i19] = j2
                 # if debug: print "adding nod fm db to list",i
-        for i19 in self.nodinfo.values():  # browse bcast data
+        for i19 in list(self.nodinfo.values()):  # browse bcast data
             #  if not sum.has_key(i19.nod): # has_key deprecated here
             #  if not i19.nod in summ1:  # more pythonic to read it the following way
             if i19.nod not in summ1: 
@@ -1270,7 +1272,7 @@ class NodeInfoClass:
                 j2.bnd, j2.msc, j2.age = i19.bnd, i19.msc, i19.age
         self.lock.release()
         r = []  # form the list (xx return sum?)
-        for s in summ1.values():
+        for s in list(summ1.values()):
             seq = qdb.hiseq.get(s.nod, 0)  # reflect what we have in our db
             if seq or s.bnd:  # only report interesting info
                 r.append((s.nod, seq, s.bnd, s.msc, s.age))
@@ -1328,12 +1330,12 @@ class NetworkSync:
         s.connect(("8.8.8.8", 53))
         s.settimeout(20)  # set timeout to 20 seconds instead of the default minute and a half. - Scott 12Jul2022
         my_addr = s.getsockname()[0]
-    except socket.error, exc:
-        print "Caught exception socket.error : %s" % exc
+    except socket.error as exc:
+        print("Caught exception socket.error : %s" % exc)
         my_addr = "127.0.0.1"
     finally:
         s.close()
-    print "\n IP address is:  %s\n" % my_addr
+    print("\n IP address is:  %s\n" % my_addr)
     bc_addr = re.sub(r'\d+$', '255', my_addr)  # calc bcast addr
     si = NodeInfoClass()  # node info
 
@@ -1349,13 +1351,15 @@ class NetworkSync:
         global authk
         authk = newauth
         seed = "2004070511111akb"  # change when protocol changes
-
         # self.authkey = md5.new(newauth+seed)
-        self.authkey = hashlib.md5(newauth + seed)
+        newauthseed = newauth + seed
+        newauthseed = newauthseed.encode()
+        self.authkey = hashlib.md5(newauthseed)
 
     def auth(self, msg):
         """calc authentication hash"""
         h = self.authkey.copy()
+        msg = msg.encode()
         h.update(msg)
         return h.hexdigest()
 
@@ -1369,6 +1373,7 @@ class NetworkSync:
         """send message to address list"""
         if authk != "" and node != "":
             amsg = self.auth(msg) + '\n' + msg
+            amsg = amsg.encode()
             addrlst = []
             if addr == 'bcast':
                 addrlst.append(self.bc_addr)
@@ -1380,13 +1385,13 @@ class NetworkSync:
                 if a == '0.0.0.0':
                     continue
                 if debug:
-                    print "send to ", a
-                    print msg
+                    print("send to ", a)
+                    print(msg)
                 try:
                     self.skt.sendto(amsg, (a, self.port))
-                except socket.error, e01:
+                except socket.error as e01:
                     self.send_errs += 1
-                    print "error, pkt xmt failed %s %s [%s]" % (now(), e01.args, a)
+                    print("error, pkt xmt failed %s %s [%s]" % (now(), e01.args, a))
 
     def send_qsomsg(self, nod, seq, destip):
         """send q record"""
@@ -1414,7 +1419,7 @@ class NetworkSync:
         """filler thread requests missing database records"""
         time.sleep(0.2)
         if debug:
-            print "filler thread starting"
+            print("filler thread starting")
         while 1:
             time.sleep(.1)  # periodically check for fills
             if debug:
@@ -1426,26 +1431,27 @@ class NetworkSync:
                 c4 = r[p2]
                 msg = "r|%s|%s|%s\n" % (self.my_addr, c4[1], c4[2])  # (addr,src,seq)
                 self.sndmsg(msg, c4[0])
-                print "req fill", c4
+                print("req fill", c4)
 
     def rcvr(self):
         """receiver thread processes incoming packets"""
         if debug:
-            print "receiver thread starting"
+            print("receiver thread starting")
         r = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         r.bind(('', self.port))
         while 1:
             msg, addr = r.recvfrom(800)
+            msg = msg.decode()
             if addr[0] != self.my_addr:
                 self.pkts_rcvd += 1
             # if authk == "": continue             # skip till auth set
             pkt_tm = now()
             host, sip, fnod, stm = '', '', '', ''
             if debug:
-                print "rcvr: %s: %s" % (addr, msg),  # xx
+                print("rcvr: %s: %s" % (addr, msg),)  # xx
             if not self.ckauth(msg):  # authenticate packet
                 # if debug: sms.prmsg("bad auth from: %s"%addr)
-                print "bad auth from:", addr
+                print("bad auth from:", addr)
                 self.badauth_rcvd += 1
             else:
                 lines = msg.split('\n')  # decode lines
@@ -1458,9 +1464,9 @@ class NetworkSync:
                         self.si.ssb(pkt_tm, host, sip, fnod, stm, stml, ver, td)
                         mclock.calib(fnod, stml, td)
                         if abs(td) >= tdwin:
-                            print 'Incoming packet clock error', td, host, sip, fnod, pkt_tm
+                            print('Incoming packet clock error', td, host, sip, fnod, pkt_tm)
                         if showbc:
-                            print "bcast", host, sip, fnod, ver, pkt_tm, td
+                            print("bcast", host, sip, fnod, ver, pkt_tm, td)
                     elif fields[0] == 's':  # source status
                         nod, seq, bnd, msc, age3 = fields[1:]
                         # if debug: print pkt_tm,fnod,sip,stm,nod,seq,bnd,msc
@@ -1479,18 +1485,18 @@ class NetworkSync:
     def start(self):
         """launch all threads"""
         #        global node
-        print "This host:", self.hostname, "IP:", self.my_addr, "Mask:", self.bc_addr
+        print("This host:", self.hostname, "IP:", self.my_addr, "Mask:", self.bc_addr)
         #        if (self.hostname > "") & (node == 's'):
         #            node = self.hostname             # should filter chars
         #        print "Node ID:",node
-        print "Launching threads"
+        print("Launching threads")
         #        thread.start_new_thread(self.bcastr,())
-        thread.start_new_thread(self.fillr, ())
-        thread.start_new_thread(self.rcvr, ())
+        _thread.start_new_thread(self.fillr, ())
+        _thread.start_new_thread(self.rcvr, ())
         if debug:
-            print "threads launched"
+            print("threads launched")
         time.sleep(0.5)  # let em print
-        print "Startup complete"
+        print("Startup complete")
 
 
 class GlobalDataClass:
@@ -1534,7 +1540,7 @@ class GlobalDataClass:
             i23.val = value
             i23.ts = timestamp
             if name3[:2] == 'p:':
-                ini, name3, dummy, dummy, dummy = string.split(value, ', ')
+                ini, name3, dummy, dummy, dummy = str.split(value, ', ')
                 participants[ini] = value
                 if name3 == 'delete':
                     del (participants[ini])
@@ -1551,7 +1557,7 @@ class GlobalDataClass:
     def sethelp(self):
         lhelp = ["   Set Commands\n   For the Logging Guru In Charge\n   eg: .set <parameter> <value>\n"]
         #  above is spaced for sort
-        for i24 in self.byname.keys():
+        for i24 in list(self.byname.keys()):
             if i24[:2] != 'p:':  # skip ops in help display
                 lhelp.append("  %-6s  %-43s  '%s'" % (i24, self.byname[i24].desc, self.byname[i24].val))
         lhelp.sort()
@@ -1578,7 +1584,7 @@ class SynchMessage:
         # Check to see if the log window has been deleted           
         self.lock.acquire()
         while self.msgs:
-            logw.configure(state=NORMAL)
+            logw.config(state=NORMAL)
             logw.see(END)
             nod = self.msgs[0][70:81]  # color local entries
             seq = self.msgs[0][65:69].strip()
@@ -1592,13 +1598,13 @@ class SynchMessage:
                     logw.insert(END, "%s\n" % self.msgs[0], "b")
             else:
                 logw.insert(END, "%s\n" % self.msgs[0])
-            logw.configure(state=DISABLED)
+            logw.config(state=DISABLED)
             del self.msgs[0]
         self.lock.release()
 
 
 def now():
-    """return current time in standard string format"""
+    """return current time in standard str format"""
     # n = time.localtime(time.time())
     n = time.gmtime(time.time() + mclock.offset)  # time in gmt utc
     # offset to correct to master
@@ -1622,10 +1628,11 @@ def tmsub(a, b):
 
 class GlobalDb:
     """new sqlite globals database fdlog.sq3 replacing globals file"""
+    # __init__ is called twice - notice it prints "Using local value database fdlog.sq3" twice?
 
     def __init__(self):
         self.dbPath = globf[0:-4] + '.sq3'
-        print "  Using local value database", self.dbPath
+        print("  Using local value database", self.dbPath)  # In Class init this prints twice
         self.sqdb = sqlite3.connect(self.dbPath, check_same_thread=False)  # connect to the database
         # Have to add FALSE here to get this stable. - Scott Hibbs 7/17/2015
         self.sqdb.row_factory = sqlite3.Row  # row factory
@@ -1675,7 +1682,7 @@ def loadglob():
     #  timeok = int(globDb.get('timeok', 0))
     NetworkSync.rem_host = globDb.get('remip', '0.0.0.0')
     if debug:
-        print "  debug:", debug
+        print("  debug:", debug)
 
 
 def saveglob():
@@ -1698,13 +1705,13 @@ def getfile(fn):
     """get file contents"""
     data = ""
     try:
-        fd = file(fn, "r")
+        fd = open(fn, "r")
         data = fd.read()
         fd.close()
     except IOError:
         pass
     if data != "":
-        print "Found file", fn
+        print("Found file", fn)
         # print data
     return data
 
@@ -1722,9 +1729,9 @@ def contestlog(pr):
             nts_msg_relay.append(msg)
     media_copy = getfile("media.txt")  # media activity
     soapbox = getfile("soapbox.txt")  # soapbox commentary
-    fd_call = string.upper(gd.getv('fdcall'))  # prep data
+    fd_call = str.upper(gd.getv('fdcall'))  # prep data
     xmttrs = ival(gd.getv('class'))
-    gota_call = string.upper(gd.getv('gcall'))
+    gota_call = str.upper(gd.getv('gcall'))
     if xmttrs < 2:
         gota_call = ""
     if pr == 0:
@@ -1734,39 +1741,39 @@ def contestlog(pr):
     dummy, bycall, gotabycall = qdb.cleanlog()  # get a clean log
     qpb, ppb, qpop, qplg, qpst, dummy, dummy, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
         qdb.bandrpt()  # and count it
-    print "..",
-    sys.stdout = file(logfile, "w")  # redirect output to file
-    print "Field Day 20%s Entry Form" % datime[:2]
-    print
-    print "Date Prepared:              %s UTC" % datime[:-2]
-    print
-    print "1.  Field Day Call:         %s" % fd_call
+    print("..", end=' ')
+    sys.stdout = open(logfile, "w")  # redirect output to file
+    print("Field Day 20%s Entry Form" % datime[:2])
+    print()
+    print("Date Prepared:              %s UTC" % datime[:-2])
+    print()
+    print("1.  Field Day Call:         %s" % fd_call)
     if gota_call != "":
-        print "    GOTA Station Call:      %s" % gota_call
-    print "2.  Club or Group Name:     %s" % gd.getv('grpnam')
-    print "3.  Number of Participants: %s" % len(participants)
-    print "4.  Transmitter Class:      %s" % xmttrs
-    print "5.  Entry Class:            %s" % string.upper(gd.getv('class'))[-1:]
-    print
-    print "6.  Power Sources Used:"
+        print("    GOTA Station Call:      %s" % gota_call)
+    print("2.  Club or Group Name:     %s" % gd.getv('grpnam'))
+    print("3.  Number of Participants: %s" % len(participants))
+    print("4.  Transmitter Class:      %s" % xmttrs)
+    print("5.  Entry Class:            %s" % str.upper(gd.getv('class'))[-1:])
+    print()
+    print("6.  Power Sources Used:")
     if int(gd.getv('psgen')) > 0:
-        print "      Generator"
+        print("      Generator")
     if int(gd.getv('pscom')) > 0:
-        print "      Commercial"
+        print("      Commercial")
     if int(gd.getv('psbat')) > 0:
-        print "      Battery"
+        print("      Battery")
     # add solar! xx
     if gd.getv('psoth') != '':
-        print "      Other: %s" % (gd.getv('psoth'))
-    print
-    print "7.  ARRL Section:           %s" % gd.getv('sect')
-    print
-    print "8.  Total CW QSOs:      %4s  Points: %5s" % (cwq, cwq * 2)
-    print "9.  Total Digital QSOs: %4s  Points: %5s" % (digq, digq * 2)
-    print "10. Total Phone QSOs:   %4s  Points: %5s" % (fonq, fonq)
+        print("      Other: %s" % (gd.getv('psoth')))
+    print()
+    print("7.  ARRL Section:           %s" % gd.getv('sect'))
+    print()
+    print("8.  Total CW QSOs:      %4s  Points: %5s" % (cwq, cwq * 2))
+    print("9.  Total Digital QSOs: %4s  Points: %5s" % (digq, digq * 2))
+    print("10. Total Phone QSOs:   %4s  Points: %5s" % (fonq, fonq))
     qsop = cwq * 2 + digq * 2 + fonq
-    print "11. Total QSO Points:                 %5s" % qsop
-    print "12. Max Power Used:     %4s  Watts" % maxp
+    print("11. Total QSO Points:                 %5s" % qsop)
+    print("12. Max Power Used:     %4s  Watts" % maxp)
     powm = 5
     if int(gd.getv('psgen')) > 0 or int(gd.getv('pscom')) > 0:
         powm = 2
@@ -1776,11 +1783,11 @@ def contestlog(pr):
         powm = 1
     if maxp > 1500:
         powm = 0
-    print "13. Power Multiplier:                  x %2s" % powm
+    print("13. Power Multiplier:                  x %2s" % powm)
     qso_scor = qsop * powm
-    print "14. Claimed QSO Score:                %5s" % qso_scor
-    print
-    print "15. Bonus Points:"
+    print("14. Claimed QSO Score:                %5s" % qso_scor)
+    print()
+    print("15. Bonus Points:")
     tot_bonus = 0
     #  emerg_powr_bp = 0  # not used
     if gd.getv('pscom') == '0':
@@ -1788,204 +1795,204 @@ def contestlog(pr):
         if emerg_powr_bp > 2000:
             emerg_powr_bp = 2000
         tot_bonus += emerg_powr_bp
-        print "   %4s 100%s Emergency Power (%s xmttrs)" % (emerg_powr_bp, '%', xmttrs)
+        print("   %4s 100%s Emergency Power (%s xmttrs)" % (emerg_powr_bp, '%', xmttrs))
     #  media_pub_bp = 0  # not used
     if media_copy > "":
         media_pub_bp = 100
         tot_bonus += media_pub_bp
-        print "    %3s Media Publicity (copy below)" % media_pub_bp
+        print("    %3s Media Publicity (copy below)" % media_pub_bp)
     public_bp = 0
     public_place = gd.getv('public')
     if public_place != "":
         public_bp = 100
         tot_bonus += public_bp
-        print "    %3s Set-up in a Public Place (%s)" % (public_bp, public_place)
+        print("    %3s Set-up in a Public Place (%s)" % (public_bp, public_place))
     #  info_booth_bp = 0  # not used
     if int(gd.getv('infob')) > 0 and public_bp > 0:
         info_booth_bp = 100
         tot_bonus += info_booth_bp
-        print "    %3s Information Booth (photo included)" % info_booth_bp
+        print("    %3s Information Booth (photo included)" % info_booth_bp)
     #  nts_orig_bp = 0  # not used
     if nts_orig_msg > "":
         nts_orig_bp = 100
         tot_bonus += nts_orig_bp
-        print "    %3s NTS message Originated to ARRL SM/SEC (copy below)" % nts_orig_bp
+        print("    %3s NTS message Originated to ARRL SM/SEC (copy below)" % nts_orig_bp)
     n = len(nts_msg_relay)
     nts_msgs_bp = 10 * n
     if nts_msgs_bp > 100:
         nts_msgs_bp = 100
     if nts_msgs_bp > 0:
         tot_bonus += nts_msgs_bp
-        print "    %3s Formal NTS messages handled (%s) (copy below)" % (nts_msgs_bp, n)
+        print("    %3s Formal NTS messages handled (%s) (copy below)" % (nts_msgs_bp, n))
     sat_qsos = len(sat)
     #  sat_bp = 0  # not used
     if sat_qsos > 0:
         sat_bp = 100
         tot_bonus += sat_bp
-        print "    %3s Satellite QSO Completed (%s/1) (list below)" % (sat_bp, sat_qsos)
+        print("    %3s Satellite QSO Completed (%s/1) (list below)" % (sat_bp, sat_qsos))
     natural_q = len(nat)
     #  natural_bp = 0  # not used
     if natural_q >= 5:
         natural_bp = 100
         tot_bonus += natural_bp
-        print "    %3s Five Alternate power QSOs completed (%s/5) (list below)" % (natural_bp, natural_q)
+        print("    %3s Five Alternate power QSOs completed (%s/5) (list below)" % (natural_bp, natural_q))
     #  w1aw_msg_bp = 0  # not used
     if len(w1aw_msg) > 30:  # ignore short file place holder 152i
         w1aw_msg_bp = 100
         tot_bonus += w1aw_msg_bp
-        print "    %3s W1AW FD Message Received (copy below)" % w1aw_msg_bp
+        print("    %3s W1AW FD Message Received (copy below)" % w1aw_msg_bp)
     #  site_visited_ego_bp = 0  # not used
     if gd.getv('svego') > "":
         site_visited_ego_bp = 100
         tot_bonus += site_visited_ego_bp
-        print "    %3s Site Visited by elected govt officials (%s)" % (site_visited_ego_bp, gd.getv('svego'))
+        print("    %3s Site Visited by elected govt officials (%s)" % (site_visited_ego_bp, gd.getv('svego')))
     #  site_visited_roa_bp = 0  # not used
     if gd.getv('svroa') > "":
         site_visited_roa_bp = 100
         tot_bonus += site_visited_roa_bp
-        print "    %3s Site Visited by representative of agency (%s)" % (site_visited_roa_bp, gd.getv('svroa'))
+        print("    %3s Site Visited by representative of agency (%s)" % (site_visited_roa_bp, gd.getv('svroa')))
     #  gota_max_bp = 0  # not used
     if gotaq >= 100:
         gota_max_bp = 100
         tot_bonus += gota_max_bp
-        print "    %3s GOTA Station 100 QSOs bonus achieved" % gota_max_bp
+        print("    %3s GOTA Station 100 QSOs bonus achieved" % gota_max_bp)
     #  youth_bp = 0  # not used
     if int(gd.getv('youth')) > 0:
         youth_bp = 20 * int(gd.getv('youth'))
         if youth_bp > 5 * 20:
             youth_bp = 5 * 20
         tot_bonus += youth_bp
-        print "    %3s Youth Participation Bonus" % youth_bp
+        print("    %3s Youth Participation Bonus" % youth_bp)
     # keep this last
     #  web_sub_bp = 0  # not used
     if gd.getv('websub') == "1":
         web_sub_bp = 50
         tot_bonus += web_sub_bp
-        print "    %3s Web Submission Bonus" % web_sub_bp
-    print
-    print "    Total Bonus Points Claimed: %5s" % tot_bonus
-    print
+        print("    %3s Web Submission Bonus" % web_sub_bp)
+    print()
+    print("    Total Bonus Points Claimed: %5s" % tot_bonus)
+    print()
     tot_scor = qso_scor + tot_bonus
-    print "    Total Claimed Score:        %5s" % tot_scor
-    print
-    print "16. We have observed all competition rules as well as all regulations"
-    print "    for amateur radio in our country. Our report is correct and true"
-    print "    to the best of our knowledge. We agree to be bound by the decisions"
-    print "    of the ARRL Awards Committee."
-    print
-    print "Submitted By:"
-    print
-    print "    Date:     %s UTC" % datime[:-2]
-    print "    Call:     %s" % string.upper(gd.getv('fmcall'))
-    print "    Name:     %s" % gd.getv('fmname')
-    print "    Address:  %s" % gd.getv('fmad1')
-    print "    Address:  %s" % gd.getv('fmad2')
-    print "    Email:    %s" % gd.getv('fmem')
-    print
-    print
-    print "Field Day Call: %s" % string.upper(fd_call)
-    print
-    print "17. QSO Breakdown by Band and Mode"
-    print
-    print "        ----CW----  --Digital-  ---Phone--"
-    print "  Band  QSOs   PWR  QSOs   PWR  QSOs   PWR"
-    print
+    print("    Total Claimed Score:        %5s" % tot_scor)
+    print()
+    print("16. We have observed all competition rules as well as all regulations")
+    print("    for amateur radio in our country. Our report is correct and true")
+    print("    to the best of our knowledge. We agree to be bound by the decisions")
+    print("    of the ARRL Awards Committee.")
+    print()
+    print("Submitted By:")
+    print()
+    print("    Date:     %s UTC" % datime[:-2])
+    print("    Call:     %s" % str.upper(gd.getv('fmcall')))
+    print("    Name:     %s" % gd.getv('fmname'))
+    print("    Address:  %s" % gd.getv('fmad1'))
+    print("    Address:  %s" % gd.getv('fmad2'))
+    print("    Email:    %s" % gd.getv('fmem'))
+    print()
+    print()
+    print("Field Day Call: %s" % str.upper(fd_call))
+    print()
+    print("17. QSO Breakdown by Band and Mode")
+    print()
+    print("        ----CW----  --Digital-  ---Phone--")
+    print("  Band  QSOs   PWR  QSOs   PWR  QSOs   PWR")
+    print()
     qsobm, pwrbm = {}, {}
     for b in (160, 80, 40, 20, 15, 10, 6, 2, 220, 440, 1200, 'sat', 'gota'):
         if b == 'gota' and gota_call == "":
             continue
-        print "%6s" % b,
+        print("%6s" % b, end=' ')
         for m8 in 'cdp':
             bm2 = "%s%s" % (b, m8)
-            print "%5s %5s" % (qpb.get(bm2, 0), ppb.get(bm2, 0)),
+            print("%5s %5s" % (qpb.get(bm2, 0), ppb.get(bm2, 0)), end=' ')
             qsobm[m8] = qsobm.get(m8, 0) + qpb.get(bm2, 0)
             pwrbm[m8] = max(pwrbm.get(m8, 0), ppb.get(bm2, 0))
-        print
-    print
-    print "Totals",
-    print "%5s %5s" % (qsobm['c'], pwrbm['c']),
-    print "%5s %5s" % (qsobm['d'], pwrbm['d']),
-    print "%5s %5s" % (qsobm['p'], pwrbm['p'])
-    print
-    print
+        print()
+    print()
+    print("Totals", end=' ')
+    print("%5s %5s" % (qsobm['c'], pwrbm['c']), end=' ')
+    print("%5s %5s" % (qsobm['d'], pwrbm['d']), end=' ')
+    print("%5s %5s" % (qsobm['p'], pwrbm['p']))
+    print()
+    print()
     if gota_call:
-        print "18. Callsigns and QSO counts of GOTA Contestants"
-        print
-        print "      Call  QSOs"
-        for i25 in qpgop.keys():
-            print "    %6s   %3s" % (i25, qpgop[i25])
-        print "    %6s   %3s" % ("Total", gotaq)
-        print
-        print
-    print "Dupe Lists sorted by Band, Mode and Call:"
-    print
-    print "  Main Station(s) Dupe List (%s)" % fd_call
+        print("18. Callsigns and QSO counts of GOTA Contestants")
+        print()
+        print("      Call  QSOs")
+        for i25 in list(qpgop.keys()):
+            print("    %6s   %3s" % (i25, qpgop[i25]))
+        print("    %6s   %3s" % ("Total", gotaq))
+        print()
+        print()
+    print("Dupe Lists sorted by Band, Mode and Call:")
+    print()
+    print("  Main Station(s) Dupe List (%s)" % fd_call)
     lbycalls = []
-    for i25 in bycall.values():
+    for i25 in list(bycall.values()):
         lbycalls.append("    %4s %s" % (i25.band, i25.call))
     lbycalls.sort()
     b2, n = "", 0
     for i25 in lbycalls:
         b, c6 = i25.split()
         if (b == b2) & (n < 5):  # same band, 5 per line
-            print "%-10s" % c6,
+            print("%-10s" % c6, end=' ')
             n += 1
         else:
-            print
-            print "    %4s   %-10s" % (b, c6),
+            print()
+            print("    %4s   %-10s" % (b, c6), end=' ')
             b2 = b
             n = 1
-    print
-    print
-    print
+    print()
+    print()
+    print()
     if gota_call > "":
-        print "  GOTA Station Dupe List (%s)" % gota_call
+        print("  GOTA Station Dupe List (%s)" % gota_call)
         lbycalls = []
-        for i25 in gotabycall.values():
+        for i25 in list(gotabycall.values()):
             lbycalls.append("    %4s %s" % (i25.band, i25.call))
         lbycalls.sort()
         b2, n = "", 0
         for i25 in lbycalls:
             b, c6 = i25.split()
             if (b == b2) & (n < 5):  # same band
-                print "%-10s" % c6,
+                print("%-10s" % c6, end=' ')
                 n += 1
             else:
-                print
-                print "    %4s   %-10s" % (b, c6),
+                print()
+                print("    %4s   %-10s" % (b, c6), end=' ')
                 b2 = b
                 n = 1
-        print
-        print
-        print
+        print()
+        print()
+        print()
     if w1aw_msg != "":
-        print "W1AW FD Message Copy"
-        print
-        print "%s" % w1aw_msg
-        print
-        print
+        print("W1AW FD Message Copy")
+        print()
+        print("%s" % w1aw_msg)
+        print()
+        print()
     if nts_orig_msg != "":
-        print "Originated NTS Message"
-        print
-        print nts_orig_msg
-        print
-        print
+        print("Originated NTS Message")
+        print()
+        print(nts_orig_msg)
+        print()
+        print()
     if len(nts_msg_relay) > 0:
-        print "RELAYED NTS Messages"
-        print
+        print("RELAYED NTS Messages")
+        print()
         for i25 in nts_msg_relay:
-            print i25
-            print
-        print
+            print(i25)
+            print()
+        print()
     if media_copy != "":
-        print "Media Copy"
-        print
-        print media_copy
-        print
-        print
+        print("Media Copy")
+        print()
+        print(media_copy)
+        print()
+        print()
     if len(nat) > 0:
-        print "Natural Power QSOs (show first 10 logged)"
-        print
+        print("Natural Power QSOs (show first 10 logged)")
+        print()
         lnat = []
         for i25 in nat:
             ln = "%8s %5s %-10s %-18s %4s %-6s %-6s %4s %s" % \
@@ -1994,15 +2001,15 @@ def contestlog(pr):
         lnat.sort()
         j3 = 0
         for i25 in lnat:
-            print i25
+            print(i25)
             j3 += 1
             if j3 > 9:
                 break
-        print
-        print
+        print()
+        print()
     if len(sat) > 0:
-        print "Satellite QSOs (show 5)"
-        print
+        print("Satellite QSOs (show 5)")
+        print()
         lsat = []
         for i25 in sat:
             ln = "%8s %5s %-10s %-18s %4s %-6s %-6s %4s %s" % \
@@ -2011,26 +2018,26 @@ def contestlog(pr):
         lsat.sort()
         j3 = 0
         for i25 in lsat:
-            print i25
+            print(i25)
             j3 += 1
             if j3 > 4:
                 break
-        print
-        print
+        print()
+        print()
     if soapbox != "":
-        print "Soapbox Comments"
-        print
-        print soapbox
-        print
-        print
-    print "Logging and Reporting Software Used:\n"
-    print prog
-    print "===================== CLIP HERE ============================"
-    print
-    print "(do not include below in ARRL submission)"
-    print
-    print "Submission Notes"
-    print """
+        print("Soapbox Comments")
+        print()
+        print(soapbox)
+        print()
+        print()
+    print("Logging and Reporting Software Used:\n")
+    print(prog)
+    print("===================== CLIP HERE ============================")
+    print()
+    print("(do not include below in ARRL submission)")
+    print()
+    print("Submission Notes")
+    print("""
     email files as attachments to FieldDay@arrl.org within 30 days!!!
     web entry at www.b4h.net/cabforms
         fdlog.log log file, less log detail below 'CLIP HERE'
@@ -2041,68 +2048,68 @@ def contestlog(pr):
             natural power pictures
             demo stations pictures
         plus other interesting pictures
-    """
-    print "Participant List"
-    print
+    """)
+    print("Participant List")
+    print()
     lpart = []
-    for i25 in participants.values():
+    for i25 in list(participants.values()):
         lpart.append(i25)
     lpart.sort()
     n = 0
     for i25 in lpart:
         n += 1
-        print "  %4s %s" % (n, i25)
-    print
-    print
-    print "QSO breakdown by Station"
-    print
-    for i25 in qpst.keys():
-        print "  %4s %s" % (qpst[i25], i25)
-    print
-    print
-    print "QSO breakdown by Contestant"
-    print
-    for i25 in qpop.keys():
-        print "  %4s %s" % (qpop[i25], i25)
-    print
-    print
-    print "QSO breakdown by Logger"
-    print
-    for i25 in qplg.keys():
-        print "  %4s %s" % (qplg[i25], i25)
-    print
-    print
-    print "Worked All States during FD Status"
-    print
+        print("  %4s %s" % (n, i25))
+    print()
+    print()
+    print("QSO breakdown by Station")
+    print()
+    for i25 in list(qpst.keys()):
+        print("  %4s %s" % (qpst[i25], i25))
+    print()
+    print()
+    print("QSO breakdown by Contestant")
+    print()
+    for i25 in list(qpop.keys()):
+        print("  %4s %s" % (qpop[i25], i25))
+    print()
+    print()
+    print("QSO breakdown by Logger")
+    print()
+    for i25 in list(qplg.keys()):
+        print("  %4s %s" % (qplg[i25], i25))
+    print()
+    print()
+    print("Worked All States during FD Status")
+    print()
     r = qdb.waslogreport()
     for i25 in r:
-        print i25
-    print
-    print
-    print "Detailed Log"
-    print
-    print "  Date Range", gd.getv('fdstrt'), "-", gd.getv('fdend'), "UTC"
-    print
+        print(i25)
+    print()
+    print()
+    print("Detailed Log")
+    print()
+    print("  Date Range", gd.getv('fdstrt'), "-", gd.getv('fdend'), "UTC")
+    print()
     qdb.prlog()
-    print
-    print
-    print "ADIF Log"
-    print
+    print()
+    print()
+    print("ADIF Log")
+    print()
     qdb.pradif()
-    print
-    print "VHF Cabrillo"
-    print
+    print()
+    print("VHF Cabrillo")
+    print()
     qdb.vhf_cabrillo()
-    print
-    print
-    print "Winter Field day"
-    print
+    print()
+    print()
+    print("Winter Field day")
+    print()
     qdb.winter_fd()
-    print
-    print "eof"
+    print()
+    print("eof")
     sys.stdout = sys.__stdout__  # revert print to console
-    print
-    print "entry and log written to file", logfile
+    print()
+    print("entry and log written to file", logfile)
 
 
 def bandset(b):
@@ -2172,7 +2179,7 @@ class NewParticipantDialog:
         s.vist.grid(row=4, column=1, sticky=W)
         fr2 = Frame(s.t)
         fr2.grid(row=1, column=0, sticky=EW, pady=3)
-        fr2.grid_columnconfigure((0, 1), weight=1)
+        fr2.columnconfigure(0, weight=1)
         # Added Save label - Curtis E. Mills WE7U 25Jun2019
         Label(fr2, text='Save = <Enter>', font=fdbfont, foreground='red').grid(row=3, column=0, sticky=W)
         # Button(fr2, text='Save', font=fdbfont, command=s.applybtn) .grid(row=3, column=1, sticky=EW, padx=3)
@@ -2183,14 +2190,14 @@ class NewParticipantDialog:
 
     def lookup(self):
         # constrain focus to the initials until they are ok -slightly annoying - may change in future
-        initials = string.lower(self.initials.get())
+        initials = str.lower(self.initials.get())
         if not re.match(r'[a-zA-Z]{2,3}$', initials):
             # self.initials.delete(0,END)
-            self.initials.configure(bg='gold')
+            self.initials.config(bg='gold')
             self.initials.focus()
         else:
-            self.initials.configure(bg='white')
-            dummy, name7, call10, age4, vist1 = string.split(participants.get(initials, ', , , , '), ', ')
+            self.initials.config(bg='white')
+            dummy, name7, call10, age4, vist1 = str.split(participants.get(initials, ', , , , '), ', ')
             if dummy == initials:
                 # self.name.delete(0, END)
                 # self.name.insert(END, name)
@@ -2201,7 +2208,7 @@ class NewParticipantDialog:
                 # self.vist.delete(0,END)
                 # self.vist.insert(END, vist)
                 self.initials.delete(0, END)
-                self.initials.configure(bg='gold')
+                self.initials.config(bg='gold')
                 self.initials.focus()
                 age4 = 0
                 vist1 = ""
@@ -2214,7 +2221,7 @@ class NewParticipantDialog:
                 pass
             else:
                 self.vist.insert(END, vist1)
-        return 1
+        return True
 
     @property  # This added, so I can use the <Return> binding -Scott Hibbs KD4SIR Mar/30/2017
     def applybtn(self):
@@ -2222,53 +2229,53 @@ class NewParticipantDialog:
         # print "store"
         initials = self.initials.get().lower()
         name11 = self.name.get()
-        call11 = string.lower(self.call.get())
-        age5 = string.lower(self.age.get())
-        vist2 = string.lower(self.vist.get())
-        self.initials.configure(bg='white')
-        self.name.configure(bg='white')
-        self.call.configure(bg='white')
-        self.age.configure(bg='white')
-        self.vist.configure(bg='white')
+        call11 = str.lower(self.call.get())
+        age5 = str.lower(self.age.get())
+        vist2 = str.lower(self.vist.get())
+        self.initials.config(bg='white')
+        self.name.config(bg='white')
+        self.call.config(bg='white')
+        self.age.config(bg='white')
+        self.vist.config(bg='white')
         if not re.match(r'[a-zA-Z]{2,3}$', initials):
             txtbillb.insert(END, "error in initials\n")
             txtbillb.see(END)
             topper()
             self.initials.focus()
-            self.initials.configure(bg='gold')
+            self.initials.config(bg='gold')
         elif not re.match(r'[A-Za-z ]{4,20}$', name11):
             txtbillb.insert(END, "error in name\n")
             txtbillb.see(END)
             topper()
             self.name.focus()
-            self.name.configure(bg='gold')
+            self.name.config(bg='gold')
         elif not re.match(r'([a-zA-Z\d]{3,6})?$', call11):
             txtbillb.insert(END, "error in call\n")
             txtbillb.see(END)
             topper()
             self.call.focus()
-            self.call.configure(bg='gold')
+            self.call.config(bg='gold')
         elif not re.match(r'(\d{1,2})?$', age5):
             txtbillb.insert(END, "error in age\n")
             txtbillb.see(END)
             topper()
             self.age.focus()
-            self.age.configure(bg='gold')
+            self.age.config(bg='gold')
         elif not re.match(r'([a-zA-Z\d]{4,20})?$', vist2):
             txtbillb.insert(END, "error in title\n")
             txtbillb.see(END)
             topper()
             self.vist.focus()
-            self.vist.configure(bg='gold')
+            self.vist.config(bg='gold')
         else:
             # Enter the Participant in the dictionary
             # initials # statement has no effect - removed
-            # nam = "p:%s" % initials  # not used
+            nam = "p:%s" % initials  # not used
             v = "%s, %s, %s, %s, %s" % (initials, name11, call11, age5, vist2)
             participants[initials] = v
-            #  dummy = qdb.globalshare(nam, v)  # store + bcast #
+            _dummy = qdb.globalshare(nam, v)  # store + bcast #
             txtbillb.insert(END, "\a New Participant Entered.")
-            print "\a"
+            print("\a")
             txtbillb.see(END)
             topper()
             self.initials.delete(0, END)
@@ -2278,7 +2285,7 @@ class NewParticipantDialog:
             self.vist.delete(0, END)
             self.name.focus()
             buildmenus()
-        return self.applybtn  # used to avoid pycharm error "Getter should return or yield something"
+        return None  # used to avoid pycharm error "Getter should return or yield something"
 
     def quitbtn(self):
         self.t.destroy()
@@ -2287,10 +2294,10 @@ class NewParticipantDialog:
 def renew_title():
     """renew title and various, called at 10 second rate"""
     if node == 'gotanode':
-        call12 = string.upper(gd.getv('gcall'))
+        call12 = str.upper(gd.getv('gcall'))
     else:
-        call12 = string.upper(gd.getv('fdcall'))
-    clas = string.upper(gd.getv('class'))
+        call12 = str.upper(gd.getv('fdcall'))
+    clas = str.upper(gd.getv('class'))
     sec = gd.getv('sect')
     t = now()
     sob = tmsub(t, tmob)
@@ -2306,10 +2313,10 @@ def renew_title():
 def setnode(new):
     global node
     bandoff()
-    node = string.lower(new)
+    node = str.lower(new)
     qdb.redup()
     renew_title()
-    lblnode.configure(text="My Node: %s" % node, font=fdfont, foreground='blue', background='light grey')
+    lblnode.config(text="My Node: %s" % node, font=fdfont, foreground='blue', background='light grey')
     # Had to add the above so that the new lblnode could be updated. - Scott Hibbs KD4SIR Mar/28/2017
 
 
@@ -2325,12 +2332,12 @@ def applyprop():
             setnode(new)
         #        elif cf['lab'] == 'AuthKey':  reauth(new)    #net.setauth(new)
         else:
-            print 'error, no such var'
+            print('error, no such var')
         saveglob()
         renew_title()
         cf['p'].destroy()
     else:
-        print 'bad syntax', new
+        print('bad syntax', new)
 
 
 def pdiag(label, value, valid_re, wid):
@@ -2367,9 +2374,9 @@ def viewprep(ttl=''):
     #    w.transient(root)
     w.title("FDLog_Enhanced - %s" % ttl)
     t = Text(w, takefocus=0, height=20, width=85, font=fdfont,
-             wrap=NONE, setgrid=1)
+             wrap=NONE, setgrid=True)
     s = Scrollbar(w, command=t.yview)
-    t.configure(yscrollcommand=s.set)
+    t.config(yscrollcommand=s.set)
     t.grid(row=0, column=0, sticky=NSEW)
     s.grid(row=0, column=1, sticky=NS)
     w.grid_rowconfigure(0, weight=1)
@@ -2382,7 +2389,7 @@ def viewtextv(txt, ttl=''):
     """view text variable"""
     w = viewprep(ttl)
     w.insert(END, txt)
-    w.configure(state=DISABLED)
+    w.config(state=DISABLED)
 
 
 def viewtextl(lthing, ttl=''):
@@ -2390,7 +2397,7 @@ def viewtextl(lthing, ttl=''):
     w = viewprep(ttl)
     for i26 in lthing:
         w.insert(END, "%s\n" % i26)
-    w.configure(state=DISABLED)
+    w.config(state=DISABLED)
 
 
 def viewtextf(fn, ttl=''):
@@ -2398,7 +2405,7 @@ def viewtextf(fn, ttl=''):
     if ttl == "":
         ttl = "file %s" % fn
     try:
-        fd = file(fn, 'r')
+        fd = open(fn, 'r')
         lfile = fd.read()
         viewtextv(lfile, ttl)
         fd.close()
@@ -2437,7 +2444,7 @@ def updatebb():
         # the '_' as an argument is to get rid of the pycharm error message.
         d = {}
         txtbillb.insert(END, "\n--node-- band opr lgr pwr  ----- last\n")
-        for t in net.si.nodinfo.values():
+        for t in list(net.si.nodinfo.values()):
             dummy1, dummy1, age6 = d.get(t.nod, ('', '', 9999))
             if age6 > t.age:
                 d[t.nod] = (t.bnd, t.msc, t.age)
@@ -2479,7 +2486,7 @@ def updatebb():
                 sc = 'red'
                 bandb[bm3].bind("<Enter>", whosonfirst)
                 bandb[bm3].bind("<Leave>", whosonsecond)
-            bandb[bm3].configure(background=bc, selectcolor=sc)
+            bandb[bm3].config(background=bc, selectcolor=sc)
 
     cltg = ival(gd.getv('class'))  # class target
     if cltg > 1:
@@ -2501,7 +2508,7 @@ def updatebb():
         clc = 'pale green'
     if ts > cltg:
         clc = 'red'
-    bandb['Class'].configure(text='Class %s/%s' % (ts, cltg), background=clc)
+    bandb['Class'].config(text='Class %s/%s' % (ts, cltg), background=clc)
 
     vhc = 'gold'
     if vh - vhfree == 0:
@@ -2513,7 +2520,7 @@ def updatebb():
     if vh > vhfree:
         vhc = 'dark orange'  # 2 vhf is okay, only 1 is free...
         anytext = "VHF taking HF "
-    bandb['VHF'].configure(text='%s%s/%s' % (anytext, vh, vhfree), background=vhc)
+    bandb['VHF'].config(text='%s%s/%s' % (anytext, vh, vhfree), background=vhc)
 
     if cltg > 1:
         gotatg = 1
@@ -2524,7 +2531,7 @@ def updatebb():
         goc = 'pale green'
     if go > gotatg:
         goc = 'red'
-    bandb['GOTA'].configure(text='GOTA %s/%s' % (go, gotatg), background=goc)
+    bandb['GOTA'].config(text='GOTA %s/%s' % (go, gotatg), background=goc)
 
 
 def updateqct():
@@ -2534,7 +2541,7 @@ def updateqct():
     for i28, j6 in (('FonQ', 'Phone %5s' % fonq),
                     ('CW/D', 'CW&Dig %4s' % (cwq + digq)),
                     ('GOTAq', 'GOTA %6s' % gotaq)):
-        bandb[i28].configure(text=j6, background='light grey')
+        bandb[i28].config(text=j6, background='light grey')
         # Update for the operator OpQ - KD4SIR for FD 2014
         if operator == "":
             coin2 = "Contestant"
@@ -2584,9 +2591,9 @@ def updateqct():
     if node == '':
         t = "NO NODE SELECTED"
     if t:
-        lblnet.configure(text=t, background='gold')
+        lblnet.config(text=t, background='gold')
     else:
-        lblnet.configure(text="Network OK", background='light grey')
+        lblnet.config(text="Network OK", background='light grey')
 
 
 def bandbuttons(w):
@@ -2645,7 +2652,7 @@ def testqgen(n):
         while n:
             call13 = rndlet() + rndlet() + rnddig() + rndlet() + rndlet() + rndlet()
             rpt = rnddig() + rndlet() + ' ' + rndlet() + rndlet() + ' testQ'
-            print call13, rpt
+            print(call13, rpt)
             n -= 1
             qdb.qsl(now(), call13, band, rpt)
             time.sleep(0.1)
@@ -2670,7 +2677,7 @@ def setoper(op):
     """set operator"""
     global operator
     # print "setoper",op
-    ini, name9, call14, age7, vist3 = string.split(op, ', ')
+    ini, name9, call14, age7, vist3 = str.split(op, ', ')
     operator = "%s: %s, %s, %s, %s" % (ini, name9, call14, age7, vist3)
     # Adding red to the display - KD4SIR
     operatorcolor = 'light grey'
@@ -2683,7 +2690,7 @@ def setlog(logr):
     """set logger"""
     global logger
     # print "setlog",logr
-    ini, name10, call15, age8, vist4 = string.split(logr, ', ')
+    ini, name10, call15, age8, vist4 = str.split(logr, ', ')
     logger = "%s: %s, %s, %s, %s" % (ini, name10, call15, age8, vist4)
     loggercolor = 'light grey'
     logds.config(text=logger, background=loggercolor)
@@ -2694,7 +2701,7 @@ def setlog(logr):
 def buildmenus():
     opdsu.delete(0, END)
     logdsu.delete(0, END)
-    lparticipants = participants.values()
+    lparticipants = list(participants.values())
     lparticipants.sort()
     for i30 in lparticipants:
         # Removed the $ which looks for the end of value - Scott Hibbs KD4SIR 2/12/2017
@@ -2759,13 +2766,14 @@ def ckpowr():
         pwrnt.config(background=pcolor1)
         powcb.config(background=pcolor1)
         powlbl.config(background=pcolor1)
-    print 'power', power
-    return 1
+    print('power', power)
+    return True
 
 
 def setpwr(p4):
     global power
-    pwr = ival(p4)
+    pwri = ival(p4)
+    pwr = str(pwri)
     pwrnt.delete(0, END)
     pwrnt.insert(END, pwr)
     if p4[-1:] == 'n':
@@ -2792,7 +2800,8 @@ def setpwr(p4):
         powcb.config(background=pcolor2)
         powlbl.config(background=pcolor2)
     else:
-        # pcolor == 'light grey' # Statement has no effect
+        pcolor == 'light grey'  # Statement has no effect
+        # maybe this is needed for the linux platform. ?? -scott
         pwrmb.config(background=pcolor2)
         pwrnt.config(background=pcolor2)
         powcb.config(background=pcolor2)
@@ -2813,7 +2822,7 @@ def showthiscall(call16):
     findany = 0
     m11, dummy, dummy = qdb.cleanlog()
     #    print m.values()
-    for i31 in m11.values():
+    for i31 in list(m11.values()):
         #        print i.call
         q = i31.call.split('/')
         if p5[0] == q[0]:
@@ -2833,7 +2842,7 @@ def readsections():
     """this will read the Arrl_sect.dat file for sections"""
     # This modified from Alan Biocca FDLog version 153d - Scott Hibbs Feb/6/2017
     try:
-        fd = file("Arrl_sect.dat", "r")  # read section data
+        fd = open("Arrl_sect.dat", "r")  # read section data
         while 1:
             ln = fd.readline().strip()  # read a line and put in db
             if not ln:
@@ -2841,18 +2850,19 @@ def readsections():
             if ln[0] == '#':
                 continue
             try:
-                sec, dummy, dummy, dummy = string.split(ln, " ", 3)
+                sec, dummy, dummy, dummy = str.split(ln, " ", 3)
                 secName[sec] = sec
-            except ValueError, e02:
-                print "read Arrl section data error, item skipped: ", e02
+            except ValueError as e02:
+                print("read Arrl section data error, item skipped: ", e02)
         fd.close()
-    except IOError, e02:
-        print "read error during readSections", e02
+    except IOError as e02:
+        print("read error during readSections", e02)
 
 
 def proc_key(ch):
     """process keystroke"""
-    global kbuf, power, operator, logger, debug, band, node, suffix, tdwin, goBack
+    #  Changes need to be made in proc_key(ch) and pasteinterpreter()
+    global stat, kbuf, power, operator, logger, debug, band, node, suffix, tdwin, goBack
     testq = 0
     if ch == '?' and (kbuf == "" or kbuf[0] != '#'):  # ? for help
         mhelp()
@@ -2865,7 +2875,7 @@ def proc_key(ch):
         topper()
         return
     if ch == '\r':  # return, may be cmd or log entry
-        if kbuf[:1] == '#':
+        if kbuf[:1] == '#':  # QST Message
             qdb.qst(kbuf[1:])
             kbuf = ""
             txtbillb.insert(END, '\n')
@@ -2925,7 +2935,7 @@ def proc_key(ch):
             return
         m12 = re.match(r"[.]band (((160|80|40|20|15|10|6|2|220|440|900|1200|sat)[cdp])|off)", kbuf)
         if m12:
-            print
+            print()
             nb = m12.group(1)
             kbuf = ""
             txtbillb.insert(END, "\n")
@@ -2971,38 +2981,38 @@ def proc_key(ch):
             topper()
             return
         if re.match(r'[.]st$', kbuf):  # status  xx mv to gui
-            print
-            print
-            print "FD Call   %s" % string.upper(gd.getv('fdcall'))
-            print "GOTA Call %s" % string.upper(gd.getv('gcall'))
-            print "FD Report %s %s" % (string.upper(gd.getv('class')), gd.getv('sect'))
-            print "Band      %s" % band
-            print "Power     %s" % power
-            print "Contestnt %s" % operator
-            print "Logger    %s" % logger
-            print "Node      %s" % node
+            print()
+            print()
+            print("FD Call   %s" % str.upper(gd.getv('fdcall')))
+            print("GOTA Call %s" % str.upper(gd.getv('gcall')))
+            print("FD Report %s %s" % (str.upper(gd.getv('class')), gd.getv('sect')))
+            print("Band      %s" % band)
+            print("Power     %s" % power)
+            print("Contestnt %s" % operator)
+            print("Logger    %s" % logger)
+            print("Node      %s" % node)
             if authk != "" and node != "":
-                print "Net       enabled"
+                print("Net       enabled")
             else:
-                print "Net       disabled"
-            print
+                print("Net       disabled")
+            print()
             kbuf = ""
             txtbillb.insert(END, "\n")
             return
         if re.match(r'[.]re$', kbuf):  # report  xx mv to gui
-            print
-            print "  band  cw q   pwr dig q   pwr fon q   pwr"
+            print()
+            print("  band  cw q   pwr dig q   pwr fon q   pwr")
             qpb, ppb, dummy, dummy, dummy, tq, score, maxp, dummy, dummy, dummy, dummy, dummy, \
                 dummy, dummy = qdb.bandrpt()
             for b in (160, 80, 40, 20, 15, 10, 6, 2, 220, 440, 1200, 'sat', 'gota'):
-                print "%6s" % b,
+                print("%6s" % b, end=' ')
                 for m12 in 'cdp':
                     bm5 = "%s%s" % (b, m12)
-                    print "%5s %5s" % (qpb.get(bm5, 0), ppb.get(bm5, 0)),
-                print
-            print
-            print "%s total Qs, %s QSO points," % (tq, score),
-            print maxp, "watts maximum power"
+                    print("%5s %5s" % (qpb.get(bm5, 0), ppb.get(bm5, 0)), end=' ')
+                print()
+            print()
+            print("%s total Qs, %s QSO points," % (tq, score), end=' ')
+            print(maxp, "watts maximum power")
             kbuf = ""
             txtbillb.insert(END, "\n")
             topper()
@@ -3015,9 +3025,9 @@ def proc_key(ch):
             return
         # check for valid contact
         if ch == '\r':
-            stat2, ftm, dummy, sfx, call17, xcall, rept = qdb.qparse(kbuf)
+            stat, ftm, dummy, sfx, call17, xcall, rept = qdb.qparse(kbuf)
             goBack = "%s %s" % (call17, rept)  # for the up arrow enhancement - Scott Hibbs KD4SIR Jul/5/2018
-            if stat2 == 5:  # whole qso parsed
+            if stat == 5:  # whole qso parsed
                 kbuf = ""
                 if len(node) < 3:
                     txtbillb.insert(END, " ERROR, set .node <call> before logging\n")
@@ -3028,10 +3038,10 @@ def proc_key(ch):
                 elif qdb.partck(xcall):  # Participant check
                     txtbillb.insert(END, "\n Participant - not allowed \n")
                     topper()
-                elif xcall == string.lower(gd.getv('fdcall')):
+                elif xcall == str.lower(gd.getv('fdcall')):
                     txtbillb.insert(END, "\n That's us - not allowed \n")
                     topper()
-                elif xcall == string.lower(gd.getv('gcall')):
+                elif xcall == str.lower(gd.getv('gcall')):
                     txtbillb.insert(END, "\n That's us - not allowed \n")
                     topper()
                 else:
@@ -3071,8 +3081,8 @@ def proc_key(ch):
                         return
                     if em == "":
                         # This checks 1D to 1D contacts
-                        #  clas = string.upper(gd.getv('class'))  # not used
-                        rept1 = string.upper(rept)
+                        #  clas = str.upper(gd.getv('class'))  # not used
+                        rept1 = str.upper(rept)
                         # if clas == '1D': no longer applies due to rule change in 2019.
                         #     if clas in rept1:
                         #         txtbillb.insert(END, "\n 1D to 1D contacts are logged, but zero points! \n")
@@ -3110,7 +3120,7 @@ def proc_key(ch):
                         if rept2 in secName:
                             pass
                         else:
-                            print "\n Use one of these for the section:"
+                            print("\n Use one of these for the section:")
                             kk = ""
                             nx = 0
                             ny = 0
@@ -3125,7 +3135,7 @@ def proc_key(ch):
                                     if ny < 6:  # last line gets the rest
                                         kk += "\n  "
                                         nx = 0
-                            print kk
+                            print(kk)
                             # print('\n'.join("{} : {}".format(k, v) for k, v in secName.items()))
                             txtbillb.insert(END, kk)
                             txtbillb.insert(END, "\n  Up arrow and correct with another section listed above.")
@@ -3139,7 +3149,7 @@ def proc_key(ch):
                         if ftm:  # force timestamp
                             tm = tm[0:4] + ftm[0:8] + tm[11:]  # yymmdd.hhmmss
                         qdb.qsl(tm, xcall, band, rept)
-            elif stat2 == 4:
+            elif stat == 4:
                 kbuf = ""
                 # Added participant check here too - Feb/12/2017 -Scott Hibbs 
                 if qdb.partck(xcall):  # Participant check
@@ -3159,7 +3169,7 @@ def proc_key(ch):
             kbuf = kbuf[0:-1]
             txtbillb.delete('end - 2 chars')
         return
-    if ch == '\u1p':  # up arrow reprints the input line - Scott Hibbs KD4SIR Jul/5/2018
+    if ch == '\\u1p':  # up arrow reprints the input line - Scott Hibbs KD4SIR Jul/5/2018
         if goBack != "":
             if kbuf == "":
                 txtbillb.insert(END, goBack)  # print goBack info
@@ -3170,8 +3180,8 @@ def proc_key(ch):
             kbuf = ""
         return
     if ch == ' ':  # space, check for prefix/suffix/call
-        stat2, tm, dummy, sfx, call17, xcall, rept = qdb.qparse(kbuf)
-        if stat2 == 2:  # suffix, dupe check
+        stat, tm, dummy, sfx, call17, xcall, rept = qdb.qparse(kbuf)
+        if stat == 2:  # suffix, dupe check
             suffix = kbuf
             kbuf = ""
             r = qdb.sfx2call(suffix, band)
@@ -3179,12 +3189,12 @@ def proc_key(ch):
                 r = 'None'
             txtbillb.insert(END, ": %s on band '%s'\n" % (r, band))
             return
-        if stat2 == 3:  # prefix, combine w suffix
-            stat2, tm, dummy, sfx, call17, xcall, rept = qdb.qparse(kbuf + suffix)
-            if stat2 == 4:  # whole call
+        if stat == 3:  # prefix, combine w suffix
+            stat, tm, dummy, sfx, call17, xcall, rept = qdb.qparse(kbuf + suffix)
+            if stat == 4:  # whole call
                 kbuf += suffix
                 txtbillb.insert(END, sfx)  # fall into call dup ck
-        if stat2 == 4:  # whole call, dup chk
+        if stat == 4:  # whole call, dup chk
             if qdb.dupck(xcall, band):
                 showthiscall(call17)
                 txtbillb.insert(END, " DUPE ON BAND %s \n" % band)
@@ -3204,41 +3214,54 @@ def proc_key(ch):
             return
     buf = kbuf + ch  # echo & add legal char to kbd buf
     if len(buf) < 50:
-        if buf[0] == '.':
+        if buf[0] == '.':  # dot command
             if re.match(r'[ a-zA-Z\d.,/@-]{0,45}$', ch):
                 kbuf = buf
                 txtbillb.insert(END, ch)
-        elif buf[0] == '#':
+        elif buf[0] == '#':  # QST Message
             if re.match(r'#[ a-zA-Z\d.,?/!@$;:+=%&()-]{0,40}$', buf):
                 kbuf = buf
                 txtbillb.insert(END, ch)
         else:
-            stat2, tm, dummy, sfx, call17, xcall, rept = qdb.qparse(buf)
-            if stat2 > 0 and len(buf) < 50:
+            # print("line 3223 buf is %s" % buf)
+            stat, tm, _pfx, sfx, call17, xcall, rept = qdb.qparse(buf)
+            if stat > 0:
                 kbuf = buf
+                # print("line 3227 kbuf is ", kbuf)
                 txtbillb.insert(END, ch)
+            else:
+                print("ignored key")
+                # print("stat over zerow? stat = ", stat)
+                # print("len(buf) = ", len(buf))
+                # print("it has to be less than fitty")
+                # return
 
 
 def kevent(event):
     """keyboard event handler"""
     global goBack
-    #    print "event '%s' '%s' '%s'"%(event.type,event.keysym,event.keysym_num)
+    # print("event '%s' '%s' '%s'" % (event.type, event.keysym, event.keysym_num))
     k2 = event.keysym_num
+    # print(chr(k2))
     if 31 < k2 < 123:  # space to z
-        proc_key(chr(event.keysym_num))
+        proc_key(chr(k2))
     elif k2 == 65362:  # up arrow
-        proc_key('\u1p')
+        proc_key('\\u1p')
     elif k2 == 65288:  # backspace
         proc_key('\b')
     elif k2 == 65307:  # ESC
         proc_key('\x1b')
     elif k2 == 65293:  # return
         proc_key('\r')
+    #  Added from Alan Biocca (W6AKB) FDLog v4-1-154c-dev during python 3 conversion. 15Jul2022 Scott Hibbs
+    #  display key code for unrecognized key
+    # else:
+    #     print("ignored key ", k2)
     txtbillb.see(END)  # Ensure that it stays in view
     return "break"  # prevent further processing on kbd events
 
 
-def focevent(_):
+def focevent(event):
     txtbillb.mark_set('insert', END)
     return "break"
 
@@ -3248,10 +3271,10 @@ def edit_dialog(node1, seq):
     _ = EditDialog(root, node1, seq)
 
 
-def log_select(e03):
+def log_select(event):
     """process mouse left-click on log window"""
     #    print e.x,e.y
-    t = logw.index("@%d,%d" % (e03.x, e03.y))
+    t = logw.index("@%d,%d" % (event.x, event.y))
     #    print t
     line, dummy = t.split('.')
     line = int(line)
@@ -3265,7 +3288,7 @@ def log_select(e03):
     #  In case user clicks on a deleted log entry Feb/2/2017 Scott Hibbs
     baddd = logtext[23:24].strip()
     if baddd == '*':
-        print "Can't edit a delete entry"
+        print("Can't edit a delete entry")
         return 'break'
     if len(seq) == 0:
         return 'break'
@@ -3280,7 +3303,7 @@ def log_select(e03):
             return 'break'
     except ValueError:
         return 'break'
-    print stn, seq, bxnd, cxll
+    print(stn, seq, bxnd, cxll)
     if stn == node:  # only edit my own Q's
         # Also check to make sure the call isn't previously deleted. Jul/02/2016 KD4SIR Scott Hibbs
         if qdb.dupck(cxll, bxnd):
@@ -3290,12 +3313,12 @@ def log_select(e03):
             if stnseq in bid:
                 edit_dialog(stn, seq)
             else:
-                print "Previously edited contact - Not in the log."
+                print("Previously edited contact - Not in the log.")
                 return
         else:
-            print "This is not a log entry."
+            print("This is not a log entry.")
     else:
-        print "Cannot edit another person's contact."
+        print("Cannot edit another person's contact.")
     return 'break'
 
 
@@ -3314,10 +3337,10 @@ def mouse_popup(event):
 
 def pasteinterpreter():
     """Needed for mouse paste event"""
-    #  Added by KD4SIR Scott Hibbs 08Jul2022
+    #  The program needs to interpret the paste event. Added by KD4SIR Scott Hibbs 08Jul2022
+    #  Changes need to be made in proc_key(ch) and pasteinterpreter()
     global stat, kbuf, power, operator, logger, debug, band, node, suffix, tdwin, goBack, selected
     txtbillb.insert(END, selected)
-    #  The program needs to interpret the paste event.
     for pastebuf in selected:
         if pastebuf.isupper():
             txtbillb.insert(END, "\n LOWERCAPS PLEASE \n")
@@ -3339,10 +3362,10 @@ def pasteinterpreter():
         elif qdb.partck(xcall):  # Participant check
             txtbillb.insert(END, "\n Participant - not allowed \n")
             topper()
-        elif xcall == string.lower(gd.getv('fdcall')):
+        elif xcall == str.lower(gd.getv('fdcall')):
             txtbillb.insert(END, "\n That's us - not allowed \n")
             topper()
-        elif xcall == string.lower(gd.getv('gcall')):
+        elif xcall == str.lower(gd.getv('gcall')):
             txtbillb.insert(END, "\n That's us - not allowed \n")
             topper()
         else:
@@ -3376,7 +3399,7 @@ def pasteinterpreter():
                 topper()
                 return
             if em == "":
-                rept1 = string.upper(rept)
+                rept1 = str.upper(rept)
                 # check the report for valid fd or wfd classes - Art Miller KC7SDA
                 try:
                     reptclass, reptsec = rept.split(" ")
@@ -3409,7 +3432,7 @@ def pasteinterpreter():
                 if rept2 in secName:
                     pass
                 else:
-                    print "\n Use one of these for the section:"
+                    print("\n Use one of these for the section:")
                     kk = ""
                     nx = 0
                     ny = 0
@@ -3424,7 +3447,7 @@ def pasteinterpreter():
                             if ny < 6:  # last line gets the rest
                                 kk += "\n  "
                                 nx = 0
-                    print kk
+                    print(kk)
                     # print('\n'.join("{} : {}".format(k, v) for k, v in secName.items()))
                     txtbillb.insert(END, kk)
                     txtbillb.insert(END, "\n  correct section with up arrow, or before repasting again\n")
@@ -3452,7 +3475,7 @@ def paste(event):
     if event:
         try:
             selected = root.clipboard_get()
-        except Tkinter.TclError:
+        except tkinter.TclError:
             selected = ""
             return "break"
         pasteinterpreter()
@@ -3460,7 +3483,7 @@ def paste(event):
     else:
         try:
             selected = root.clipboard_get()  # Get the copied item from system clipboard
-        except Tkinter.TclError:
+        except tkinter.TclError:
             selected = ""
             return
         pasteinterpreter()
@@ -3474,7 +3497,7 @@ def copy(event):
     if event:
         try:
             selected = root.clipboard_get()
-        except Tkinter.TclError:
+        except tkinter.TclError:
             selected = ""
             return "break"
     else:
@@ -3482,7 +3505,7 @@ def copy(event):
             selected = txtbillb.get('sel.first', 'sel.last')  # Get the mouse selection into the clipboard
             root.clipboard_clear()  # Clear the tkinter clipboard
             root.clipboard_append(selected)  # Append to system clipboard
-        except Tkinter.TclError:
+        except tkinter.TclError:
             selected = ""
             return
 
@@ -3525,7 +3548,7 @@ class EditDialog(Toplevel):
         self.chodate = qdb.byid[s].date
         self.be = Entry(top, width=5, font=fdbfont)
         self.be.grid(row=3, column=1, sticky=W, padx=3, pady=2)
-        # self.be.configure(bg='gold') # test yes works
+        # self.be.config(bg='gold') # test yes works
         self.be.insert(0, qdb.byid[s].band)
         self.choband = qdb.byid[s].band
         self.ce = Entry(top, width=11, font=fdbfont)
@@ -3550,7 +3573,7 @@ class EditDialog(Toplevel):
         self.chologr = qdb.byid[s].logr
         bf = Frame(top)
         bf.grid(row=11, columnspan=2, sticky=EW, pady=2)
-        bf.grid_columnconfigure((0, 1, 2), weight=1)
+        bf.columnconfigure(0, weight=1)
         db = Button(bf, text=' Delete ', font=fdbfont, command=self.dele)
         db.grid(row=1, sticky=EW, padx=3)
         sb = Button(bf, text=' Save ', font=fdbfont, command=self.submit)
@@ -3576,93 +3599,93 @@ class EditDialog(Toplevel):
         if self.chodate != t:
             # print "The date has changed."
             changer = 1
-        self.de.configure(bg='white')
+        self.de.config(bg='white')
         m14 = re.match(r'\d{6}\.\d{4,6}$', t)
         if m14:
             newdate = t + '00'[:13 - len(t)]
             # print newdate
         else:
-            self.de.configure(bg='gold')
+            self.de.config(bg='gold')
             error += 1
         t = self.be.get().strip()  # band mode
         if self.choband != t:
             # print "the band has changed"
             changer = 2
-        self.be.configure(bg='white')
+        self.be.config(bg='white')
         m14 = re.match(r'(160|80|40|20|15|10|6|2|220|440|900|1200|sat)[cdp]$', t)
         if m14:
             newband = t
             # print newband
         else:
-            self.be.configure(bg='gold')
+            self.be.config(bg='gold')
             error += 1
         t = self.ce.get().strip()  # call
         if self.chocall != t:
             # print "the call has changed"
             changer = 2
-        self.ce.configure(bg='white')
+        self.ce.config(bg='white')
         m14 = re.match(r'[a-z\d/]{3,11}$', t)
         if m14:
             newcall = t
             # print newcall
         else:
-            self.ce.configure(bg='gold')
+            self.ce.config(bg='gold')
             error += 1
         t = self.re.get().strip()  # report
         if self.chorept != t:
-            print "the section is not verified - please check."
+            print("the section is not verified - please check.")
             changer = 1
-        self.re.configure(bg='white')
+        self.re.config(bg='white')
         m14 = re.match(r'.{4,24}$', t)
         if m14:
             newrept = t
             # print newrept
         else:
-            self.re.configure(bg='gold')
+            self.re.config(bg='gold')
             error += 1
         t = self.pe.get().strip().lower()  # power
         if self.chopowr != t:
             # print "the power has changed."
             changer = 1
-        self.pe.configure(bg='white')
+        self.pe.config(bg='white')
         m14 = re.match(r'\d{1,4}n?$', t)
         if m14:
             newpowr = t
             # print newpowr
         else:
-            self.pe.configure(bg='gold')
+            self.pe.config(bg='gold')
             error += 1
         t = self.oe.get().strip().lower()  # operator
         if self.chooper != t:
             # print "the Contestant has changed."
             changer = 1
-        self.oe.configure(bg='white')
+        self.oe.config(bg='white')
         # if participants.has_key(t): # has_key deprecated here
         if t in participants:
             newopr = t
             # print newopr
         else:
-            self.oe.configure(bg='gold')
+            self.oe.config(bg='gold')
             error += 1
         t = self.le.get().strip().lower()  # logger
         if self.chologr != t:
             # print "the logger has changed."
             changer = 1
-        self.le.configure(bg='white')
+        self.le.config(bg='white')
         # if participants.has_key(t): # has_key deprecated here
         if t in participants:
             newlogr = t
             # print newlogr
         else:
-            self.le.configure(bg='gold')
+            self.le.config(bg='gold')
             error += 1
         if error == 0:
             # There was no dupe check on the edited qso info. This was added. Scott Hibbs Jul/01/2016
             if changer == 0:
-                print 'Nothing changed. No action performed.'
+                print('Nothing changed. No action performed.')
                 self.crazytxt = "nothing changed?"
                 self.crazyclr = "red"
-                self.crazylbl.configure(bg=self.crazyclr, text=self.crazytxt)
+                self.crazylbl.config(bg=self.crazyclr, text=self.crazytxt)
                 error += 1
             if changer == 1:
                 # delete and enter new data because something other than band or call has changed.
@@ -3676,10 +3699,10 @@ class EditDialog(Toplevel):
             if changer == 2:
                 # band or call changed so check for dupe before submitting to log.
                 if qdb.dupck(newcall, newband):  # dup check for new data
-                    print 'Edit is a DUPE. No action performed.'
+                    print('Edit is a DUPE. No action performed.')
                     self.crazytxt = "This is a DUPE"
                     self.crazyclr = "red"
-                    self.crazylbl.configure(bg=self.crazyclr, text=self.crazytxt)
+                    self.crazylbl.config(bg=self.crazyclr, text=self.crazytxt)
                     error += 1
                 else:
                     # delete and enter new data
@@ -3692,13 +3715,13 @@ class EditDialog(Toplevel):
                     topper()
 
     def dele(self):
-        print "delete entry"
+        print("delete entry")
         reason = 'deleteclick'
         qdb.delete(self.node, self.seq, reason)
         self.top.destroy()
 
     def quitb(self):
-        print 'Dismissed - edit aborted'
+        print('Dismissed - edit aborted')
         self.top.destroy()
 
 
@@ -3727,8 +3750,8 @@ def update():
 
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
-print prog
-version = "v23b"
+print(prog)
+version = "v23b3"
 fontsize = 10
 fontinterval = 2
 typeface = 'Courier'
@@ -3779,7 +3802,7 @@ participants = {}
 #     "u":"uniform ","v":"victor ","w":"whiskey ","x":"x-ray ","y":"yankee ", \
 #     "z":"zulu ","-":"dash ", "/":"dash ", "0":"Zero ", "1":"One ", "2":"Two ", "3":"Three ", \
 #     "4":"Four ", "5":"Five ", "6":"Six ", "7":"Seven ", "8":"Eight ", "9":"Nine "}
-# phonetics = "ab9cde" #string.lower(gd.getv('fdcall'))
+# phonetics = "ab9cde" #str.lower(gd.getv('fdcall'))
 # let:char = d
 # phocall = ""
 # for char in phonetics:
@@ -3815,81 +3838,81 @@ globf = "fdlog.dat"  # persistent global file
 kbuf = ""  # keyboard line buffer
 goBack = ""  # needed to print the last line entered with up arrow - Scott Hibbs KD4SIR Jul/05/2018
 loadglob()  # load persistent globals from file
-selected = ""
+selected = ""  # selected is used for the mouse functions
 globDb = GlobalDb()
 stat = 0
-print
+print()
 if node == "":
     # Revised 4/19/2014 for 8 characters so the log lines up nicely. - Scott Hibbs KD4SIR
-    print "  Enter the station name (lower case)"
-    print "  Please be 7 characters! (I will add letters to be unique)"
-    print "  (Use 'gota' for get on the air station)"
+    print("  Enter the station name (lower case)")
+    print("  Please be 7 characters! (I will add letters to be unique)")
+    print("  (Use 'gota' for get on the air station)")
     #    print "  (Previous Node ID: '%s')"%node
-    print "  (7 characters}"
-    k = string.lower(string.strip(sys.stdin.readline())[:8])
+    print("  (7 characters}")
+    k = str.lower(str.strip(sys.stdin.readline())[:8])
     if len(k) == 8:
-        print "That's too many.. (Marc? is that you?)"  # Thanks to Marc Fountain K9MAF for the correction. Mar/23/2017
+        print("That's too many.. (Marc? is that you?)")  # Thanks to Marc Fountain K9MAF for the correction. Mar/23/2017
         k = k[:7]
     z = len(k)
     if k != 'gota':
         while z != 7:
             if k == 'gota':
-                print "please restart the program."
+                print("please restart the program.")
                 sys.exit()
             else:
                 if z < 4:
-                    print "um yeah.. 7 characters....    (restart if your gota)"
-                    k = string.lower(string.strip(sys.stdin.readline())[:8])
+                    print("um yeah.. 7 characters....    (restart if your gota)")
+                    k = str.lower(str.strip(sys.stdin.readline())[:8])
                     z = len(k)
                 else:
                     for z in range(z, 7):
-                        print "close enough (Ken? is that you?)"
+                        print("close enough (Ken? is that you?)")
                         k = k + random.choice('abcdefghijklmnopqrstuvwxyz')
-                        print k
+                        print(k)
                         # noinspection PyRedeclaration
                         z = len(k)  # Redeclared 'z' defined above without usage- but needed keeps program from looping
                         # 1. if there is more than four characters
                         # 2. add the rest with randoms
         else:
-            print "Thank You!!"
+            print("Thank You!!")
             node = k + random.choice('abcdefghijklmnopqrstuvwxyz')
-            print
+            print()
     else:
-        print "Thank You for being gota!!"
+        print("Thank You for being gota!!")
         node = 'gotanode'
-        print
-print "Using Node ID: '%s' " % node
-print
+        print()
+print("Using Node ID: '%s' " % node)
+print()
 # get auth key  auth xxxpppzzz...  fdlogxxx.fdd  port ppp   hashkey (all)
 # allow user to select new one, or re-use previous
-print "Enter Authentication Key (Return to re-use previous '%s')" % authk
-print "  (use 'tst' for testing, two digit year for contest):"
-k = string.strip(sys.stdin.readline())
+print("Enter Authentication Key (Return to re-use previous '%s')" % authk)
+print("  (use 'tst' for testing, two digit year for contest):")
+k = str.strip(sys.stdin.readline())
 if k != "":
-    print "New Key entered, Contestant and logger cleared"
+    print("New Key entered, Contestant and logger cleared")
     authk = k
     operator = ""
     logger = ""
-    print
-print "Using Authentication Key: '%s'" % authk
-print "Using", authk[0:3], "for setting port, file"
+    print()
+print("Using Authentication Key: '%s'" % authk)
+print("Using", authk[0:3], "for setting port, file")
 port_offset = ival(authk[3:6]) * 7
 if port_offset == 0:
     port_offset = ival(authk[0:3]) * 7
 # for each char in port_offset:  xxx
 # port_offset = ((port_offset << 3) + (char & 15)) & 0x0fff
 port_base += port_offset
-print "Using Network Port:", port_base
+print("Using Network Port:", port_base)
 logdbf = "fdlog%s.fdd" % (authk[0:3])
-print "Writing Log Journal file:", logdbf
-print "Starting Network"
+print("Writing Log Journal file:", logdbf)
+print("Starting Network")
 net = NetworkSync()  # setup net
 net.setport(port_base)
 net.setauth(authk)
-print "Saving Persistent Configuration in", globf
+print("Saving Persistent Configuration in", globf)
 saveglob()
-print "Time Difference Window (tdwin):", tdwin, "seconds"
-print "Starting GUI setup"
+print("Time Difference Window (tdwin):", tdwin, "seconds")
+print("Starting GUI setup")
 root = Tk()  # setup Tk GUI
 # root.withdraw()  # This was removed in Alan's FDLog without explanation - 7/3/2015
 menu = Menu(root)
@@ -3947,16 +3970,23 @@ menu.add_cascade(label="W1AW", menu=W1AWmenu)
 # Changed this to a PDF file - Curtis E. Mills WE7U 20Jun2019
 W1AWmenu.add_command(label="W1AW Schedule (pdf)", command=lambda: os.system('W1AW.pdf'))
 W1AWmenu.add_command(label="NTS Message", command=lambda: os.system('NTS_eg.txt'))
-# Time Conversion Chart
+#  Added from Alan Biocca (W6AKB) FDLog v4-1-154c-dev during python 3 conversion. 15Jul2022 Scott Hibbs
+# Time Zone Conversion Chart
+# 000 0000 0000 0000 0000
+# 000  -8   -7   -6   -5
 tzchart = """
- UTC       PDT  CDT  EDT
- GMT  PST  CST  EST
+ UTC       PDT  MDT  CDT  EDT
+ GMT  PST  MST  CST  EST
+
 """
 for g in range(0, 2400, 100):
     p = g - 800
     if p < 0:
         p += 2400
-    c = p + 100
+    m = p + 100
+    if m < 0:
+        m += 2400
+    c = m + 100
     if c < 0:
         c += 2400
     e = c + 100
@@ -3965,7 +3995,7 @@ for g in range(0, 2400, 100):
     x = e + 100
     if x < 0:
         x += 2400
-    tzchart += "%04d %04d %04d %04d %04d\n" % (g, p, c, e, x)
+    tzchart += "%04d %04d %04d %04d %04d %04d\n" % (g, p, m, c, e, x)
 resourcemenu.add_command(label="Time Conversion Chart", command=lambda: viewtextv(tzchart, "Time Conversion Chart"))
 helpmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Help", menu=helpmenu)
@@ -4064,19 +4094,19 @@ lblnode.grid(row=2, column=9, columnspan=1, sticky=NSEW)
 # lblport.grid(row=3, column=9, columnspan=1, sticky=NSEW)
 # log window
 logw = Text(root, takefocus=0, height=11, width=80, font=fdmfont,
-            background='light grey', wrap=NONE, setgrid=1)
-# logw.configure(cursor='arrow')
+            background='light grey', wrap=NONE, setgrid=True)
+# logw.config(cursor='arrow')
 scroll = Scrollbar(root, command=logw.yview, background='light grey')
-logw.configure(yscrollcommand=scroll.set)
+logw.config(yscrollcommand=scroll.set)
 logw.grid(row=2, column=0, sticky=NSEW)
 scroll.grid(row=2, column=1, sticky=NS)
 root.grid_rowconfigure(2, weight=1)
 root.grid_columnconfigure(0, weight=1)
 # txtbillb = dialog window
 txtbillb = Text(root, takefocus=1, height=10, width=80, font=fdmfont,
-                wrap=NONE, setgrid=1, background='light grey')
+                wrap=NONE, setgrid=True, background='light grey')
 scrollt = Scrollbar(root, command=txtbillb.yview)
-txtbillb.configure(yscrollcommand=scrollt.set)
+txtbillb.config(yscrollcommand=scrollt.set)
 txtbillb.grid(row=3, column=0, sticky=NSEW)
 scrollt.grid(row=3, column=1, sticky=NS)
 root.grid_rowconfigure(3, weight=1)
@@ -4101,7 +4131,7 @@ logw.insert(END, "%s\n" % prog, "b")
 # Phonetics box
 # fthw2 = Text(f1c,takefocus=0,height=2,width=40,font=fdmfont,\
 #            background='light grey',wrap=NONE,setgrid=1)
-# fthw2.configure(cursor='arrow')
+# fthw2.config(cursor='arrow')
 # fthw2.grid(row=4,column=2,sticky=NSEW)
 # root.grid_rowconfigure(4,weight=1)
 # fthw2.insert(END,"phonetics box")
@@ -4112,19 +4142,19 @@ buildmenus()
 sms = SynchMessage()  # setup sync message service
 qdb = QsoDb()  # init qso database
 qdb.loadfile()  # read log file
-print "Showing GUI"
-print
+print("Showing GUI")
+print()
 if node == gd.getv('tmast'):
-    print "This Node is the TIME MASTER!!"
-    print "THIS COMPUTER'S CLOCK BETTER BE RIGHT (preferably GPS locked)"
-    print "User should Insure that system time is within 1 second of the"
-    print "  correct time and that the CORRECT TIMEZONE is selected (in the OS)"
-    print
+    print("This Node is the TIME MASTER!!")
+    print("THIS COMPUTER'S CLOCK BETTER BE RIGHT (preferably GPS locked)")
+    print("User should Insure that system time is within 1 second of the")
+    print("  correct time and that the CORRECT TIMEZONE is selected (in the OS)")
+    print()
 else:
-    print "User should Insure that System Time is within a few seconds of the"
-    print "  correct time and that the CORRECT TIMEZONE is selected (in the OS)"
-print "To change system time, stop FDLog, change the time or zone, then restart"
-print
+    print("User should Insure that System Time is within a few seconds of the")
+    print("  correct time and that the CORRECT TIMEZONE is selected (in the OS)")
+print("To change system time, stop FDLog, change the time or zone, then restart")
+print()
 #  These root commands were removed without an explanation in Alan's FDLog,
 #  but I'm leaving them in. Scott Hibbs 7/3/2015
 #  Until I found that below also caused a memory leak - Scott Hibbs KD4SIR 03Mar2022
@@ -4156,14 +4186,14 @@ txtbillb.bind('<Control-Key-v>', paste)  # paste event for the paste function
 
 root.after(1000, update)  # 1 hz activity
 root.mainloop()  # gui up
-print "\nShutting down"
+print("\nShutting down")
 # the end was updated from 152i
 band = 'off'  # gui down, xmt band off, preparing to quit
 net.bcast_now()  # push band out
 time.sleep(0.2)
 saveglob()  # save globals
-print "  globals saved"
-print "\n\n FDLog_Enhanced has shut down."
+print("  globals saved")
+print("\n\n FDLog_Enhanced has shut down.")
 time.sleep(0.5)
 # os._exit(1)  # kill the process somehow?
 exit(1)

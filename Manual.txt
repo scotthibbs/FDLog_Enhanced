@@ -234,36 +234,37 @@ TROUBLESHOOTING:
 	is OK, Yellow will ask you if there is a problem, and Red displays if there IS a problem. 
 	The messages in FDLog_Enhanced have been renamed to be more descriptive but the issues below
 	are the same. 
+	
+	Most network errors occur due to firewall issues. Please ensure the firewall isn't blocking traffic.
 
-	  NO NODE    The node identification is missing. This is necessary
-				 to identify the database records when they are shared.
-				 It is recommended to set this to the name of the owner
-				 of the station radio or computer. THIS MUST BE UNIQUE. 
-				 DO NOT GIVE TWO NODES THE SAME NODE ID at the same time. 
-				 Restart the program to reset this.
-
-	  NO AUTHKEY The authentication key is missing. Restart the program
-				 and answer the query during initialization to set it.
-				 It must match the other nodes you are sharing data with.
-				 This is usually the last two digits of the year. 
 				 
-	  SNDP FAIL  The Packet Sender has received an error from the operating
-				 system. This may occur when there is a network problem.
-				 Restarting the program or rebooting may cure it.
+	  SEND FAIL  or SNDP FAIL. The error displayed in FDLog_Enhanced is 
+				 "SEND FAIL - Not sending data to others. (firewall?)"
+				 The Packet Sender has received an error from the operating
+				 system. This may occur when there is a network problem. Check the 
+				 firewall. Restarting the program or rebooting may cure it. 
 				 
-	  RCVP FAIL  In FDLog_Enhanced this is called "alone?" Ten seconds have 
+	  RCVP FAIL  In FDLog_Enhanced this is called 
+				"Alone? Not receiving data from others. (firewall?)" Ten seconds have 
 				 passed without receiving any packets. This indicates that no 
 				 other packets from a FDLOG program are being received within 
 				 the time window. This could indicate a problem with the network 
 				 or auth key, or it could be normal if this is the only computer 
-				 on this network running the program. It will occur occasionally 
-				 if there are only two computers on the network running FDLog. 
-				 Try restarting the program after the network is known to be working.
+				 on this network running the program. Try restarting the program 
+				 after the network is known to be working.
+				 
+				 * This will also flash occasionally under normal circumstances 
+				 if there are only two computers on the network or if there
+				 is inactivity on the network in the programs.   
+				 
 
 	  AUTH FAIL  A packet has been received (on the port) that has the incorrect
 				 authentication code. It will not be processed. All nodes
-				 participating must use the same authentication key. Refer to
-				 the command window for more information about this error. It
+				 participating must use the same authentication key. This is the 
+				 two digit number entered when starting the program refering to
+				 the year of the contest ("23").
+				 
+				 Refer to the command window for more information about this error. It
 				 is best if test and production modes use different ports to
 				 avoid seeing each others packets which have differing
 				 authentication codes.

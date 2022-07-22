@@ -1,33 +1,31 @@
-# FDLog_Enhanced
+# FDLog_Enhanced (Now Ported to Python 3)
 This is a complete Field Day group logging solution!
 Download this on all computers (Windows, Mac, Linux including Raspberry Pis) and start logging. 
 Have everyone sign in when they visit. We have our visitors log for us because it is so simple.
 
 Log entry is just three simple things : KD4SIR 1D IN
 
-Tracks Dupes, shows previous contacts, see who is on which radio and which band, 
+Tracks Dupes, shows previous contacts, see who is on which radio (node) and which band, 
 who is contesting and who is logging, how many contacts they have made etc. 
 All computers have a copy of the database and tracks operations so everyone can see and co-operate.   
 
 Download a stable release from the release section to enjoy! 
 
-This is the last Python 2.7 version for the 2023 stable release.  
+The code here is now in Python 3 and working toward a 2023 stable release.  
 
-The release log has more detailed information. This was tested on windows and linux 
-on a 192.168.x.x network and seemed fine. 
+The release log has more detailed information.
+I test on Linux and Windows with a 192.168.x.x network.  
 This needs to be tested on different networks and with Macs.
 
-Release Log for FDLog and FDLog_Enhanced (82 Enhancements so far)
+Release Log for FDLog and FDLog_Enhanced (83 Enhancements so far)
 From the present back to 1984. 
 
-Last updated 12Jul2022 Scott Hibbs KD4SIR
+Last updated 21Jul2022 Scott Hibbs KD4SIR
 scotthibbs at gmail.com (email ideas for enhancements/bugs)
 
 Ideas and things to Do: 
 
-	Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, we may soon port this project to Python 3
-		I'll be working on this after making this stable enough for another release
-	
+		
 	* An Information Table node that will allow sign in, show our group score, 
 			the top 5 Contestors, the top 5 visitors, Worked All States etc.
 	* Add more scoring: 
@@ -54,12 +52,21 @@ Ideas and things to Do:
 		Off buttons keep the red background color when not selected, should turn grey
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
-		
-2022_Beta 2.3 12Jul2022
-
-	Finished python corrections as recommended by pycharm. I learned a ton! I will now test this to see if it is stable for a release - Scott Hibbs KD4SIR 
 	
-	Updated miniweb.py to version 1.8 - Removed unused import, restructured, and beautification.  - Scott Hibbs KD4SIR 
+2022_Beta 3.0 21Jul2022
+
+ 83 Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, I have finished porting this to 
+	Python 3. - Scott Hibbs KD4SIR
+	
+	updated miniweb.py to version 2.0 - now also ported to python 3. - Scott Hibbs kd4sir
+	
+	
+2022_v2.3 12Jul2022 (Last Python 2.7 version) Released
+
+	Finished python corrections as recommended by pycharm. I learned a ton! I will now test this to see if it is 
+	stable for a release - Scott Hibbs KD4SIR 
+	
+	Updated miniweb.py to version 1.8 - Removed unused import, restructure, beautification.  - Scott Hibbs KD4SIR 
 
 2022_Beta 2.2 10Jul2022
 

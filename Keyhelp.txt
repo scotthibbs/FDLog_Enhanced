@@ -8,14 +8,15 @@ In a Nutshell:
 	Bands are vertical. Modes are horizontal.
 	The modes are (C)ode, (D)igital, and (P)hone.
 	Don't hit enter until after the contact is made.
+	Complete contacts look like "kd4sir 1d IN"
 	Without "QSL - May I have another?" it didn't work.
 	Hit <Escape> to start over. 
 	The up arrow will retype the previous entry.
 	The space will look up prefix, suffix or calls.
-	Complete contacts can now be copy or pasted too. 
+	Copy and paste now work for complete contacts.
        
-A complete contact is in the format of
--Call-Class-Sect- and is seperated by spaces so  
+
+-Call-Class-Sect- is seperated by spaces so  
 kd4sir 1d ky <Enter> (Will log a contact)
 
 Optionally you can: 
@@ -31,7 +32,7 @@ To place an entry from a paper log use
 Commands starting with dot: 
 .band 160c      Will set the band using the keyboard.
 .off            Will set the station to off. 
-.pow 100        Will change the power. 1500n also works.
+.pow 100        Will change the power. 100n also works.
 .st             Will list this station's status. 
 .re             Will list a summary of the bands.
 .ba             Will list the stations on bands.

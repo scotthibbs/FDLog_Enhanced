@@ -1,6 +1,6 @@
 Program README: 
 
-	This program is 39 years old!! And it keeps on going..
+	This program is 39 years old in 2023!! And it keeps on going..
 
 	Alan K Biocca W6AKB (Formerly WB6ZQZ) Wrote this in 1984 using small c 
 	and it was titled "WB6ZQZ's Field Day Logging Program". In 2002, Mr Biocca 
