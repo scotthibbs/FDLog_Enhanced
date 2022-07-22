@@ -754,7 +754,8 @@ class QsoDb:
             # This avoids confusion by only listing items in the log to edit in the future.
             # Scott Hibbs KD4SIR - July 3, 2018
             somelocallist5 = []
-            for i9 in sorted(a.values()):
+            #  for i9 in sorted(a.values()):  #  This doesn't work in python 3. (no sorting)
+            for i9 in a.values():
                 if i9.seq == seq:
                     continue
                 else:

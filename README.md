@@ -46,13 +46,17 @@ Ideas and things to Do:
 	* left arrow act like backspace instead of nothing.
 	
 	Windows Need Fixed: 
-	* After QSO edit display log prints all blue 
+	* After QSO edit display log prints all blue and not sorted.
 	
 	Linux Need Fixed: 
 		Off buttons keep the red background color when not selected, should turn grey
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
-	
+		
+2022_Beta 3.0.1 21Jul2022
+	Fixed edit/delete bug. Still needs to be sorted and have this reprint in the correct colors. (Currently all blue)
+
+
 2022_Beta 3.0 21Jul2022
 
  83 Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, I have finished porting this to 
