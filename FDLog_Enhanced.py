@@ -18,8 +18,7 @@ from tkinter import END, NORMAL, DISABLED, Toplevel, Frame, Label, Entry, Button
 
 #  Current version 2022_Beta 3.0 21Jul2022 (first Python 3 version)
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
-#  These "noinspection PyMethodMayBeStatic" errors are supressed because they are beyond my python skills
-#  if someone can look at these and correct it would be great. -Scott
+
 
 #  Main program starts about line 3752
 
@@ -408,8 +407,8 @@ class QsoDb:
     hiseq = {}  # high sequence number by node
     lock = threading.RLock()  # sharing lock
 
-    # noinspection PyMethodMayBeStatic
-    def new(self, source):
+    @staticmethod
+    def new(source):
         n = QsoDb()
         n.src = source  # source id
         return n
@@ -433,8 +432,8 @@ class QsoDb:
         self.seq = int(self.seq)
         self.dispatch('logf')
 
-    # noinspection PyMethodMayBeStatic
-    def loadfile(self):
+    @staticmethod
+    def loadfile():
         """ Used to load the log file"""
         # global sqdb  # setup sqlite database connection
         print("Loading Log File")
@@ -505,8 +504,8 @@ class QsoDb:
         return d, cdict, gdict  # Deletes processed, fully Cleaned
         #     by id, call-bnd, gota by call-bnd
 
-    # noinspection PyMethodMayBeStatic
-    def prlogln(self, s):
+    @staticmethod
+    def prlogln(s):
         """convert log item to display format"""
         #  note that a lot of functions read data by location from the editor so
         #  changing columns matters to these other functions.
@@ -750,22 +749,21 @@ class QsoDb:
             logw.config(state=NORMAL)
             logw.delete(0.1, END)
             logw.insert(END, "\n")
-            # Redraw the logw text window (on delete) to only show valid calls in the log. 
+            # This Redraws the logw text window (on delete) to only show valid calls in the log.
             # This avoids confusion by only listing items in the log to edit in the future.
-            # Scott Hibbs KD4SIR - July 3, 2018
-            somelocallist5 = []
-            #  for i9 in sorted(a.values()):  #  This doesn't work in python 3. (no sorting)
-            for i9 in a.values():
+            # Scott Hibbs KD4SIR - 03Jul2018
+            # Fixed so that it wasn't printing in all blue - Scott Hibbs KD4SIR 31Jul2022
+            # i9.prlogln(i9) gives the line of the log output.
+            for i9 in list(a.values()):
                 if i9.seq == seq:
                     continue
                 else:
-                    somelocallist5.append(logw.insert(END, "\n"))
-                    if nod == node:
-                        somelocallist5.append(logw.insert(END, i9.prlogln(i9), "b"))
+                    if node in i9.prlogln(i9):
+                        logw.insert(END, i9.prlogln(i9), "b")
+                        logw.insert(END, "\n")
                     else:
-                        somelocallist5.append(logw.insert(END, i9.prlogln(i9)))
-                        somelocallist5.append(logw.insert(END, "\n"))
-            logw.insert(END, "\n")
+                        logw.insert(END, i9.prlogln(i9))
+                        logw.insert(END, "\n")
             logw.config(state=DISABLED)
         else:
             txtbillb.insert(END, " DELETE Ignored [%s,%s] Not Found\n" % (nod, seq))
@@ -946,8 +944,8 @@ class QsoDb:
         """return calls w suffix on this band"""
         return self.bysfx.get(suffix1 + '.' + band1, [])
 
-    # noinspection PyMethodMayBeStatic
-    def qparse(self, line):
+    @staticmethod
+    def qparse(line):
         """"qso/call/partial parser"""
         # check for valid input at each keystroke
         # return status, time, extended call, base call, suffix, report
@@ -1145,6 +1143,27 @@ class QsoDb:
         return r
 
 
+def logwredraw():
+    """redraw the logw window with only valid log entries"""
+    # This is for a future enhancement - Scott Hibbs KD4SIR 31Jul2022
+    global node
+    a, dummy, dummy = qdb.cleanlog()
+    logw.config(state=NORMAL)
+    logw.delete(0.1, END)
+    logw.insert(END, "\n")
+    # i32.prlogln(i32) gives the line of the log output.
+    for i32 in list(a.values()):
+        if node in i32.prlogln(i32):
+            logw.insert(END, i32.prlogln(i32), "b")
+            logw.insert(END, "\n")
+        else:
+            logw.insert(END, i32.prlogln(i32))
+            logw.insert(END, "\n")
+    logw.config(state=DISABLED)
+    logw.see(END)
+    topper()
+
+
 class NodeInfoClass:
     """Threads and networking section"""
     nodes = {}
@@ -1160,16 +1179,16 @@ class NodeInfoClass:
         self.bnd = None
         self.nod = None
 
-    # noinspection PyMethodMayBeStatic
-    def sqd(self, src, seq, t, b, c3, rp, p1, o, logr1):
-        """process qso data fm net into db"""
+    @staticmethod
+    def sqd(src, seq, t, b, c3, rp, p1, o, logr1):
+        """process qso data from net into db"""
         s = qdb.new(src)
         s.seq, s.date, s.call, s.band, s.rept, s.oper, s.logr, s.powr = \
             seq, t, c3, b, rp, o, logr1, p1
         s.dispatch('net')
 
-    # noinspection PyMethodMayBeStatic
-    def netnum(self, ip, mask):
+    @staticmethod
+    def netnum(ip, mask):
         """extract net number"""
         i14, m6, r = [], [], {}
         i14 = str.split(ip, '.')
@@ -1629,7 +1648,6 @@ def tmsub(a, b):
 
 class GlobalDb:
     """new sqlite globals database fdlog.sq3 replacing globals file"""
-    # __init__ is called twice - notice it prints "Using local value database fdlog.sq3" twice?
 
     def __init__(self):
         self.dbPath = globf[0:-4] + '.sq3'
@@ -1672,7 +1690,6 @@ def loadglob():
     """load persistent local config to global vars from file"""
     # updated from 152i
     global globDb, node, operator, logger, power, tdwin, debug, authk
-    globDb = GlobalDb()
     node = globDb.get('node', '')
     operator = globDb.get('operator', '')
     logger = globDb.get('logger', '')
@@ -2149,8 +2166,8 @@ class NewParticipantDialog:
         self.name = None
         self.initials = None
 
-    # noinspection PyMethodMayBeStatic
-    def dialog(self):
+    @staticmethod
+    def dialog():
         """ the gui of the new participant window"""
         if node == "":
             txtbillb.insert(END, "err - no node\n")
@@ -2801,8 +2818,6 @@ def setpwr(p4):
         powcb.config(background=pcolor2)
         powlbl.config(background=pcolor2)
     else:
-        pcolor == 'light grey'  # Statement has no effect
-        # maybe this is needed for the linux platform. ?? -scott
         pwrmb.config(background=pcolor2)
         pwrnt.config(background=pcolor2)
         powcb.config(background=pcolor2)
@@ -3262,7 +3277,7 @@ def kevent(event):
     return "break"  # prevent further processing on kbd events
 
 
-def focevent(event):
+def focevent(_event):
     txtbillb.mark_set('insert', END)
     return "break"
 
@@ -3838,9 +3853,9 @@ logfile = "fdlog.log"  # printable log file (contest entry)
 globf = "fdlog.dat"  # persistent global file
 kbuf = ""  # keyboard line buffer
 goBack = ""  # needed to print the last line entered with up arrow - Scott Hibbs KD4SIR Jul/05/2018
+globDb = GlobalDb()
 loadglob()  # load persistent globals from file
 selected = ""  # selected is used for the mouse functions
-globDb = GlobalDb()
 stat = 0
 print()
 if node == "":
@@ -3971,7 +3986,7 @@ menu.add_cascade(label="W1AW", menu=W1AWmenu)
 # Changed this to a PDF file - Curtis E. Mills WE7U 20Jun2019
 W1AWmenu.add_command(label="W1AW Schedule (pdf)", command=lambda: os.system('W1AW.pdf'))
 W1AWmenu.add_command(label="NTS Message", command=lambda: os.system('NTS_eg.txt'))
-#  Added from Alan Biocca (W6AKB) FDLog v4-1-154c-dev during python 3 conversion. 15Jul2022 Scott Hibbs
+#  Updated by Alan Biocca (W6AKB) FDLog v4-1-154c-dev during python 3 conversion. 15Jul2022 Scott Hibbs
 # Time Zone Conversion Chart
 # 000 0000 0000 0000 0000
 # 000  -8   -7   -6   -5
@@ -4011,6 +4026,10 @@ helpmenu.add_command(label="The Manual", command=lambda: viewtextf('Manual.txt',
 helpmenu.add_command(label="Release Log", command=lambda: viewtextf('Releaselog.txt'))
 helpmenu.add_command(label="GitHub ReadMe", command=lambda: viewtextf('readme.txt'))
 helpmenu.add_command(label="About FDLOG_Enhanced", command=lambda: viewtextv(about, "About"))
+rdrawmenu = Menu(menu, tearoff=0)
+menu.add_cascade(label="Redraw Log Window", menu=rdrawmenu)
+rdrawmenu.add_command(label="Redraw Log Window", command=logwredraw)
+
 # Band Buttons
 f1 = Frame(root, bd=1)
 bandbuttons(f1)
@@ -4053,19 +4072,20 @@ pwrmb.config(menu=pwrmu, direction='below')
 #  rearranged this menu - Scott Hibbs Mar/23/2017
 
 #  Rule change on power now limits to 100w - this needs to be fixed #########################################
+#  Be nice to have countdown of 5 Alt/Nat power contacts. Add Battery check mark etc.
 pwrmu.add_command(label='     0 Watts', command=lambda: (setpwr('0')))
 pwrmu.add_command(label='     5 Watts', command=lambda: (setpwr('5')))
-pwrmu.add_command(label='    50 Watts', command=lambda: (setpwr('50')))
+# pwrmu.add_command(label='    50 Watts', command=lambda: (setpwr('50')))
 pwrmu.add_command(label='  100 Watts', command=lambda: (setpwr('100')))
-pwrmu.add_command(label='  150 Watts', command=lambda: (setpwr('150')))
-pwrmu.add_command(label='  200 Watts', command=lambda: (setpwr('200')))
-pwrmu.add_command(label='  500 Watts', command=lambda: (setpwr('500')))
-pwrmu.add_command(label='1000 Watts', command=lambda: (setpwr('1000')))
-pwrmu.add_command(label='1500 Watts', command=lambda: (setpwr('1500')))
-pwrmu.add_command(label='     5W Natural', command=lambda: (setpwr('5n')))
-pwrmu.add_command(label='   50W Natural', command=lambda: (setpwr('50n')))
-pwrmu.add_command(label=' 100W Natural', command=lambda: (setpwr('100n')))
-pwrmu.add_command(label=' 150W Natural', command=lambda: (setpwr('150n')))
+# pwrmu.add_command(label='  150 Watts', command=lambda: (setpwr('150')))
+# pwrmu.add_command(label='  200 Watts', command=lambda: (setpwr('200')))
+# pwrmu.add_command(label='  500 Watts', command=lambda: (setpwr('500')))
+# pwrmu.add_command(label='1000 Watts', command=lambda: (setpwr('1000')))
+# pwrmu.add_command(label='1500 Watts', command=lambda: (setpwr('1500')))
+pwrmu.add_command(label='     5W Alt/Nat rule 7.3.8', command=lambda: (setpwr('5n')))
+# pwrmu.add_command(label='   50W Natural', command=lambda: (setpwr('50n')))
+pwrmu.add_command(label=' 100W Alt/Nat rule 7.3.8', command=lambda: (setpwr('100n')))
+# pwrmu.add_command(label=' 150W Natural', command=lambda: (setpwr('150n')))
 
 pwrnt = Entry(f1b, width=4, font=fdfont, background=pcolor, validate='focusout', validatecommand=ckpowr)
 pwrnt.grid(row=0, column=7, sticky=NSEW)
@@ -4167,7 +4187,7 @@ txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 txtbillb.insert(END, "                              Dialogue Window\n", "b")
 txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", "b")
 txtbillb.insert(END, "Use space to check a prefix, suffix, or a call. \n")
-txtbillb.insert(END, "Paste contacts in call class section only for ex: 'kd4sir 1d in'  \n")
+txtbillb.insert(END, "Paste contacts in call class section format for ex: 'kd4sir 1d in'  \n")
 txtbillb.insert(END, "To begin select a Contestant, a Logger, Power and Band/Mode in red above.\n\n")
 txtbillb.insert(END, "-Call-Class-Sect- \n")
 txtbillb.config(insertwidth=3)
@@ -4214,9 +4234,6 @@ exit(1)
 #  add node list display after db read during startup?
 #
 #  add phonetic alphabet display (started: some code commented out) 2016 Field Day notes
-#
-#  Weo suggested making Control-C text copy/paste work. (suggestion from original group - FDLog)
-#
 #
 #  Tried and tried to get wof (whoseonfirst) to return only the one value for the mouse over.
 #    I don't have the python skilz... If you can awesome!!! -Scott Mar/18/2017

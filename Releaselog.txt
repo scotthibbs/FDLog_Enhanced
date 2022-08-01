@@ -1,13 +1,15 @@
-Release Log for FDLog and FDLog_Enhanced (83 Enhancements so far)
-From the present back to 1984. 
+Release Log for FDLog and FDLog_Enhanced 
+FDLog_Enhanced has 84 Enhancements to FDLog so far.
+From the present back to the beginning of FDLog in 1984. 
 
-Last updated 21Jul2022 Scott Hibbs KD4SIR
+Last updated 31Jul2022 Scott Hibbs KD4SIR
 scotthibbs at gmail.com (email ideas for enhancements/bugs)
 
+
 Ideas and things to Do: 
-	
+		
 	* An Information Table node that will allow sign in, show our group score, 
-			the top 5 Contestors, the top 5 visitors, Worked All States etc.
+			the top 5 Contestors, the top 5 visitors, Worked All States, NTP server etc.
 	* Add more scoring: 
 			complex gota points, youth, information table, official visitors, 
 			max 20 radios, power multipliers, educational activity... 
@@ -24,21 +26,33 @@ Ideas and things to Do:
 	* Logs menu gives logs for each mode by band, add setting for "ALL" contacts per mode
 	* Should protect from Contestant being on multiple nodes (can't operate two radios at a time) 
 	* left arrow act like backspace instead of nothing.
+	* QST messages need to allow upper case characters
+	* button needed to redraw window. Add row of buttons? Put network row above band buttons? 
 	
-	Windows Need Fixed: 
-	* After QSO edit display log prints all blue 
-	
-	Linux Need Fixed: 
+	Linux to do list: 
 		Off buttons keep the red background color when not selected, should turn grey
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
+		
+2022_Beta 3.0.2 31Jul2022
+	
+		Fixed the GlobalDb() being called twice. 
+		Added all the staticmethod decorators that where necessary.
+		Removed all the power settings above 100w. 
+		Fixed "After QSO edit display log prints all blue and not sorted."
+		Added def logwredraw() to reprint the log display window on command.
+ 84	Ability to reprint the log window with a clean log. A menu item for now, but will be a button later.		
+		
+2022_Beta 3.0.1 21Jul2022
+
+	Fixed edit/delete that became broken. Still needs to be sorted and have this reprint in the correct colors. (Currently all blue)
 
 2022_Beta 3.0 21Jul2022
+
  83 Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, I have finished porting this to 
 	Python 3. - Scott Hibbs KD4SIR
 	
 	updated miniweb.py to version 2.0 - now also ported to python 3. - Scott Hibbs kd4sir
-	
 	
 2022_v2.3 12Jul2022 (Last Python 2.7 version) Released
 	Finished all python corrections as recommended by pycharm. I learned a ton! Fixed copy/paste errors when nothing was selected. Fixed an error if a person typed (not pasted) a bad exchange.  I will now test this to see if it is stable enough for a release. Maybe work on documentation? - Scott Hibbs KD4SIR 
