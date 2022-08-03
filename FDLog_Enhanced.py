@@ -2839,14 +2839,35 @@ def showthiscall(call16):
     m11, dummy, dummy = qdb.cleanlog()
     #    print m.values()
     for i31 in list(m11.values()):
-        #        print i.call
+        # print(i31.call)
         q = i31.call.split('/')
+        # print(q)
         if p5[0] == q[0]:
             if findany == 0:
                 txtbillb.insert(END, "\n")
             txtbillb.insert(END, "%s\n" % i31.prlogln(i31))
             findany = 1
     return findany
+
+
+def showthiscall2(call16a):
+    """used by proc_key function to show the log entries for this call and return the previous report"""
+    # Added by Scott Hibbs KD4SIR 02Aug2022
+    repta = ""
+    pa5 = call16a.split('/')
+    findanya = 0
+    ma11, dummy, dummy = qdb.cleanlog()
+    for ia31 in list(ma11.values()):
+        # print(ia31.call)
+        qa = ia31.call.split('/')
+        ra = ia31.rept.split('/')
+        if pa5[0] == qa[0]:
+            repta = ra
+            if findanya == 0:
+                txtbillb.insert(END, "\n")
+            txtbillb.insert(END, "%s\n" % ia31.prlogln(ia31))
+            findanya = 1
+    return findanya, repta
 
 
 def mhelp():
@@ -3063,9 +3084,6 @@ def proc_key(ch):
                 else:
                     # Added database protection against no band, no power,
                     # no op, and no logger -- KD4SIR Scott Hibbs Jul/15/2013
-                    # Added warning against 1D to 1D contacts being
-                    # logged but not counting points -- KD4SIR Scott Hibbs Oct/13/2013
-                    """ 1d to 1d Rule change - to be corrected."""
                     # Checking Contestant or Logger has a license - Scott Hibbs Mar/28/2017
                     legal = 0
                     if re.match(r'[a-z :]+ [a-zA-Z ]+, ([a-z\d]+)', operator):
@@ -3222,11 +3240,18 @@ def proc_key(ch):
                 kbuf = ""
                 topper()
             else:
+                # This displays the previous contacts and put in the previous report too
+                # so the logger only has to hit enter. Added by Scott Hibbs KD4SIR 02Aug2022
                 kbuf += ' '
                 txtbillb.insert(END, ch)
-                if showthiscall(call17):  # shows the previous contacts with this station
+                _dummy, repta = showthiscall2(call17)
+                repta = str(repta)
+                repta = re.sub(r"[\[\]]", '', repta)
+                repta = repta.replace("'", "")
+                if showthiscall2(call17):  # shows the previous contacts with this station
                     txtbillb.insert(END, " worked on different bands\n")
-                    txtbillb.insert(END, "%s " % xcall)
+                    txtbillb.insert(END, "%s %s" % (xcall, repta))
+                    kbuf += repta
             return
     buf = kbuf + ch  # echo & add legal char to kbd buf
     if len(buf) < 50:
