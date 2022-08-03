@@ -53,58 +53,59 @@ To Do and Ideas:
 		on my raspberry pi: read error in file readme.txt
 
 
-2022_Beta 3.0.3 02Aug2022
+2022_Beta 3.0.3 02Aug2022     
  85 Previous contacts on another band/mode will now populate the report as well so that no further typing is needed 
 	to log the call again.	- Scott Hibbs kd4sir
 		
 		
-2022_Beta 3.0.2 31Jul2022
-		Fixed the GlobalDb() being called twice. 
-		Added all the staticmethod decorators that where necessary.
-		Removed all the power settings above 100w. 
-		Fixed "After QSO edit display log prints all blue and not sorted."
-		Added def logwredraw() to reprint the log display window on command.
- 84	Ability to reprint the log window with a clean log. A menu item for now, but will be a button later.		
+2022_Beta 3.0.2 31Jul2022     
+		Fixed the GlobalDb() being called twice.      
+		Added all the staticmethod decorators that where necessary.     
+		Removed all the power settings above 100w.      
+		Fixed "After QSO edit display log prints all blue and not sorted."     
+		Added def logwredraw() to reprint the log display window on command.     
+ 84	Ability to reprint the log window with a clean log. A menu item for now, but will be a button later.	     	
 		
 		
-2022_Beta 3.0.1 21Jul2022
-	Fixed edit/delete that became broken. Still needs to be sorted and have this reprint in the correct colors. (Currently all blue)
+2022_Beta 3.0.1 21Jul2022     
+	Fixed edit/delete that became broken. Still needs to be sorted and have this reprint in the correct colors. (Currently all blue)     
 
-2022_Beta 3.0 21Jul2022
- 83 Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, I have finished porting this to 
-	Python 3. - Scott Hibbs KD4SIR
+2022_Beta 3.0 21Jul2022     
+ 83 Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, I have finished porting this to      
+       	Python 3. - Scott Hibbs KD4SIR
 	
-	updated miniweb.py to version 2.0 - now also ported to python 3. - Scott Hibbs kd4sir
+	updated miniweb.py to version 2.0 - now also ported to python 3. - Scott Hibbs kd4sir     
 		
-2022_v2.3 12Jul2022 (Last Python 2.7 version) Released
-	Finished python corrections as recommended by pycharm. I learned a ton! I will now test this to see if it is 
+2022_v2.3 12Jul2022 (Last Python 2.7 version) Released      
+	Finished python corrections as recommended by pycharm. I learned a ton! I will now test this to see if it is      
 	stable for a release - Scott Hibbs KD4SIR 
 	
 	Updated miniweb.py to version 1.8 - Removed unused import, restructure, beautification.  - Scott Hibbs KD4SIR 
 
-2022_Beta 2.2 10Jul2022
- 82 Control-v and Control-c now both work. With the up arrow too. 
-	More python corrections. 
-	Fixed WAS report (Can't have multiple spaces in this file). 
-	Entry window will now always show the bottom line.  
+2022_Beta 2.2 10Jul2022     
+ 82 Control-v and Control-c now both work. With the up arrow too.       
+	More python corrections.      
+	Fixed WAS report (Can't have multiple spaces in this file).      
+	Entry window will now always show the bottom line.       
 
-2022_Beta 2.1 09Jul2022
- 81 Mouse Copy and Paste now work!! Tested on windows 10, must use the same format as the program entry which 
-	is "kd4sir 1d in" or it will reject, also checks dupes, section etc. Keyboard shortcuts 
-	(Control c,and v) will be easy to add next. - Thanks to Weo's suggestion (found in code notes probably in the 90's) - Scott Hibbs KD4SIR 08Jul2022    
- 79 update: Restructured again. The main program is now located at bottom of the file. All major pycharm errors have
-	been corrected.
+2022_Beta 2.1 09Jul2022      
+ 81 Mouse Copy and Paste now work!! Tested on windows 10, must use the same format as the program entry which      
+	is "kd4sir 1d in" or it will reject, also checks dupes, section etc. Keyboard shortcuts      
+	(Control c,and v) will be easy to add next. - Thanks to Weo's suggestion       
+	(found in code notes probably in the 90's) - Scott Hibbs KD4SIR 08Jul2022          
+ 79 update: Restructured again. The main program is now located at bottom of the file. 
+        All major pycharm errors have been corrected.     
 	
-2022_Beta_2 05Jul2022
- 80 Found our memory leak - removed unnecessary root.update() and root.deiconify() - Scott Hibbs KD4SIR 03Mar2022    
- 79 Major code restructure!! (and updating with pycharm suggestions) Moved main program elements to be more 
-	readable. - 05Jul2022  
+2022_Beta_2 05Jul2022      
+ 80 Found our memory leak - removed unnecessary root.update() and root.deiconify() - Scott Hibbs KD4SIR 03Mar2022         
+ 79 Major code restructure!! (and updating with pycharm suggestions) Moved main program elements to be more      
+	readable. - 05Jul2022       
 
      Although a different program included with FDLog, I corrected a compatibility issue with Win10 so miniweb.py would work. 
      Changed from blocked port 80 to five fives - 55555. Adding a zip file of this project in the same folder makes it easy to 
 	 share accross the same network as computers show up for field day. - Scott
 
-2022_Beta_1.1 (Working toward a stable 2023_Field_Day Release)
+2022_Beta_1.1 (Working toward a stable 2023_Field_Day Release)      
  78 All text files converted to Unix EOL Conversion - Curtis E. Mills WE7U 21Jun2019   
  77 W1AW schedule is now a PDF file. - Curtis E. Mills WE7U 20Jun2019    
  76 Changed colors to be less garish: Yellow to gold, orange to dark orange, green to pale green,    
