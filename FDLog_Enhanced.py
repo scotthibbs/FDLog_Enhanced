@@ -691,6 +691,17 @@ class QsoDb:
         somelocallist3.sort()
         return somelocallist3
 
+    def filterlog3(self, filt):
+        """list filtered (by mode) log in time order, including special msgs"""
+        # Added by Scott Hibbs KD4SIR 05Aug2022
+        somelocallist3z = []
+        mmz, dummy, dummy = self.cleanlog()
+        for i7z in list(mmz.values()):
+            if filt in i7z.band:
+                somelocallist3z.append(i7z.prlogln(i7z))
+        somelocallist3z.sort()
+        return somelocallist3z
+
     def filterlogst(self, filt):
         """list filtered (by nod) log in time order, including special msgs"""
         somelocallist4 = []
@@ -736,7 +747,6 @@ class QsoDb:
         #        print "del",nod,seq
         a, dummy, dummy = self.cleanlog()
         k3 = "%s|%s" % (nod, seq)
-        # if a.has_key(k) and a[k].band[0] != '*':  # only visible q # deprecated has_key here
         if k3 in a and a[k3].band[0] != '*':  # only visible q
             tm, call6, bandmod = a[k3].date, a[k3].call, a[k3].band
             rept = "*del:%s:%s:%s" % (nod, seq, reason)
@@ -1145,7 +1155,7 @@ class QsoDb:
 
 def logwredraw():
     """redraw the logw window with only valid log entries"""
-    # This is for a future enhancement - Scott Hibbs KD4SIR 31Jul2022
+    # Added by Scott Hibbs KD4SIR 31Jul2022
     global node
     a, dummy, dummy = qdb.cleanlog()
     logw.config(state=NORMAL)
@@ -1161,7 +1171,26 @@ def logwredraw():
             logw.insert(END, "\n")
     logw.config(state=DISABLED)
     logw.see(END)
-    topper()
+
+
+def logwredrawminus():
+    """redraw the logw window with only valid log entries minus QSTs"""
+    # Added by Scott Hibbs KD4SIR 31Jul2022
+    global node
+    a, dummy, dummy = qdb.cleanlog()
+    logw.config(state=NORMAL)
+    logw.delete(0.1, END)
+    logw.insert(END, "\n")
+    # i32.prlogln(i32) gives the line of the log output.
+    for i32 in list(a.values()):
+        if node in i32.prlogln(i32):
+            logw.insert(END, i32.prlogln(i32), "b")
+            logw.insert(END, "\n")
+        else:
+            logw.insert(END, i32.prlogln(i32))
+            logw.insert(END, "\n")
+    logw.config(state=DISABLED)
+    logw.see(END)
 
 
 class NodeInfoClass:
@@ -1200,16 +1229,13 @@ class NodeInfoClass:
     def ssb(self, pkt_tm, host, sip, nod, stm, stml, ver, td):
         """process status broadcast (first line)"""
         self.lock.acquire()
-        #  if not self.nodes.has_key(nod):  # has_key deprecated here
-        #  if not nod in self.nodes:  # but more pythonic to read it the following way
         if nod not in self.nodes:  # create if new 
             self.nodes[nod] = NodeInfoClass()
             if nod != node:
                 print("New Node Heard", host, sip, nod, stm, stml, ver, td)
         i15 = self.nodes[nod]
         #        if debug: print "ssb before assign",i.nod,i.stm,i.bnd
-        i15.ptm, i15.nod, i15.host, i15.ip, i15.stm, i15.age = \
-            pkt_tm, nod, host, sip, stm, 0
+        i15.ptm, i15.nod, i15.host, i15.ip, i15.stm, i15.age = pkt_tm, nod, host, sip, stm, 0
         self.lock.release()
         #   if debug:
         #  print "ssb:",pkt_tm,host,sip,nod,stm,stml,ver,td
@@ -1218,8 +1244,6 @@ class NodeInfoClass:
         """process node status bcast (rest of bcast lines)"""
         self.lock.acquire()
         key = "%s-%s" % (fnod, nod)
-        # if not self.nodinfo.has_key(key): # has_key deprecated here
-        #  if not key in self.nodinfo: #  or more pythonic to read it the following way
         if key not in self.nodinfo:
             self.nodinfo[key] = NodeInfoClass()  # create new
             #  if debug: print "sss: new nodinfo instance",key
@@ -1545,8 +1569,6 @@ class GlobalDataClass:
         if name3[:2] == 'p:':  # set oper/logr
             i23 = self.byname.get(name3, self.new(name3, '', '', '', 0))
         else:
-            # if not self.byname.has_key(name):  # new # has_key deprecated here
-            # if not name3 in self.byname:  # a more pythonic way is below
             if name3 not in self.byname:  # new
                 return "error - invalid global data name: %s" % name3
             i23 = self.byname[name3]
@@ -1568,8 +1590,6 @@ class GlobalDataClass:
                 # else: print "set warning - older value discarded"
 
     def getv(self, name4):
-        # if not self.byname.has_key(name):  # new # has_key deprecated here
-        # if not name4 in self.byname:  # it's more pythonic to read it the following way
         if name4 not in self.byname:  # new
             return "get error - global data name %s not valid" % name4
         return self.byname[name4].val
@@ -1601,15 +1621,18 @@ class SynchMessage:
 
     def prout(self):
         """get message from queue for displaying log"""
-        # Check to see if the log window has been deleted           
+        # Check to see if the log window has been deleted
+        shonuff = ""
         self.lock.acquire()
         while self.msgs:
+            # print(str(self.msgs))
             logw.config(state=NORMAL)
             logw.see(END)
             nod = self.msgs[0][70:81]  # color local entries
             seq = self.msgs[0][65:69].strip()
             seq = int(seq)
             stn = self.msgs[0][69:].strip()
+            rpod = self.msgs[0][22:28]  # looks for "*del" entries
             if nod == node:
                 # Added a check to see if in the log to print blue or not - Scott Hibbs June 26, 2018
                 bid, dummy, dummy = qdb.cleanlog()  # get a clean log
@@ -1619,8 +1642,15 @@ class SynchMessage:
             else:
                 logw.insert(END, "%s\n" % self.msgs[0])
             logw.config(state=DISABLED)
+            # Added ability to redraw the log window after receiving a *del message - Scott Hibbs KD4SIR 05Aug2022
+            # print(rpod)
+            if "*del:" in rpod:
+                shonuff = "yes"
+                # logwredraw()
             del self.msgs[0]
         self.lock.release()
+        if shonuff == "yes":
+            logwredraw()
 
 
 def now():
@@ -2323,19 +2353,40 @@ def renew_title():
     h = mob / 60
     m9 = mob % 60
     # Added port to the heading - Scott Hibbs KD4SIR Jan/27/2017
-    root.title('  FDLog_Enhanced %s %s %s (Node: %s Time on Band: %d:%02d) %s:%s UTC %s/%s Port:%s' %
-               (call12, clas, sec, node, h, m9, t[-6:-4], t[-4:-2], t[2:4], t[4:6], port_base))
+    # Port now moved to node label and clean up title - Scott Hibbs KD4SIR 06Aug2022
+    # root.title('  FDLog_Enhanced %s %s %s (Node: %s Time on Band: %d:%02d) %s:%s UTC %s/%s Port:%s' %
+    #            (call12, clas, sec, node, h, m9, t[-6:-4], t[-4:-2], t[2:4], t[4:6], port_base))
+    root.title('  FDLog_Enhanced      %s %s %s      Current Time %s:%s UTC %s/%s' %
+               (call12, clas, sec, t[-6:-4], t[-4:-2], t[2:4], t[4:6]))
+
+    # Adding a lbltimeonband that needs updated with the title. - Scott Hibbs KD4SIR 06Aug2022
+    # lbltimeonband.config(text=" Time on Band: %d:%02d " % (h, m9), font=fdfont, foreground='blue',
+    #                      background='light grey')
+    timeonband(h, m9)
     net.bcast_now()  # this is periodic bcast...
 
 
+def timeonband(h, m9):
+    """This sets the color of the lbltimeonband"""
+    # Added by Scott Hibbs KD4SIR 06Aug2022
+    if band == "off":
+        lbltimeonband.config(text=" Time Away:    %d:%02d " % (h, m9), font=fdfont, foreground='blue',
+                             background='red')
+    else:
+        lbltimeonband.config(text=" Time on Band: %d:%02d " % (h, m9), font=fdfont, foreground='blue',
+                             background='light grey')
+
+
 def setnode(new):
+    """Set the node"""
     global node
     bandoff()
     node = str.lower(new)
     qdb.redup()
     renew_title()
-    lblnode.config(text="My Node: %s" % node, font=fdfont, foreground='blue', background='light grey')
-    # Had to add the above so that the new lblnode could be updated. - Scott Hibbs KD4SIR Mar/28/2017
+    lblnode.config(text=" My Node: %s Port: %s" % (node, port_base), font=fdfont, foreground='blue',
+                   background='light grey')
+    # Had to add the above line so that the new lblnode could be updated. - Scott Hibbs KD4SIR Mar/28/2017
 
 
 def applyprop():
@@ -2435,6 +2486,13 @@ def viewlogf(bandm):
     """view log filtered by bandmode"""
     lg = qdb.filterlog2(bandm)
     viewtextl(lg, "Log Filtered for %s" % bandm)
+
+
+def viewlogfm(emode):
+    """view log filtered by mode"""
+    # Added by Scott Hibbs KD4SIR 05Aug2022
+    lg = qdb.filterlog3(emode)
+    viewtextl(lg, "Log Filtered for %s" % emode)
 
 
 def viewlogfs(nod):
@@ -2554,11 +2612,12 @@ def updatebb():
 
 def updateqct():
     """update contact count"""
+    # Separated CW and Digital scores instead of adding them - Scott Hibbs KD4SIR 05Aug2022
     dummy, dummy, qpop, qplg, dummy, dummy, dummy, dummy, cwq, digq, fonq, dummy, gotaq, dummy, dummy = \
         qdb.bandrpt()  # xx reduce processing here
-    for i28, j6 in (('FonQ', 'Phone %5s' % fonq),
-                    ('CW/D', 'CW&Dig %4s' % (cwq + digq)),
-                    ('GOTAq', 'GOTA %6s' % gotaq)):
+    for i28, j6 in (('FonQ', 'Phone: %5s' % fonq),
+                    ('CW/D', 'CW: %s & Dig: %s' % (cwq, digq)),
+                    ('GOTAq', 'GOTA: %6s' % gotaq)):
         bandb[i28].config(text=j6, background='light grey')
         # Update for the operator OpQ - KD4SIR for FD 2014
         if operator == "":
@@ -2567,14 +2626,16 @@ def updateqct():
             opds.config(text="<Select Contestant>", background='red')
         else:
             coin = exin(operator)
+            tails, dummy, dummy, dummy = str(operator).split(",")
+            # print("tails is %s" % tails)
             if coin in qpop:
                 coin2 = qpop['%s' % coin]
-                opmb.config(text='ConQ %2s' % coin2, background='light grey')
-                opds.config(text=operator, background='light grey')
+                opmb.config(text='Contacts: %2s' % coin2, background='light grey')
+                opds.config(text=tails, background='light grey')
             else:
                 coin2 = "0"
-                opmb.config(text='ConQ %2s' % coin2, background='light grey')
-                opds.config(text=operator, background='light grey')
+                opmb.config(text='Contacts: %2s' % coin2, background='light grey')
+                opds.config(text=tails, background='light grey')
         # Update for the logger LoQ - KD4SIR for FD 2014
         if logger == "":
             coil2 = "Logger"
@@ -2582,14 +2643,15 @@ def updateqct():
             logds.config(text="<Select Logger>", background='red')
         else:
             coil = exin(logger)
+            heads, dummy, dummy, dummy = str(logger).split(",")
             if coil in qplg:
                 coil2 = qplg['%s' % coil]
-                logmb.config(text='LogQ %2s' % coil2, background='light grey')
-                logds.config(text=logger, background='light grey')
+                logmb.config(text='Logs: %2s' % coil2, background='light grey')
+                logds.config(text=heads, background='light grey')
             else:
                 coil2 = "0"
-                logmb.config(text='LogQ %2s' % coil2, background='light grey')
-                logds.config(text=logger, background='light grey')
+                logmb.config(text='Logs: %2s' % coil2, background='light grey')
+                logds.config(text=heads, background='light grey')
     t = ""  # check for net config trouble
     if net.fills:
         t = "NEED FILL"
@@ -2637,6 +2699,7 @@ def bandbuttons(w):
                                          variable=sv, value=bm4, selectcolor='red',
                                          command=lambda b04=bm4: (bandset(b04)))
             bandb[bm4].grid(row=b, column=a, sticky=NSEW)
+
             b += 1
         a += 1
     for i29, j5, dummy in (('Class', 0, 5),
@@ -2907,15 +2970,17 @@ def proc_key(ch):
     # Adding a statement to check for uppercase. Previously unresponsive while capped locked. - Scott Hibbs Jul/01/2016
     # Thanks to WW9A Brian Smith for pointing out that the program isn't randomly frozen and not requiring a restart.
     if ch.isupper():
-        txtbillb.insert(END, " LOWERCAPS PLEASE \n")
-        kbuf = ""
-        topper()
-        return
+        # Allowing uppercase for QST messages. - Scott Hibbs KD4SIR 05Aug2022
+        if kbuf[0] != '#':
+            txtbillb.insert(END, " LOWERCAPS PLEASE \n")
+            kbuf = ""
+            topper()
+            return
     if ch == '\r':  # return, may be cmd or log entry
         if kbuf[:1] == '#':  # QST Message
             qdb.qst(kbuf[1:])
             kbuf = ""
-            txtbillb.insert(END, '\n')
+            topper()
             return
         # check for valid commands
         if re.match(r'[.]h$', kbuf):  # help request
@@ -3248,7 +3313,7 @@ def proc_key(ch):
                 repta = str(repta)
                 repta = re.sub(r"[\[\]]", '', repta)
                 repta = repta.replace("'", "")
-                if showthiscall2(call17):  # shows the previous contacts with this station
+                if showthiscall(call17):  # shows the previous contacts with this station
                     txtbillb.insert(END, " worked on different bands\n")
                     txtbillb.insert(END, "%s %s" % (xcall, repta))
                     kbuf += repta
@@ -3289,6 +3354,9 @@ def kevent(event):
     elif k2 == 65362:  # up arrow
         proc_key('\\u1p')
     elif k2 == 65288:  # backspace
+        proc_key('\b')
+    # Added by Scott Hibbs KD4SIR 05Aug2022
+    elif k2 == 65361:  # left arrow acts as backspace
         proc_key('\b')
     elif k2 == 65307:  # ESC
         proc_key('\x1b')
@@ -3344,7 +3412,7 @@ def log_select(event):
             return 'break'
     except ValueError:
         return 'break'
-    print(stn, seq, bxnd, cxll)
+    #  print(stn, seq, bxnd, cxll)
     if stn == node:  # only edit my own Q's
         # Also check to make sure the call isn't previously deleted. Jul/02/2016 KD4SIR Scott Hibbs
         if qdb.dupck(cxll, bxnd):
@@ -3954,8 +4022,10 @@ print("Saving Persistent Configuration in", globf)
 saveglob()
 print("Time Difference Window (tdwin):", tdwin, "seconds")
 print("Starting GUI setup")
+
+#     ****************** GUI START **************************
+
 root = Tk()  # setup Tk GUI
-# root.withdraw()  # This was removed in Alan's FDLog without explanation - 7/3/2015
 menu = Menu(root)
 root.config(menu=menu)
 filemenu = Menu(menu, tearoff=0)
@@ -3981,10 +4051,16 @@ for j in modes:
     m = Menu(logmenu, tearoff=0)
     if j == 'c':
         lab = 'CW'
+        xa = j
+        m.add_command(label="All CW", command=lambda: (viewlogfm("c")))
     elif j == 'd':
         lab = 'Digital'
+        xb = j
+        m.add_command(label="All Digital", command=lambda: (viewlogfm("d")))
     elif j == 'p':
         lab = 'Phone'
+        xc = j
+        m.add_command(label="All Phone", command=lambda: (viewlogfm("p")))
     logmenu.add_cascade(label=lab, menu=m)
     for i in bands:
         if i == 'off':
@@ -4052,50 +4128,59 @@ helpmenu.add_command(label="Release Log", command=lambda: viewtextf('Releaselog.
 helpmenu.add_command(label="GitHub ReadMe", command=lambda: viewtextf('readme.txt'))
 helpmenu.add_command(label="About FDLOG_Enhanced", command=lambda: viewtextv(about, "About"))
 rdrawmenu = Menu(menu, tearoff=0)
-menu.add_cascade(label="Redraw Log Window", menu=rdrawmenu)
-rdrawmenu.add_command(label="Redraw Log Window", command=logwredraw)
+# possible future menu enhancement placeholder
+# menu.add_cascade(label="Redraw Log Window", menu=rdrawmenu)
+# rdrawmenu.add_command(label="Redraw Log Window", command=logwredraw)
+
+# Network Label moved to the top - Scott Hibbs KD4SIR 05Aug2022
+frn1 = Frame(root, bd=1)
+lblnet = Label(frn1, text="Wait for Network Status", font=fdfont, relief='raised',
+               foreground='blue', background='gold')
+
+# Time on Band label
+lbltimeonband = Label(frn1, text=" ", font=fdfont, relief='raised', foreground='blue', background='light grey')
+
+# Node label
+lblnode = Label(frn1, text=" Node: %s Port: %s" % (node, port_base), font=fdfont, relief='raised',
+                foreground='black', background='light grey')
 
 # Band Buttons
 f1 = Frame(root, bd=1)
 bandbuttons(f1)
-f1.grid(row=0, columnspan=2, sticky=NSEW)
-f1b = Frame(root, bd=0)  # oper logger power and network windows
+
+# oper logger power and network windows
+f1b = Frame(root, bd=0)
 #  Changed the color of the user buttons to red until assigned - KD4SIR Scott Hibbs 7/14/2013
 #  Changed colors to be less garish: Yellow to gold, orange to dark orange, green to pale green,
 #  grey to light grey. - Curtis E. Mills WE7U 21Jun2019
 ocolor = 'red'
 lcolor = 'red'
 pcolor = 'red'
+
 # Operator
 opmb = Menubutton(f1b, text='Contestant', font=fdfont, relief='raised', background=ocolor)
-opmb.grid(row=0, column=1, sticky=NSEW)
 opmu = Menu(opmb, tearoff=0)
 opmb.config(menu=opmu, direction='below')
 opmu.add_command(label="Add New Contestant", command=newpart.dialog)
 opds = Menubutton(f1b, text='<select Contestant>', font=fdfont, relief='raised', background=ocolor)
-opds.grid(row=0, column=0, sticky=NSEW)
 opdsu = Menu(opds, tearoff=0)
 opds.config(menu=opdsu, direction='below')
-f1b.grid_columnconfigure(0, weight=1)
+
 # Logger
 logmb = Menubutton(f1b, text="Logger", font=fdfont, relief='raised', background=lcolor)
-logmb.grid(row=0, column=4, sticky=NSEW)
 logmu = Menu(logmb, tearoff=0)
 logmb.config(menu=logmu, direction='below')
 logmu.add_command(label="Add New Logger", command=newpart.dialog)
 logds = Menubutton(f1b, text='<Select Logger>', font=fdfont, relief='raised', background=lcolor)
-logds.grid(row=0, column=3, sticky=NSEW)
-f1b.grid_columnconfigure(3, weight=1)
 logdsu = Menu(logds, tearoff=0)
 logds.config(menu=logdsu, direction='below')
 logdsu.add_command(label="Add New Logger", command=newpart.dialog)
-pwrmb = Menubutton(f1b, text="Power", font=fdfont, relief='raised',
-                   background=pcolor)
-pwrmb.grid(row=0, column=6, sticky=NSEW)
+
+# Power buttons
+pwrmb = Menubutton(f1b, text="Power", font=fdfont, relief='raised', background=pcolor)
 pwrmu = Menu(pwrmb, tearoff=0)
 pwrmb.config(menu=pwrmu, direction='below')
 #  rearranged this menu - Scott Hibbs Mar/23/2017
-
 #  Rule change on power now limits to 100w - this needs to be fixed #########################################
 #  Be nice to have countdown of 5 Alt/Nat power contacts. Add Battery check mark etc.
 pwrmu.add_command(label='     0 Watts', command=lambda: (setpwr('0')))
@@ -4103,64 +4188,60 @@ pwrmu.add_command(label='     5 Watts', command=lambda: (setpwr('5')))
 # pwrmu.add_command(label='    50 Watts', command=lambda: (setpwr('50')))
 pwrmu.add_command(label='  100 Watts', command=lambda: (setpwr('100')))
 # pwrmu.add_command(label='  150 Watts', command=lambda: (setpwr('150')))
-# pwrmu.add_command(label='  200 Watts', command=lambda: (setpwr('200')))
-# pwrmu.add_command(label='  500 Watts', command=lambda: (setpwr('500')))
-# pwrmu.add_command(label='1000 Watts', command=lambda: (setpwr('1000')))
-# pwrmu.add_command(label='1500 Watts', command=lambda: (setpwr('1500')))
 pwrmu.add_command(label='     5W Alt/Nat rule 7.3.8', command=lambda: (setpwr('5n')))
-# pwrmu.add_command(label='   50W Natural', command=lambda: (setpwr('50n')))
 pwrmu.add_command(label=' 100W Alt/Nat rule 7.3.8', command=lambda: (setpwr('100n')))
-# pwrmu.add_command(label=' 150W Natural', command=lambda: (setpwr('150n')))
-
 pwrnt = Entry(f1b, width=4, font=fdfont, background=pcolor, validate='focusout', validatecommand=ckpowr)
-pwrnt.grid(row=0, column=7, sticky=NSEW)
 powlbl = Label(f1b, text="W", font=fdfont, background=pcolor)
-powlbl.grid(row=0, column=8, sticky=NSEW)
 natv = IntVar()
 powcb = Checkbutton(f1b, text="Natural", variable=natv, command=ckpowr,
                     font=fdfont, relief='raised', background=pcolor)
-powcb.grid(row=0, column=9, sticky=NSEW)
 setpwr(power)
-f1b.grid(row=1, columnspan=2, sticky=NSEW)
+
 # Added Network label - KD4SIR Scott Hibbs Oct 4, 2013
 # Added Node label - KD4SIR Scott Hibbs Oct/13/2013
 # Added wof label - KD4SIR Scott Hibbs Jan/19/2017
 # Added port label - KD4SIR Scott Hibbs Jan/19/2017
-# Network window
-lblnet = Label(f1b, text="Wait for Network Status", font=fdfont, foreground='blue', background='gold')
-lblnet.grid(row=2, column=0, columnspan=9, sticky=NSEW)
-# Node window
-lblnode = Label(f1b, text="My Node: %s" % node, font=fdfont, foreground='blue', background='light grey')
-lblnode.grid(row=2, column=9, columnspan=1, sticky=NSEW)
+
+# Function buttons
+redrawbutton = Button(f1b, text="Redraw Log", font=fdfont, relief='raised', foreground='blue', command=logwredraw,
+                      background='light grey')
+extrabutton = Button(f1b, text="Future Buttons Here", font=fdfont, relief='raised', foreground='blue',
+                     command=logwredraw, background='light grey')
+
 # Whos on First Window to display operators on bands
 # lblwof = Label(f1b, text="", font=fdfont, foreground='blue', background='light grey')
 # lblwof.grid(row=2, column=0, columnspan=9, sticky=NSEW)
 # Port window
 # lblport = Label(f1b, text="Port: %s" % port_base, font=fdfont, foreground='blue', background='light grey')
 # lblport.grid(row=3, column=9, columnspan=1, sticky=NSEW)
+
 # log window
 logw = Text(root, takefocus=0, height=11, width=80, font=fdmfont,
             background='light grey', wrap=NONE, setgrid=True)
-# logw.config(cursor='arrow')
 scroll = Scrollbar(root, command=logw.yview, background='light grey')
 logw.config(yscrollcommand=scroll.set)
-logw.grid(row=2, column=0, sticky=NSEW)
-scroll.grid(row=2, column=1, sticky=NS)
-root.grid_rowconfigure(2, weight=1)
-root.grid_columnconfigure(0, weight=1)
-# txtbillb = dialog window
-txtbillb = Text(root, takefocus=1, height=10, width=80, font=fdmfont,
-                wrap=NONE, setgrid=True, background='light grey')
-scrollt = Scrollbar(root, command=txtbillb.yview)
-txtbillb.config(yscrollcommand=scrollt.set)
-txtbillb.grid(row=3, column=0, sticky=NSEW)
-scrollt.grid(row=3, column=1, sticky=NS)
-root.grid_rowconfigure(3, weight=1)
+scroll.grid(row=3, column=1, sticky=NS)
 logw.tag_config("b", foreground="blue")
 logw.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", "b")
 logw.insert(END, "                            DATABASE DISPLAY WINDOW\n", "b")
 logw.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", "b")
 logw.insert(END, "%s\n" % prog, "b")
+
+# Text Billboard - our entry window.
+txtbillb = Text(root, takefocus=1, height=10, width=80, font=fdmfont,
+                wrap=NONE, setgrid=True, background='light grey')
+scrollt = Scrollbar(root, command=txtbillb.yview)
+txtbillb.config(yscrollcommand=scrollt.set)
+txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", "b")
+txtbillb.insert(END, "                              Dialogue Window\n", "b")
+txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", "b")
+txtbillb.insert(END, "Use space to check a prefix, suffix, or a call. \n")
+txtbillb.insert(END, "Paste contacts in call class section format for ex: 'kd4sir 1d in'  \n")
+txtbillb.insert(END, "To begin select a Contestant, a Logger, Power and Band/Mode in red above.\n\n")
+txtbillb.insert(END, "-Call-Class-Sect- \n")
+txtbillb.config(insertwidth=3)
+txtbillb.focus_set()
+
 #     Add a bottom window for station information
 # f1c = Frame(root, bd=1)
 # f1c.grid(row=4,columnspan=4,sticky=NSEW)
@@ -4183,6 +4264,7 @@ logw.insert(END, "%s\n" % prog, "b")
 # fthw2.insert(END,"phonetics box")
 # txtentry.insert(END,"\n")
 # startup
+
 contestlog(0)  # define globals
 buildmenus()
 sms = SynchMessage()  # setup sync message service
@@ -4201,25 +4283,46 @@ else:
     print("  correct time and that the CORRECT TIMEZONE is selected (in the OS)")
 print("To change system time, stop FDLog, change the time or zone, then restart")
 print()
-#  These root commands were removed without an explanation in Alan's FDLog,
-#  but I'm leaving them in. Scott Hibbs 7/3/2015
-#  Until I found that below also caused a memory leak - Scott Hibbs KD4SIR 03Mar2022
-#  root.update()
-#  root.deiconify()
 net.start()  # start threads
 renew_title()
-txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", "b")
-txtbillb.insert(END, "                              Dialogue Window\n", "b")
-txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", "b")
-txtbillb.insert(END, "Use space to check a prefix, suffix, or a call. \n")
-txtbillb.insert(END, "Paste contacts in call class section format for ex: 'kd4sir 1d in'  \n")
-txtbillb.insert(END, "To begin select a Contestant, a Logger, Power and Band/Mode in red above.\n\n")
-txtbillb.insert(END, "-Call-Class-Sect- \n")
-txtbillb.config(insertwidth=3)
-txtbillb.focus_set()
+
 secName = {}
 readsections()
 updatect = 0
+
+#  #### GUI GRIDS #####
+# Grid for Network Row - network timeonband and node
+frn1.grid(row=0, columnspan=2, sticky=NSEW)
+frn1.grid_columnconfigure(1, weight=1)
+lblnet.grid(row=0, column=0, columnspan=6, sticky=NSEW)
+lbltimeonband.grid(row=0, column=7, columnspan=1, sticky=NSEW)
+lblnode.grid(row=0, column=9, columnspan=1, sticky=NSEW)
+# Grid for band buttons
+f1.grid(row=1, columnspan=2, sticky=NSEW)
+# Grid for Contestant, Logger and Power buttons
+f1b.grid(row=2, columnspan=2, sticky=NSEW)
+opmb.grid(row=2, column=1, sticky=NSEW)
+opds.grid(row=2, column=0, sticky=NSEW)
+f1b.grid_columnconfigure(0, weight=1)
+logmb.grid(row=2, column=4, sticky=NSEW)
+logds.grid(row=2, column=3, sticky=NSEW)
+f1b.grid_columnconfigure(3, weight=1)
+pwrmb.grid(row=2, column=6, sticky=NSEW)
+pwrnt.grid(row=2, column=7, sticky=NSEW)
+powlbl.grid(row=2, column=8, sticky=NSEW)
+powcb.grid(row=2, column=9, sticky=NSEW)
+# Grid for functionbuttons
+redrawbutton.grid(row=3, column=0, sticky=W)
+extrabutton.grid(row=3, column=1, sticky=W)
+# Grid for log window
+root.grid_rowconfigure(2, weight=1)
+logw.grid(row=3, column=0, sticky=NSEW)
+root.grid_columnconfigure(0, weight=1)
+# Grid for text billboard
+root.grid_rowconfigure(3, weight=1)
+txtbillb.grid(row=4, column=0, sticky=NSEW)
+scrollt.grid(row=4, column=1, sticky=NS)
+
 
 #  Bindings
 root.bind('<ButtonRelease-1>', focevent)
@@ -4230,6 +4333,7 @@ logw.bind('<Button-1>', log_select)  # start of log edit
 txtbillb.bind('<Control-Key-c>', copy)  # copy event for the copy function
 txtbillb.bind('<Control-Key-v>', paste)  # paste event for the paste function
 
+bandset('off')
 root.after(1000, update)  # 1 hz activity
 root.mainloop()  # gui up
 print("\nShutting down")
@@ -4246,8 +4350,6 @@ exit(1)
 
 # Suggestions/To Do:
 #
-#
-#
 # Would love another file to use for the "InfoNode" computer. Scott 2017 Field Day notes
 #       It will allow visitors/participants to log in
 #       It will show top 5 operators and top 5 loggers
@@ -4255,8 +4357,6 @@ exit(1)
 #       Provide info on Amateur Radio (video and/or short articles to print?)
 #       Provide info on the local club
 #       fool-proof - no logging from this node.
-#
-#  add node list display after db read during startup?
 #
 #  add phonetic alphabet display (started: some code commented out) 2016 Field Day notes
 #
