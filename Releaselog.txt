@@ -1,10 +1,11 @@
 Release Log for FDLog and FDLog_Enhanced 
-FDLog_Enhanced has added 85 Enhancements to FDLog so far.
-From the present back to the beginning of FDLog in 1984. 
+We have added 92 enhancements to the original FDLog so far.
 
-Last updated 02Aug2022 Scott Hibbs KD4SIR
+This is the top of the Release Log for FDLog_Enhanced
+The release log will have the present back to the beginning of FDLog in 1984. 
+
+Last updated 06Aug2022 Scott Hibbs KD4SIR
 scotthibbs at gmail.com (email ideas for enhancements/bugs)
-
 
 To Do and Ideas: 
 		
@@ -23,18 +24,32 @@ To Do and Ideas:
 	* Dupe check for requested fills - 2 UNconnected nodes can dupe and both count when connected. 
 	  (currently dupe checking is at entry - not on fills)
 	* Need to rewrite all the documentation. It's everywhere...
+	* Should protect from Contestant being on multiple nodes (can't operate two radios at a time) 	
 	* Make font size a setting before Tkinker loads? 10,12,14 pt font. 
-	* Logs menu gives logs for each mode by band, add setting for "ALL" contacts per mode
-	* Should protect from Contestant being on multiple nodes (can't operate two radios at a time) 
-	* left arrow act like backspace instead of nothing.
-	* QST messages need to allow upper case characters
-	* button needed to redraw window. Add row of buttons? Put network row above band buttons? 
 	
 	Linux to do list: 
 		Off buttons keep the red background color when not selected, should turn grey
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
 
+
+2022_Beta 3.1.0 06Aug2022
+	Major update and rearrangement of the GUI
+ +  Moved main program code to be more readable, grouped all the grids together.  
+ 86 The log window will now reprint when it recieves a delete record from another node. - Scott Hibbs KD4SIR
+ 87 left arrow act like backspace instead of nothing. - Scott Hibbs KD4SIR
+ +  QST messages now allow upper case characters in them.
+ 88 Added an "All CW", "All Digital" and "All Phone" log choice in the logs menu - Scott Hibbs KD4SIR
+ 89 CW and Digital scores are now separated instead of adding together. - Scott Hibbs KD4SIR
+ 90 Moved the network status label (enhancement #3) and node id under the menu and above the band selection. 
+	Also put the port number with the node id - Scott Hibbs KD4SIR
+ 91 Timer label added showing "Time Away" (red) if band is off or "Time on Band" (grey). Also cleaned
+	up the title to program name, class report and section, and current time. - Scott Hibbs KD4SIR
+ +  Cleaned up the Contestant and Logger label to just show the initials and name - Scott Hibbs KD4SIR
+ +  tweaked enhancements 8, 9, and 10 (individual scores) to be more readable. 
+ 92 Added a row to the GUI for function buttons like redraw log window etc.
+ +  Enhancement 84 now has a button in the "function button" row to redraw the log window instead of a menu.
+ 
 2022_Beta 3.0.3 02Aug2022
  85 Previous contacts on another band/mode will now populate the report as well so that no further typing is needed 
 	to log the call again.	- Scott Hibbs kd4sir
@@ -148,7 +163,19 @@ SCICSG will be at The Rock Church for our third year.
 	41 Contestant or Logger needs a license to enter a QSO.
 	40 Operator now called Contestant. This allows non-hams to operate with a control operator.
 
-                The Operator field caused debate on if the person was Control Operator. We made a version that required a license for the operator. The problem then, was that a ham & non-ham pair had no idea who operated the radio or logged since it could only be entered one way. The ham got credit for contacts while logging and the non-ham had no idea the number they logged or contacted (added together). So the Radio Operator and Control Operator are different and confusing. Non-hams are after all allowed and encouraged to operate with a Control Operator logging. This program has always tracked who's the logger. So the Operator field is renamed Contestant for person at radio. Thus, we can track the number of contacts or data entries, and accurate logs for everyone, even for non-hams. Hams can accurately know how many contacts they worked and logged for themselves or someone else and know who. This maintains a score for contacts and a score for logging them. The program will check for a Control Operator (license needed for Contestant or logger) before allowing a contact. - Scott Hibbs KD4SIR Mar/29/2017
+                The Operator field caused debate on if the person was Control Operator. We made a version 
+				that required a license for the operator. The problem then, was that a ham & non-ham pair 
+				had no idea who operated the radio or logged since it could only be entered one way. 
+				The ham got credit for contacts while logging and the non-ham had no idea the number 
+				they logged or contacted (added together). So the Radio Operator and Control Operator 
+				are different and confusing. Non-hams are after all allowed and encouraged to operate with 
+				a Control Operator logging. This program has always tracked who's the logger. So the 
+				Operator field is renamed Contestant for person at radio. Thus, we can track the number 
+				of contacts or data entries, and accurate logs for everyone, even for non-hams. 
+				Hams can accurately know how many contacts they worked and logged for themselves or 
+				someone else and know who. This maintains a score for contacts and a score for 
+				logging them. The program will check for a Control Operator (license needed for 
+				Contestant or logger) before allowing a contact. - Scott Hibbs KD4SIR Mar/29/2017
 
     39 "Add New Participant" window uses the Enter key to save to facilitate multiple entries.
 	38 Can not edit previously EDITED log entries. 
