@@ -16,7 +16,8 @@ from tkinter import END, NORMAL, DISABLED, Toplevel, Frame, Label, Entry, Button
     W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
     Checkbutton, RAISED, IntVar
 
-#  Current version 2022_Beta 3.0 21Jul2022 (first Python 3 version)
+#  Current version 2022_Beta 3.1.1 09Aug2022 (font update)
+
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
 
@@ -24,7 +25,7 @@ from tkinter import END, NORMAL, DISABLED, Toplevel, Frame, Label, Entry, Button
 
 #  all history moved to readme.md
 
-prog = 'FDLog_Enhanced v2023_Beta 3.0 \n\n' \
+prog = 'FDLog_Enhanced v2022_Beta 3.1.1 09Aug2022\n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2023. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
@@ -346,6 +347,134 @@ def exin(op):
     if corlinit:
         r = corlinit.group(1)
     return r
+
+
+def fntcourier10():
+    """ Font menu selection to change the font and size"""
+    #  Added by Scott Hibbs KD4SIR 09Aug2022
+    global typeface, fontsize, fdfont
+    typeface = "Courier"
+    fontsize = 10
+    fdfont = typeface, fontsize
+    redrawall()
+
+
+def fntcourier11():
+    """ Font menu selection to change the font and size"""
+    #  Added by Scott Hibbs KD4SIR 09Aug2022
+    global typeface, fontsize, fdfont
+    typeface = "Courier"
+    fontsize = 11
+    fdfont = typeface, fontsize
+    redrawall()
+
+
+def fntcourier12():
+    """ Font menu selection to change the font and size"""
+    #  Added by Scott Hibbs KD4SIR 09Aug2022
+    global typeface, fontsize, fdfont
+    typeface = "Courier"
+    fontsize = 12
+    fdfont = typeface, fontsize
+    redrawall()
+
+
+def fntcourier13():
+    """ Font menu selection to change the font and size"""
+    #  Added by Scott Hibbs KD4SIR 09Aug2022
+    global typeface, fontsize, fdfont
+    typeface = "Courier"
+    fontsize = 13
+    fdfont = typeface, fontsize
+    redrawall()
+
+
+def fntcourier14():
+    """ Font menu selection to change the font and size"""
+    #  Added by Scott Hibbs KD4SIR 09Aug2022
+    global typeface, fontsize, fdfont
+    typeface = "Courier"
+    fontsize = 14
+    fdfont = typeface, fontsize
+    redrawall()
+
+
+def fntconsolas10():
+    """ Font menu selection to change the font and size"""
+    #  Added by Scott Hibbs KD4SIR 09Aug2022
+    global typeface, fontsize, fdfont
+    typeface = "Consolas"
+    fontsize = 10
+    fdfont = typeface, fontsize
+    redrawall()
+
+
+def fntconsolas11():
+    """ Font menu selection to change the font and size"""
+    #  Added by Scott Hibbs KD4SIR 09Aug2022
+    global typeface, fontsize, fdfont
+    typeface = "Consolas"
+    fontsize = 11
+    fdfont = typeface, fontsize
+    redrawall()
+
+
+def fntconsolas12():
+    """ Font menu selection to change the font and size"""
+    #  Added by Scott Hibbs KD4SIR 09Aug2022
+    global typeface, fontsize, fdfont
+    typeface = "Consolas"
+    fontsize = 12
+    fdfont = typeface, fontsize
+    redrawall()
+
+
+def fntconsolas13():
+    """ Font menu selection to change the font and size"""
+    #  Added by Scott Hibbs KD4SIR 09Aug2022
+    global typeface, fontsize, fdfont
+    typeface = "Consolas"
+    fontsize = 13
+    fdfont = typeface, fontsize
+    redrawall()
+
+
+def fntconsolas14():
+    """ Font menu selection to change the font and size"""
+    #  Added by Scott Hibbs KD4SIR 09Aug2022
+    global typeface, fontsize, fdfont
+    typeface = "Consolas"
+    fontsize = 14
+    fdfont = typeface, fontsize
+    redrawall()
+
+
+def redrawall():
+    """ Used by Font menu selections to redraw all the elements again """
+    #  Added by Scott Hibbs KD4SIR 09Aug2022
+    global fdfont
+    lblnet.config(font=fdfont)
+    lblnode.config(font=fdfont)
+    bandbuttons(f1)
+    bandset(band)
+    opmb.config(font=fdfont)
+    opmu.config(font=fdfont)
+    opds.config(font=fdfont)
+    opdsu.config(font=fdfont)
+    logmb.config(font=fdfont)
+    logmu.config(font=fdfont)
+    logds.config(font=fdfont)
+    logdsu.config(font=fdfont)
+    pwrmb.config(font=fdfont)
+    pwrmu.config(font=fdfont)
+    pwrnt.config(font=fdfont)
+    powlbl.config(font=fdfont)
+    powcb.config(font=fdfont)
+    redrawbutton.config(font=fdfont)
+    extrabutton.config(font=fdfont)
+    renew_title()
+    logwredraw()
+    topper()
 
 
 class SQDB:
@@ -1158,7 +1287,7 @@ def logwredraw():
     # Added by Scott Hibbs KD4SIR 31Jul2022
     global node
     a, dummy, dummy = qdb.cleanlog()
-    logw.config(state=NORMAL)
+    logw.config(state=NORMAL, font=fdfont)
     logw.delete(0.1, END)
     logw.insert(END, "\n")
     # i32.prlogln(i32) gives the line of the log output.
@@ -2167,11 +2296,11 @@ def bandset(b):
         txtbillb.insert(END, "err - no node\n")
     if operator == "":
         b = 'off'
-        txtbillb.insert(END, "err - no Contestant\n")
-    if b != 'off':
-        s = net.si.nod_on_band(b)
-        if s:
-            txtbillb.insert(END, " Already on [%s]: %s\n" % (b, s))
+        # txtbillb.insert(END, "err - no Contestant\n")
+    # if b != 'off':
+        # s = net.si.nod_on_band(b)
+        # if s:
+        # txtbillb.insert(END, " Already on [%s]: %s\n" % (b, s))
     txtbillb.see(END)
     if band != b:
         tmob = now()  # reset time on band
@@ -2889,6 +3018,7 @@ def setpwr(p4):
 
 def topper():
     """This will reset the display for input. Added Jul/01/2016 KD4SIR Scott Hibbs"""
+    txtbillb.config(font=fdfont)
     txtbillb.insert(END, "\n")
     txtbillb.insert(END, "-Call-Class-Sect- \n")
     txtbillb.see(END)  # added to always show the bottom line. Scott Hibbs KD4SIR 08Jul2022
@@ -4114,6 +4244,22 @@ for g in range(0, 2400, 100):
         x += 2400
     tzchart += "%04d %04d %04d %04d %04d %04d\n" % (g, p, m, c, e, x)
 resourcemenu.add_command(label="Time Conversion Chart", command=lambda: viewtextv(tzchart, "Time Conversion Chart"))
+
+# Font Menu
+fontmenu = Menu(menu, tearoff=0)
+menu.add_cascade(label="Font", menu=fontmenu)
+fontmenu.add_command(label="Consolas - slash zero 10pt", command=fntconsolas10)
+fontmenu.add_command(label="Consolas - 11pt", command=fntconsolas11)
+fontmenu.add_command(label="Consolas - 12pt", command=fntconsolas12)
+fontmenu.add_command(label="Consolas - 13pt", command=fntconsolas13)
+fontmenu.add_command(label="Consolas - 14pt", command=fntconsolas14)
+fontmenu.add_command(label="Courier - normal type 10pt", command=fntcourier10)
+fontmenu.add_command(label="Courier - 11pt", command=fntcourier11)
+fontmenu.add_command(label="Courier - 12pt", command=fntcourier12)
+fontmenu.add_command(label="Courier - 13pt", command=fntcourier13)
+fontmenu.add_command(label="Courier - 14pt", command=fntcourier14)
+
+# Help menu
 helpmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Help", menu=helpmenu)
 # Basically reworked the whole menu section. - Scott A Hibbs KD4SIR 7/25/13
@@ -4127,10 +4273,7 @@ helpmenu.add_command(label="The Manual", command=lambda: viewtextf('Manual.txt',
 helpmenu.add_command(label="Release Log", command=lambda: viewtextf('Releaselog.txt'))
 helpmenu.add_command(label="GitHub ReadMe", command=lambda: viewtextf('readme.txt'))
 helpmenu.add_command(label="About FDLOG_Enhanced", command=lambda: viewtextv(about, "About"))
-rdrawmenu = Menu(menu, tearoff=0)
-# possible future menu enhancement placeholder
-# menu.add_cascade(label="Redraw Log Window", menu=rdrawmenu)
-# rdrawmenu.add_command(label="Redraw Log Window", command=logwredraw)
+
 
 # Network Label moved to the top - Scott Hibbs KD4SIR 05Aug2022
 frn1 = Frame(root, bd=1)
@@ -4285,7 +4428,6 @@ print("To change system time, stop FDLog, change the time or zone, then restart"
 print()
 net.start()  # start threads
 renew_title()
-
 secName = {}
 readsections()
 updatect = 0

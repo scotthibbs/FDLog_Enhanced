@@ -12,12 +12,11 @@ The last Python 2.7 version is in the release section.
 
 The code here is now in Python 3 (should be stable) and working toward a 2023 stable release. I test on Linux and Windows with a 192.168.x.x network. This needs to be tested on different networks and with Macs.
 
-We have added 92 enhancements to the original FDLog so far.
+We have added 93 enhancements to the original FDLog so far.
 
 This is the top of the Release Log for FDLog_Enhanced
 The release log will have the present back to the beginning of FDLog in 1984. 
 
-Last updated 06Aug2022 Scott Hibbs KD4SIR
 scotthibbs at gmail.com (email ideas for enhancements/bugs)
 
 To Do and Ideas: 
@@ -38,13 +37,20 @@ To Do and Ideas:
 	  (currently dupe checking is at entry - not on fills)
 	* Need to rewrite all the documentation. It's everywhere...
 	* Should protect from Contestant being on multiple nodes (can't operate two radios at a time) 	
-	* Make font size a setting before Tkinker loads? 10,12,14 pt font. 
+
 	
 	Linux to do list: 
 		Off buttons keep the red background color when not selected, should turn grey
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
 
+
+
+2022_Beta 3.1.1 09Aug2022   
+    Font update
+
+ 93 Added a "Font" menu that will redraw the program in Courier or Consolas (shlash zero) fonts with sizes between 10-14. 
+ Needs testing on Linux and Mac - Scott Hibbs KD4SIR   
 
 2022_Beta 3.1.0 06Aug2022   
 	Major update and rearrangement of the GUI
