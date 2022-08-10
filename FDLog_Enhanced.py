@@ -16,16 +16,16 @@ from tkinter import END, NORMAL, DISABLED, Toplevel, Frame, Label, Entry, Button
     W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
     Checkbutton, RAISED, IntVar
 
-#  Current version 2022_Beta 3.1.1 09Aug2022 (font update)
+#  Current version 2022_Beta 3.1.2 10Aug2022 (inactivity updtate)
 
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
 
-#  Main program starts about line 3752
+#  Main program starts about line 4040
 
-#  all history moved to readme.md
+#  all history moved to release.txt file
 
-prog = 'FDLog_Enhanced v2022_Beta 3.1.1 09Aug2022\n\n' \
+prog = 'FDLog_Enhanced v2022_Beta 3.1.2 10Aug2022\n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2023. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
@@ -855,13 +855,11 @@ class QsoDb:
 
     def postnewinfo(self, time2, call4, bandmod, report):
         """post new locally generated info"""
-        # s = self.new(node)
-        #        s.date,s.call,s.band,s.rept,s.oper,s.logr,s.powr =
-        #            time,call,bandmod,report,exin(operator),exin(logger),power
-        # s.seq = -1
+        # Added tmob so that we can count time inactive - Scott Hibbs KD4SIR 09Aug2022
+        global tmob
+        tmob = now()
         return self.postnew(time2, call4, bandmod, report, exin(operator),
                             exin(logger), power)
-        # s.dispatch('user') # removed in 152i
 
     def postnew(self, time3, call5, bandmod, report, oper, logr, powr):
         """post new locally generated info"""
@@ -1848,7 +1846,7 @@ class GlobalDb:
 def loadglob():
     """load persistent local config to global vars from file"""
     # updated from 152i
-    global globDb, node, operator, logger, power, tdwin, debug, authk
+    global globDb, node, operator, logger, power, tdwin, debug, authk, kick
     node = globDb.get('node', '')
     operator = globDb.get('operator', '')
     logger = globDb.get('logger', '')
@@ -1856,6 +1854,7 @@ def loadglob():
     authk = globDb.get('authk', 'tst')
     tdwin = int(globDb.get('tdwin', 5))  # 152i changed from 10 to 5
     debug = int(globDb.get('debug', 0))
+    kick = globDb.get('kick', "10")
     #  timeok = int(globDb.get('timeok', 0))
     NetworkSync.rem_host = globDb.get('remip', '0.0.0.0')
     if debug:
@@ -1871,6 +1870,7 @@ def saveglob():
     globDb.put('authk', authk)
     globDb.put('tdwin', tdwin)
     globDb.put('debug', debug)
+    globDb.put('kick', kick)
     #  globDb.put('timeok', timeok)
     #    fd = file(globf,"w")
     #    fd.write("|%s|%s|%s|%s|%s|%s|%s|"%(node,operator,logger,power,\
@@ -2338,30 +2338,30 @@ class NewParticipantDialog:
         fr1 = Frame(s.t)
         fr1.grid(row=0, column=0)
         # Moved the Initials below the name. It was awkward to ask for initials first. - Scott Hibbs 18Jun2022
-        Label(fr1, text='Name', font=fdbfont).grid(row=0, column=0, sticky=W)
-        s.name = Entry(fr1, width=20, font=fdbfont)
+        Label(fr1, text='Name', font=fdfont).grid(row=0, column=0, sticky=W)
+        s.name = Entry(fr1, width=20, font=fdfont)
         s.name.grid(row=0, column=1, sticky=W)
         s.name.focus()
-        Label(fr1, text='Initials   ', font=fdbfont).grid(row=1, column=0, sticky=W)
-        s.initials = Entry(fr1, width=3, font=fdbfont, validate='focusout', validatecommand=s.lookup)
+        Label(fr1, text='Initials   ', font=fdfont).grid(row=1, column=0, sticky=W)
+        s.initials = Entry(fr1, width=3, font=fdfont, validate='focusout', validatecommand=s.lookup)
         s.initials.grid(row=1, column=1, sticky=W)
-        Label(fr1, text='Call', font=fdbfont).grid(row=2, column=0, sticky=W)
-        s.call = Entry(fr1, width=6, font=fdbfont)
+        Label(fr1, text='Call', font=fdfont).grid(row=2, column=0, sticky=W)
+        s.call = Entry(fr1, width=6, font=fdfont)
         s.call.grid(row=2, column=1, sticky=W)
-        Label(fr1, text='Age', font=fdbfont).grid(row=3, column=0, sticky=W)
-        s.age = Entry(fr1, width=2, font=fdbfont)
+        Label(fr1, text='Age', font=fdfont).grid(row=3, column=0, sticky=W)
+        s.age = Entry(fr1, width=2, font=fdfont)
         s.age.grid(row=3, column=1, sticky=W)
-        Label(fr1, text='Visitor Title', font=fdbfont).grid(row=4, column=0, sticky=W)
-        s.vist = Entry(fr1, width=20, font=fdbfont)
+        Label(fr1, text='Visitor Title', font=fdfont).grid(row=4, column=0, sticky=W)
+        s.vist = Entry(fr1, width=20, font=fdfont)
         s.vist.grid(row=4, column=1, sticky=W)
         fr2 = Frame(s.t)
         fr2.grid(row=1, column=0, sticky=EW, pady=3)
         fr2.columnconfigure(0, weight=1)
         # Added Save label - Curtis E. Mills WE7U 25Jun2019
-        Label(fr2, text='Save = <Enter>', font=fdbfont, foreground='red').grid(row=3, column=0, sticky=W)
-        # Button(fr2, text='Save', font=fdbfont, command=s.applybtn) .grid(row=3, column=1, sticky=EW, padx=3)
+        Label(fr2, text='Save = <Enter>', font=fdfont, foreground='red').grid(row=3, column=0, sticky=W)
+        # Button(fr2, text='Save', font=fdfont, command=s.applybtn) .grid(row=3, column=1, sticky=EW, padx=3)
         # Button renamed to Dismiss - Curtis E. Mills WE7U 25Jun2019
-        Button(fr2, text='Dismiss', font=fdbfont, command=s.quitbtn).grid(row=3, column=1, sticky=EW, padx=3)
+        Button(fr2, text='Dismiss', font=fdfont, command=s.quitbtn).grid(row=3, column=1, sticky=EW, padx=3)
         # Bound enter key to save entries - Scott Hibbs KD4SIR Mar/30/2017
         s.t.bind('<Return>', lambda event: s.applybtn)
 
@@ -2487,7 +2487,6 @@ def renew_title():
     #            (call12, clas, sec, node, h, m9, t[-6:-4], t[-4:-2], t[2:4], t[4:6], port_base))
     root.title('  FDLog_Enhanced      %s %s %s      Current Time %s:%s UTC %s/%s' %
                (call12, clas, sec, t[-6:-4], t[-4:-2], t[2:4], t[4:6]))
-
     # Adding a lbltimeonband that needs updated with the title. - Scott Hibbs KD4SIR 06Aug2022
     # lbltimeonband.config(text=" Time on Band: %d:%02d " % (h, m9), font=fdfont, foreground='blue',
     #                      background='light grey')
@@ -2498,12 +2497,17 @@ def renew_title():
 def timeonband(h, m9):
     """This sets the color of the lbltimeonband"""
     # Added by Scott Hibbs KD4SIR 06Aug2022
+    global acttime
     if band == "off":
-        lbltimeonband.config(text=" Time Away:    %d:%02d " % (h, m9), font=fdfont, foreground='blue',
+        lbltimeonband.config(text=" Time Away: %d:%02d " % (h, m9), font=fdfont, foreground='blue',
                              background='red')
+        acttime = m9
+        #  print("Act time: %s" % acttime)
     else:
-        lbltimeonband.config(text=" Time on Band: %d:%02d " % (h, m9), font=fdfont, foreground='blue',
+        lbltimeonband.config(text=" Inactive:  %d:%02d " % (h, m9), font=fdfont, foreground='blue',
                              background='light grey')
+        acttime = m9
+        #  print("Act time: %s" % acttime)
 
 
 def setnode(new):
@@ -2513,9 +2517,9 @@ def setnode(new):
     node = str.lower(new)
     qdb.redup()
     renew_title()
+    # Added so the new lblnode could be updated. - Scott Hibbs KD4SIR Mar/28/2017
     lblnode.config(text=" My Node: %s Port: %s" % (node, port_base), font=fdfont, foreground='blue',
                    background='light grey')
-    # Had to add the above line so that the new lblnode could be updated. - Scott Hibbs KD4SIR Mar/28/2017
 
 
 def applyprop():
@@ -2542,16 +2546,16 @@ def pdiag(label, value, valid_re, wid):
     """property dialog box"""
     cf['p'] = Toplevel(root)
     cf['p'].transient(root)
-    Label(cf['p'], text=label, font=fdbfont).grid(sticky=E, pady=20)
+    Label(cf['p'], text=label, font=fdfont).grid(sticky=E, pady=20)
     if label == 'AuthKey':
-        cf['e'] = Entry(cf['p'], width=wid, font=fdbfont, show='*')
+        cf['e'] = Entry(cf['p'], width=wid, font=fdfont, show='*')
     else:
-        cf['e'] = Entry(cf['p'], width=wid, font=fdbfont)
+        cf['e'] = Entry(cf['p'], width=wid, font=fdfont)
     cf['e'].grid(row=0, column=1, sticky=W)
     cf['e'].insert(END, value)
-    Button(cf['p'], text="Apply", command=applyprop, font=fdbfont) \
+    Button(cf['p'], text="Apply", command=applyprop, font=fdfont) \
         .grid(sticky=W, padx=20)
-    Button(cf['p'], text="Cancel", command=cf['p'].destroy, font=fdbfont) \
+    Button(cf['p'], text="Cancel", command=cf['p'].destroy, font=fdfont) \
         .grid(padx=20, pady=20, row=1, column=1, sticky=E)
     cf['vre'] = valid_re
     cf['lab'] = label
@@ -2854,6 +2858,26 @@ def rnddig():
     return chr(random.randrange(ord('0'), ord('9') + 1))
 
 
+def autoksetter(n):
+    """ This is the minutes set before autokicker activates"""
+    global kick
+    kick = n
+    globDb.put('kick', n)
+    qdb.globalshare('kick', n)  # global to db
+
+
+def autokicker():
+    """ This kicks band to off for inactivity - checked every 10 seconds"""
+    global kick, acttime
+    if band != "off":
+        digkick = int(kick)
+        if digkick != 0:
+            if digkick < acttime:
+                bandset("off")
+                txtbillb.insert(END, "\n ~~~~~ Kicked off band for inactivity ~~~~~")
+                topper()
+
+
 def testqgen(n):
     # Scott A Hibbs KD4SIR 07/25/2013
     # added if authk protection so that .testqgen only operates with a 'tst' database.
@@ -2880,6 +2904,7 @@ def testcmd(name8, rex, _):
         value = m10.group(1)
         txtbillb.insert(END, "\n%s set to %s\n" % (name8, value))
         kbuf = ""
+        topper()
     return value, default != value
 
 
@@ -3092,7 +3117,7 @@ def readsections():
 def proc_key(ch):
     """process keystroke"""
     #  Changes need to be made in proc_key(ch) and pasteinterpreter()
-    global stat, kbuf, power, operator, logger, debug, band, node, suffix, tdwin, goBack
+    global stat, kbuf, power, operator, logger, debug, band, node, suffix, tdwin, goBack, kick
     testq = 0
     if ch == '?' and (kbuf == "" or kbuf[0] != '#'):  # ? for help
         mhelp()
@@ -3119,6 +3144,7 @@ def proc_key(ch):
                 .off               change band to off
                 .pow <dddn>        power level in integer watts (suffix n for natural)
                 .node <call-n>     set id of this log node
+                .kick <n>          minutes to kick inactivity
                 .testq <n>         generate n test qsos (only in test mode)
                 .tdwin <sec>       display node bcasts exceeding this time skew
                 .st                this station status
@@ -3155,7 +3181,29 @@ def proc_key(ch):
         renew_title()
         m12 = re.match(r"[.]set ([a-z\d]{3,6}) (.*)$", kbuf)
         if m12:
-            name12, val = m12.group(1, 2)
+            name12, val = m12.group(1, 2)  # command and number
+            # Added time out for inactivity - Scott Hibbs KD4SIR 10Aug2022
+            if name12 == "kick":
+                autoksetter(val)
+                kbuf = ""
+                topper()
+                return
+            # Added gentle reminder not to use .set for these commands - Scott Hibbs KD4SIR 10Aug2022
+            if name12 == "debug":
+                txtbillb.insert(END, "\n Don't use .set - type .debug instead.\n")
+                kbuf = ""
+                topper()
+                return
+            if name12 == "tdwin":
+                txtbillb.insert(END, "\n Don't use .set - type .tdwin instead.\n")
+                kbuf = ""
+                topper()
+                return
+            if name12 == "testq":
+                txtbillb.insert(END, "\n Don't use .set - type .testq instead.\n")
+                kbuf = ""
+                topper()
+                return
             r = gd.setv(name12, val, now())
             if r:
                 txtbillb.insert(END, "\n%s\n" % r)
@@ -3164,6 +3212,7 @@ def proc_key(ch):
                 qdb.globalshare(name12, val)  # global to db
             kbuf = ""
             renew_title()
+            topper()
             return
         m12 = re.match(r"[.]band (((160|80|40|20|15|10|6|2|220|440|900|1200|sat)[cdp])|off)", kbuf)
         if m12:
@@ -3767,58 +3816,58 @@ class EditDialog(Toplevel):
         Toplevel.destroy(self)  # avoid showing as separate gui to avoid pycharm error above. :)
         self.crazytxt = "Edit Log Entry"
         self.crazyclr = "light grey"
-        self.crazylbl = tl = Label(top, text=self.crazytxt, font=fdbfont, bg=self.crazyclr, relief=RAISED)
-        # tl = Label(top, text='Edit Log Entry', font=fdbfont, bg='light grey', relief=RAISED)
+        self.crazylbl = tl = Label(top, text=self.crazytxt, font=fdfont, bg=self.crazyclr, relief=RAISED)
+        # tl = Label(top, text='Edit Log Entry', font=fdfont, bg='light grey', relief=RAISED)
         tl.grid(row=0, columnspan=2, sticky=EW)
         tl.grid_columnconfigure(0, weight=1)
-        Label(top, text='Date', font=fdbfont).grid(row=1, sticky=W)
-        # Label(top,text='Time',font=fdbfont).grid(row=2,sticky=W)
-        Label(top, text='Band', font=fdbfont).grid(row=3, sticky=W)
-        # Label(top,text='Mode',font=fdbfont).grid(row=4,sticky=W)
-        Label(top, text='Call', font=fdbfont).grid(row=5, sticky=W)
-        Label(top, text='Report', font=fdbfont).grid(row=6, sticky=W)
-        Label(top, text='Power', font=fdbfont).grid(row=7, sticky=W)
-        # Label(top,text='Natural',font=fdbfont).grid(row=8,sticky=W)
-        Label(top, text='Contestant', font=fdbfont).grid(row=9, sticky=W)
-        Label(top, text='Logger', font=fdbfont).grid(row=10, sticky=W)
-        self.de = Entry(top, width=13, font=fdbfont)
+        Label(top, text='Date', font=fdfont).grid(row=1, sticky=W)
+        # Label(top,text='Time',font=fdfont).grid(row=2,sticky=W)
+        Label(top, text='Band', font=fdfont).grid(row=3, sticky=W)
+        # Label(top,text='Mode',font=fdfont).grid(row=4,sticky=W)
+        Label(top, text='Call', font=fdfont).grid(row=5, sticky=W)
+        Label(top, text='Report', font=fdfont).grid(row=6, sticky=W)
+        Label(top, text='Power', font=fdfont).grid(row=7, sticky=W)
+        # Label(top,text='Natural',font=fdfont).grid(row=8,sticky=W)
+        Label(top, text='Contestant', font=fdfont).grid(row=9, sticky=W)
+        Label(top, text='Logger', font=fdfont).grid(row=10, sticky=W)
+        self.de = Entry(top, width=13, font=fdfont)
         self.de.grid(row=1, column=1, sticky=W, padx=3, pady=2)
         self.de.insert(0, qdb.byid[s].date)
         self.chodate = qdb.byid[s].date
-        self.be = Entry(top, width=5, font=fdbfont)
+        self.be = Entry(top, width=5, font=fdfont)
         self.be.grid(row=3, column=1, sticky=W, padx=3, pady=2)
         # self.be.config(bg='gold') # test yes works
         self.be.insert(0, qdb.byid[s].band)
         self.choband = qdb.byid[s].band
-        self.ce = Entry(top, width=11, font=fdbfont)
+        self.ce = Entry(top, width=11, font=fdfont)
         self.ce.grid(row=5, column=1, sticky=W, padx=3, pady=2)
         self.ce.insert(0, qdb.byid[s].call)
         self.chocall = qdb.byid[s].call
-        self.re = Entry(top, width=24, font=fdbfont)
+        self.re = Entry(top, width=24, font=fdfont)
         self.re.grid(row=6, column=1, sticky=W, padx=3, pady=2)
         self.re.insert(0, qdb.byid[s].rept)
         self.chorept = qdb.byid[s].rept
-        self.pe = Entry(top, width=5, font=fdbfont)
+        self.pe = Entry(top, width=5, font=fdfont)
         self.pe.grid(row=7, column=1, sticky=W, padx=3, pady=2)
         self.pe.insert(0, qdb.byid[s].powr)
         self.chopowr = qdb.byid[s].powr
-        self.oe = Entry(top, width=3, font=fdbfont)
+        self.oe = Entry(top, width=3, font=fdfont)
         self.oe.grid(row=9, column=1, sticky=W, padx=3, pady=2)
         self.oe.insert(0, qdb.byid[s].oper)
         self.chooper = qdb.byid[s].oper
-        self.le = Entry(top, width=3, font=fdbfont)
+        self.le = Entry(top, width=3, font=fdfont)
         self.le.grid(row=10, column=1, sticky=W, padx=3, pady=2)
         self.le.insert(0, qdb.byid[s].logr)
         self.chologr = qdb.byid[s].logr
         bf = Frame(top)
         bf.grid(row=11, columnspan=2, sticky=EW, pady=2)
         bf.columnconfigure(0, weight=1)
-        db = Button(bf, text=' Delete ', font=fdbfont, command=self.dele)
+        db = Button(bf, text=' Delete ', font=fdfont, command=self.dele)
         db.grid(row=1, sticky=EW, padx=3)
-        sb = Button(bf, text=' Save ', font=fdbfont, command=self.submit)
+        sb = Button(bf, text=' Save ', font=fdfont, command=self.submit)
         sb.grid(row=1, column=1, sticky=EW, padx=3)
         # Button renamed to Dismiss - Curtis E. Mills WE7U 25Jun2019
-        qb = Button(bf, text=' Dismiss ', font=fdbfont, command=self.quitb)
+        qb = Button(bf, text=' Dismiss ', font=fdfont, command=self.quitb)
         qb.grid(row=1, column=2, sticky=EW, padx=3)
         # self.wait_window(top)
 
@@ -3979,6 +4028,7 @@ def update():
     # if (updatect % 5) == 0:         # 5 sec
     # net.bcast_now()
     if (updatect % 10) == 0:  # 10 sec
+        autokicker()  # this kicks user off band for inactivity - Scott Hibbs KD4SIR 10Aug2022
         updateqct()  # this updates rcv packet fail
         renew_title()  # this sends status broadcast
     if (updatect % 30) == 0:  # 30 sec
@@ -3991,15 +4041,21 @@ def update():
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
 version = "v23b3"
-fontsize = 10
-fontinterval = 2
+fontsize = 12
+# fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
 fdfont = (typeface, fontsize)  # regular fixed width font
-fdmfont = (typeface, fontsize + fontinterval)  # medium  fixed width font
-fdbfont = (typeface, fontsize + fontinterval * 2)  # large   fixed width font
+# fdfont = (typeface, fontsize + fontinterval)  # medium  fixed width font
+# fdfont = (typeface, fontsize + fontinterval * 2)  # large   fixed width font
 fingerprint()
 mclock = ClockClass()
 gd = GlobalDataClass()
+bands = ('160', '80', '40', '20', '15', '10', '6', '2', '220', '440', '900', '1200', 'sat', 'off')
+modes = ('c', 'd', 'p')
+bandb = {}  # band button names
+newpart = NewParticipantDialog()
+cf = {}
+participants = {}
 # modified the sect setting regex to accept both lower and upper case, added additional form fields
 # (also fixed 'from' to 'form') for wfd NOTE: set commands have a max length of 6! - Art Miller KC7SDA 2019
 for name, desc, default, okre, maxlen in (
@@ -4028,11 +4084,12 @@ for name, desc, default, okre, maxlen in (
         ('pscom', '0/1            using commercial power', '0', r'[0-1]$', 1),
         ('psbat', '0/1            using battery power', '0', r'[0-1]$', 1),
         ('psoth', '<text>         desc of other power', '', r'[A-Za-z\d.: -]{0,35}$', 35),
-        ('fdstrt', 'yymmdd.hhmm    FD start time (UTC)', '020108.1800', r'[\d.]{11}$', 11),
+        ('fdstrt', 'yymmdd.hhmm   FD start time (UTC)', '020108.1800', r'[\d.]{11}$', 11),
         ('fdend', 'yymmdd.hhmm    FD end time (UTC)', '990629.2100', r'[\d.]{11}$', 11),
-        ('tmast', '<text>         Time Master Node', '', r'[A-Za-z\d-]{0,8}$', 8)):
+        ('tmast', '<text>         Time Master Node', '', r'[A-Za-z\d-]{0,8}$', 8),
+        ('kick', '<n>             Time to kick inactivity', '0', r'\d{1,2}$', 2)):
     gd.new(name, desc, default, okre, maxlen)
-participants = {}
+
 # setup for phonetics printout  # Added by Scott Hibbs KD4SIR to get phonetics on bottom of gui?
 # d = {"a":"alpha ","b":"bravo ","c":"charlie ","d":"delta ","e":"echo ", \
 #     "f":"foxtrot ","g":"golf ","h":"hotel ","i":"india ","j":"juliett ", \
@@ -4048,13 +4105,6 @@ participants = {}
 #    if char in d:
 #        phocall = phocall.join(char)
 
-# band set buttons
-bands = ('160', '80', '40', '20', '15', '10', '6', '2', '220', '440', '900', '1200', 'sat', 'off')
-modes = ('c', 'd', 'p')
-bandb = {}  # band button handles
-newpart = NewParticipantDialog()
-# property dialogs
-cf = {}
 # setup persistent globals before GUI
 suffix = ""
 call = ""
@@ -4068,7 +4118,7 @@ node = ""
 authk = ""
 port_base = 7373
 tmob = now()  # time started on band in min
-tdwin = 10  # time diff window on displaying node clock diffs
+tdwin = 5  # time diff window on displaying node clock diffs
 showbc = 0  # show broadcasts
 debug = 0
 logdbf = "fdlog.fdd"  # persistent file copy of log database
@@ -4076,10 +4126,16 @@ logfile = "fdlog.log"  # printable log file (contest entry)
 globf = "fdlog.dat"  # persistent global file
 kbuf = ""  # keyboard line buffer
 goBack = ""  # needed to print the last line entered with up arrow - Scott Hibbs KD4SIR Jul/05/2018
-globDb = GlobalDb()
-loadglob()  # load persistent globals from file
 selected = ""  # selected is used for the mouse functions
 stat = 0
+kick = 0
+acttime = 0
+
+# Load globals after all these default values are set.
+globDb = GlobalDb()
+loadglob()  # load persistent globals from file
+
+
 print()
 if node == "":
     # Revised 4/19/2014 for 8 characters so the log lines up nicely. - Scott Hibbs KD4SIR
@@ -4359,7 +4415,7 @@ extrabutton = Button(f1b, text="Future Buttons Here", font=fdfont, relief='raise
 # lblport.grid(row=3, column=9, columnspan=1, sticky=NSEW)
 
 # log window
-logw = Text(root, takefocus=0, height=11, width=80, font=fdmfont,
+logw = Text(root, takefocus=0, height=11, width=80, font=fdfont,
             background='light grey', wrap=NONE, setgrid=True)
 scroll = Scrollbar(root, command=logw.yview, background='light grey')
 logw.config(yscrollcommand=scroll.set)
@@ -4371,7 +4427,7 @@ logw.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 logw.insert(END, "%s\n" % prog, "b")
 
 # Text Billboard - our entry window.
-txtbillb = Text(root, takefocus=1, height=10, width=80, font=fdmfont,
+txtbillb = Text(root, takefocus=1, height=10, width=80, font=fdfont,
                 wrap=NONE, setgrid=True, background='light grey')
 scrollt = Scrollbar(root, command=txtbillb.yview)
 txtbillb.config(yscrollcommand=scrollt.set)
@@ -4391,7 +4447,7 @@ txtbillb.focus_set()
 #     Add entry box for entering data
 # entqsl = Entry(f1c,font=fdfont,background='light grey')
 # entqsl.grid(row=4,column=0,sticky=NSEW)
-# txtentry = Text(f1c,takefocus=1,height=2,width=39,font=fdmfont,\
+# txtentry = Text(f1c,takefocus=1,height=2,width=39,font=fdfont,\
 # wrap=NONE,setgrid=1)
 # txtentry.grid(row=4,column=4,sticky=NSEW)
 # root.grid_rowconfigure(4,weight=1)
@@ -4399,7 +4455,7 @@ txtbillb.focus_set()
 # fth2lbl = Label(f1c,text="-\n<",font=fdfont,background='light grey')
 # fth2lbl.grid(row=4,column=3,sticky=NSEW)
 # Phonetics box
-# fthw2 = Text(f1c,takefocus=0,height=2,width=40,font=fdmfont,\
+# fthw2 = Text(f1c,takefocus=0,height=2,width=40,font=fdfont,\
 #            background='light grey',wrap=NONE,setgrid=1)
 # fthw2.config(cursor='arrow')
 # fthw2.grid(row=4,column=2,sticky=NSEW)
@@ -4454,8 +4510,8 @@ pwrnt.grid(row=2, column=7, sticky=NSEW)
 powlbl.grid(row=2, column=8, sticky=NSEW)
 powcb.grid(row=2, column=9, sticky=NSEW)
 # Grid for functionbuttons
-redrawbutton.grid(row=3, column=0, sticky=W)
-extrabutton.grid(row=3, column=1, sticky=W)
+redrawbutton.grid(row=3, column=0, sticky=NSEW)
+extrabutton.grid(row=3, column=1, sticky=NSEW)
 # Grid for log window
 root.grid_rowconfigure(2, weight=1)
 logw.grid(row=3, column=0, sticky=NSEW)
@@ -4463,7 +4519,7 @@ root.grid_columnconfigure(0, weight=1)
 # Grid for text billboard
 root.grid_rowconfigure(3, weight=1)
 txtbillb.grid(row=4, column=0, sticky=NSEW)
-scrollt.grid(row=4, column=1, sticky=NS)
+scrollt.grid(row=4, column=1, sticky=NSEW)
 
 
 #  Bindings

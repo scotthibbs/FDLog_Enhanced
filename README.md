@@ -12,11 +12,10 @@ The last Python 2.7 version is in the release section.
 
 The code here is now in Python 3 (should be stable) and working toward a 2023 stable release. I test on Linux and Windows with a 192.168.x.x network. This needs to be tested on different networks and with Macs.
 
-We have added 93 enhancements to the original FDLog so far.
-
 This is the top of the Release Log for FDLog_Enhanced
 The release log will have the present back to the beginning of FDLog in 1984. 
 
+We have added 94 enhancements to the original FDLog so far.
 scotthibbs at gmail.com (email ideas for enhancements/bugs)
 
 To Do and Ideas: 
@@ -26,7 +25,6 @@ To Do and Ideas:
 	* Add more scoring: 
 			complex gota points, youth, information table, official visitors, 
 			max 20 radios, power multipliers, educational activity... 
-	* option to auto time out nodes from the band select 15m/30m/45m/1hr
 	* Fix so reports another's last contact time - this now reports node last heard on network. 
 	* Change natural to battery? or add a battery button?
 	* Try showing all sections to the side - marking those worked.
@@ -38,6 +36,9 @@ To Do and Ideas:
 	* Need to rewrite all the documentation. It's everywhere...
 	* Should protect from Contestant being on multiple nodes (can't operate two radios at a time) 	
 
+	Bugs:
+		Mouse over bands (wof function) remembers previous bands.   
+		Inability to edit participants.
 	
 	Linux to do list: 
 		Off buttons keep the red background color when not selected, should turn grey
@@ -45,43 +46,46 @@ To Do and Ideas:
 		on my raspberry pi: read error in file readme.txt
 
 
+2022_Beta 3.1.2 10Aug2022   
+	Inactivity timer update
+	
+__ Timer label (#91) modified to show minutes of inactivity while on band.  
+94 Inactivity feature: ".set kick 30" command will now set thirty minutes to kick a user off the band without activity. The default is 10 minutes. Set to 0 to turn this feature off.  
+
 
 2022_Beta 3.1.1 09Aug2022   
     Font update
 
- 93 Added a "Font" menu that will redraw the program in Courier or Consolas (shlash zero) fonts with sizes between 10-14.      
-      Needs testing on Linux and Mac - Scott Hibbs KD4SIR   
+ 93 Added a "Font" menu that will redraw the program in Courier or Consolas (shlash zero) fonts with sizes between 10-14. 
+ Needs testing on Linux and Mac - Scott Hibbs KD4SIR   
 
 2022_Beta 3.1.0 06Aug2022   
 	Major update and rearrangement of the GUI
 
-__ Moved main program code to be more readable, grouped all the grids together.   
- 86 The log window will now reprint when it recieves a delete record from another node. - Scott Hibbs KD4SIR    
- 87 left arrow act like backspace instead of nothing. - Scott Hibbs KD4SIR    
- __ QST messages now allow upper case characters in them.     
- 88 Added an "All CW", "All Digital" and "All Phone" log choice in the logs menu - Scott Hibbs KD4SIR     
- 89 CW and Digital scores are now separated instead of adding together. - Scott Hibbs KD4SIR     
- 90 Moved the network status label (enhancement #3) and node id under the menu and above the band selection.     
- Also put the port number with the node id - Scott Hibbs KD4SIR  
- 91 Timer label added showing "Time Away" (red) if band is off or "Time on Band" (grey). Also cleaned up the title to program name,      
-     class report and section, and current time. - Scott Hibbs KD4SIR  
- __  Cleaned up the Contestant and Logger label to just show the initials and name - Scott Hibbs KD4SIR    
- __  tweaked enhancements 8, 9, and 10 (individual scores) to be more readable.     
- 92 Added a row to the GUI for function buttons like redraw log window etc.    
- __  Enhancement 84 now has a button in the "function button" row to redraw the log window instead of a menu.    
+__ Moved main program code to be more readable, grouped all the grids together.  
+ 86 The log window will now reprint when it recieves a delete record from another node. - Scott Hibbs KD4SIR   
+ 87 left arrow act like backspace instead of nothing. - Scott Hibbs KD4SIR
+__ QST messages now allow upper case characters in them.  
+ 88 Added an "All CW", "All Digital" and "All Phone" log choice in the logs menu - Scott Hibbs KD4SIR   
+ 89 CW and Digital scores are now separated instead of adding together. - Scott Hibbs KD4SIR  
+ 90 Moved the network status label (enhancement #3) and node id under the menu and above the band selection. Also put the port number with the node id - Scott Hibbs KD4SIR  
+ 91 Timer label added showing "Time Away" (red) if band is off or "Time on Band" (grey). Also cleaned up the title to program name, class report and section, and current time. - Scott Hibbs KD4SIR  
+__  Cleaned up the Contestant and Logger label to just show the initials and name - Scott Hibbs KD4SIR  
+__  tweaked enhancements 8, 9, and 10 (individual scores) to be more readable.   
+ 92 Added a row to the GUI for function buttons like redraw log window etc.  
+__  Enhancement 84 now has a button in the "function button" row to redraw the log window instead of a menu.
  
 
-2022_Beta 3.0.3 02Aug2022    
- 85 Previous contacts on another band/mode will now populate the report so the logger can edit and hit enter      
-      to log the call again. - Scott Hibbs kd4sir    
+2022_Beta 3.0.3 02Aug2022  
+ 85 Previous contacts on another band/mode will now populate the report as well so that no further typing is needed to log the call again.	- Scott Hibbs kd4sir  
 				
 2022_Beta 3.0.2 31Jul2022  
- __ Fixed the GlobalDb() being called twice.   
- __ Added all the staticmethod decorators that where necessary.    
- __ Removed all the power settings above 100w.     
- __ Fixed "After QSO edit display log prints all blue and not sorted."     
- __ Added def logwredraw() to reprint the log display window on command.     
- 84 Ability to reprint the log window with a clean log. A menu item for now, but will be a button later. - Scott Hibbs KD4SIR    
+__ Fixed the GlobalDb() being called twice.   
+__ Added all the staticmethod decorators that where necessary.  
+__ Removed all the power settings above 100w.   
+__ Fixed "After QSO edit display log prints all blue and not sorted."
+__ Added def logwredraw() to reprint the log display window on command.  
+ 84	Ability to reprint the log window with a clean log. A menu item for now, but will be a button later. - Scott Hibbs KD4SIR    
  
  2022_Beta 3.0.1 21Jul2022  
 __ Fixed edit/delete that became broken. Still needs to be sorted and have this reprint in the correct colors. (Currently all blue) -Scott
