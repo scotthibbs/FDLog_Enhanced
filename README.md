@@ -1,10 +1,10 @@
 # FDLog_Enhanced (Now Ported to Python 3)
 This is a complete Field Day group contest logging solution!
 Download this on all computers (Windows, Mac, Linux including Raspberry Pis) and start logging. 
-Visitors sign into the program and log because it is so simple.
-All computers have a copy of the database (distributed) and tracks operations so everyone 
+Visitors sign in and log because it is so simple. GOTA is integrated (separate dupes of course) on same network.
+All computers (even GOTA) have a copy of the database (distributed) and tracks operations so everyone 
 can see and co-operate. Tracks Dupes, shows previous contacts, see who is on which radio (node) 
-and which band, who is contesting and who is logging, how many contacts they have made etc. 
+and which band, who is contesting and who is logging. Displays number of contacts and how many log entries made. Has an inactivity timer and can auto log off a band to make it available for others. QST messages can be sent to all nodes and a lot more. 
 
 Log entry is just three simple things : KD4SIR 1D IN 
 
@@ -25,7 +25,6 @@ To Do and Ideas:
 	* Add more scoring: 
 			complex gota points, youth, information table, official visitors, 
 			max 20 radios, power multipliers, educational activity... 
-	* Fix so reports another's last contact time - this now reports node last heard on network. 
 	* Change natural to battery? or add a battery button?
 	* Try showing all sections to the side - marking those worked.
 	* Work on Phonetic helper for GOTA station
@@ -36,16 +35,21 @@ To Do and Ideas:
 	* Need to rewrite all the documentation. It's everywhere...
 	* Should protect from Contestant being on multiple nodes (can't operate two radios at a time) 	
 
-	Bugs:
-		Mouse over bands (wof function) remembers previous bands.   
-		Inability to edit participants.
+	Bugs:  
+		Inability to edit participants. (major)
 	
 	Linux to do list: 
 		Off buttons keep the red background color when not selected, should turn grey
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
 
-
+2022_Beta 3.1.3 13Aug2022    
+	Mouse over better update
+	
+__ Bug fix: Mouse over bands (wof function) erronously remembered all previous bands. (minor) -KD4SIR     
+__ Mouse over, enhancement #6 and 34, now shows the node on the band/mode instead of all of them. -KD4SIR   
+__ fixed bug to reject 0 power contacts from getting into the log (python 2 to 3 fix) - KD4SIR   
+   
 2022_Beta 3.1.2 10Aug2022   
 	Inactivity timer update
 	

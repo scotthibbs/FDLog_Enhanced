@@ -16,16 +16,15 @@ from tkinter import END, NORMAL, DISABLED, Toplevel, Frame, Label, Entry, Button
     W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
     Checkbutton, RAISED, IntVar
 
-#  Current version 2022_Beta 3.1.2 10Aug2022 (inactivity updtate)
+#  Current version 2022_Beta 3.1.3 13Aug2022 (Mouse over better)
 
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
-
 
 #  Main program starts about line 4040
 
 #  all history moved to release.txt file
 
-prog = 'FDLog_Enhanced v2022_Beta 3.1.2 10Aug2022\n\n' \
+prog = 'FDLog_Enhanced v2022_Beta 3.1.3 13Aug2022\n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2023. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
@@ -1170,12 +1169,12 @@ class QsoDb:
             somelocallist6.append(i12)
             dummy, dummy, dcall, dummy, dummy = str.split(i12, ', ')
             if dcall == xcall:
-                # to debug: print ("%s dcall matches %s xcall" % (dcall, xcall))
+                # to debug: print("%s dcall matches %s xcall" % (dcall, xcall))
                 if gd.getv('contst').upper() == "VHF":
                     return xcall  # vhf contest
                 return call9  # field day
             if dcall == call9:
-                # to debug: print ("%s dcall matches %s call" % (dcall, call))
+                # to debug: print("%s dcall matches %s call" % (dcall, call))
                 if gd.getv('contst').upper() == "VHF":
                     return xcall  # vhf contest
                 return call9  # field day
@@ -1300,24 +1299,24 @@ def logwredraw():
     logw.see(END)
 
 
-def logwredrawminus():
-    """redraw the logw window with only valid log entries minus QSTs"""
-    # Added by Scott Hibbs KD4SIR 31Jul2022
-    global node
-    a, dummy, dummy = qdb.cleanlog()
-    logw.config(state=NORMAL)
-    logw.delete(0.1, END)
-    logw.insert(END, "\n")
-    # i32.prlogln(i32) gives the line of the log output.
-    for i32 in list(a.values()):
-        if node in i32.prlogln(i32):
-            logw.insert(END, i32.prlogln(i32), "b")
-            logw.insert(END, "\n")
-        else:
-            logw.insert(END, i32.prlogln(i32))
-            logw.insert(END, "\n")
-    logw.config(state=DISABLED)
-    logw.see(END)
+# def logwredrawminus():
+#     """redraw the logw window with only valid log entries minus QSTs"""
+#     # Added by Scott Hibbs KD4SIR 31Jul2022
+#     global node
+#     a, dummy, dummy = qdb.cleanlog()
+#     logw.config(state=NORMAL)
+#     logw.delete(0.1, END)
+#     logw.insert(END, "\n")
+#     # i32.prlogln(i32) gives the line of the log output.
+#     for i32 in list(a.values()):
+#         if node in i32.prlogln(i32):
+#             logw.insert(END, i32.prlogln(i32), "b")
+#             logw.insert(END, "\n")
+#         else:
+#             logw.insert(END, i32.prlogln(i32))
+#             logw.insert(END, "\n")
+#     logw.config(state=DISABLED)
+#     logw.see(END)
 
 
 class NodeInfoClass:
@@ -2518,7 +2517,7 @@ def setnode(new):
     qdb.redup()
     renew_title()
     # Added so the new lblnode could be updated. - Scott Hibbs KD4SIR Mar/28/2017
-    lblnode.config(text=" My Node: %s Port: %s" % (node, port_base), font=fdfont, foreground='blue',
+    lblnode.config(text=" My Node: %s Port: %s " % (node, port_base), font=fdfont, foreground='blue',
                    background='light grey')
 
 
@@ -2641,66 +2640,26 @@ def viewwasrpt():
 
 def updatebb():
     """update band buttons"""
-    # Added Who's on which bands functionality with a mouse over event - KD4SIR Scott A Hibbs Oct/13/2013
-    # Tried and tried to get wof to return only one result for the mouse over. If you can, you're awesome! -Scott
-    # global wof
     r, cl, vh, go = net.si.nod_on_bands()
     anytext = "VHF "
-
-    def whosonfirst(_):
-        """ who's on which bands functionality with a mouse over event"""
-        # Cleaned up who's on band (with section of .ba report) - KD4SIR Scott Hibbs Mar/23/2017
-        # the '_' as an argument is to get rid of the pycharm error message.
-        d = {}
-        txtbillb.insert(END, "\n--node-- band opr lgr pwr  ----- last\n")
-        for t in list(net.si.nodinfo.values()):
-            dummy1, dummy1, age6 = d.get(t.nod, ('', '', 9999))
-            if age6 > t.age:
-                d[t.nod] = (t.bnd, t.msc, t.age)
-        for t in d:
-            txtbillb.insert(END, "%8s %4s %-18s %4s\n" % (t, d[t][0], d[t][1], d[t][2]))  # t.bnd,t.msc,t.age)
-        topper()
-        txtbillb.see(END)
-
-    def whosonsecond(_):
-        """ who's on which bands functionality with a mouse over event"""
-        # the '_' as an argument is to get rid of the pycharm error message.
-        # global wof
-        # wof = ""
-        # tkMessageBox.destroy
-
     for i27 in bands:
         for j4 in modes:
             bm3 = "%s%s" % (i27, j4)
             if i27 == 'off':
                 continue
-            #  bc = 'light grey'  #  not used
             sc = 'white'
-            n = len(r.get(bm3, ''))
-            # possible memory leak: recommended fix based on comment:
-            # "python and tkinter programming book pg 434: .bind(sequence, function, add)
-            # no need for lambda" - Art Miller KC7SDA
-            bandb[bm3].bind("<Enter>", None)
-            bandb[bm3].bind("<Leave>", None)
-            if n == 0:
+            n = len(r.get(bm3, ''))  # This is the number of nodes on same band/mode.
+            if n == 0:  # no one on this band/mode.
                 bc = 'light grey'
-                bandb[bm3].bind("<Enter>", None)
-                bandb[bm3].bind("<Leave>", None)
-            elif n == 1:
+            elif n == 1:  # only one on this band/mode.
                 bc = 'gold'
-                bandb[bm3].bind("<Enter>", whosonfirst)
-                bandb[bm3].bind("<Leave>", whosonsecond)
-            else:
+            else:  # more than one on this band/mode.
                 bc = 'dark orange'
                 sc = 'red'
-                bandb[bm3].bind("<Enter>", whosonfirst)
-                bandb[bm3].bind("<Leave>", whosonsecond)
             bandb[bm3].config(background=bc, selectcolor=sc)
-
     cltg = ival(gd.getv('class'))  # class target
     if cltg > 1:
         vhfree = 1  # handle free vhf xmttr
-        #  ts = cl - vhfree  # not used
         if vh == 0:
             ts = cl
         else:
@@ -2710,7 +2669,6 @@ def updatebb():
     else:
         vhfree = 0
         ts = cl
-    # ts = cl + max(0, vh-vhfree)  # total sta = class + excess vhf stations
     # Fixed VHF to reflect a free transmitter and warn if two vhf rigs are used. - Scott Hibbs KD4SIR 5/14/2014
     clc = 'gold'
     if ts == cltg:
@@ -2718,7 +2676,6 @@ def updatebb():
     if ts > cltg:
         clc = 'red'
     bandb['Class'].config(text='Class %s/%s' % (ts, cltg), background=clc)
-
     vhc = 'gold'
     if vh - vhfree == 0:
         vhc = 'pale green'  # for 1D Class correction KD4SIR
@@ -2730,7 +2687,6 @@ def updatebb():
         vhc = 'dark orange'  # 2 vhf is okay, only 1 is free...
         anytext = "VHF taking HF "
     bandb['VHF'].config(text='%s%s/%s' % (anytext, vh, vhfree), background=vhc)
-
     if cltg > 1:
         gotatg = 1
     else:
@@ -2827,12 +2783,12 @@ def bandbuttons(w):
                 bandb[bm4] = Radiobutton(master=w, text=bm4, font=fdfont, background='light grey', indicatoron=mac,
                                          variable=sv, value=bm4, selectcolor='red',
                                          command=lambda b03=bm4: (bandset(b03)))
-            else:
+            else:  # This creates all the buttons for band/mode.
                 bandb[bm4] = Radiobutton(master=w, text=bm4, font=fdfont, background='light grey', indicatoron=mac,
                                          variable=sv, value=bm4, selectcolor='red',
                                          command=lambda b04=bm4: (bandset(b04)))
+                buttonbinder(bm4)  # Added to have each button have a binding - Scott Hibbs KD4SIR 13Aug2022
             bandb[bm4].grid(row=b, column=a, sticky=NSEW)
-
             b += 1
         a += 1
     for i29, j5, dummy in (('Class', 0, 5),
@@ -2848,6 +2804,47 @@ def bandbuttons(w):
         bandb[i29] = Button(w, text=i29, font=fdfont)
         bandb[i29].grid(row=j5, column=a, sticky=NSEW)
     w.grid_columnconfigure(a, weight=1)
+
+
+def buttonbinder(bmz):
+    """ This adds the individual bindings for the band/mode buttons."""
+    # Added by Scott Hibbs KD4SIR 13Aug2022
+    bandb[bmz].bind("<Enter>", lambda event: whosonfirstyes(bmz), add='+')
+    bandb[bmz].bind("<Leave>", None, add='+')
+    # print("bmz is: ", bmz)
+
+
+def whosonfirstyes(naturally):
+    """ This displays the information for who is on which band/mode."""
+    # Added by Scott Hibbs KD4SIR 13Aug2022
+    # naturally is the label button the mouse is over.
+    d = {}
+    woflist = []
+    for t in list(net.si.nodinfo.values()):
+        dummy1, dummy1, age6 = d.get(t.nod, ('', '', 9999))
+        # print("age6 is " + str(age6))
+        # print("t.age is " + str(t.age))
+        if age6 > t.age:
+            if t.age < 25:
+                d[t.nod] = (t.bnd, t.msc, t.age)
+    for t in d:  # t is nodes: d is dictionary key: node (op log pwr), time.
+        # print("t is : ", t)
+        # print("d is : ", str(d))
+        ballgame = str(d)
+        ballgame = re.sub(r"[\[\]]", '', ballgame)
+        ballgame = ballgame.replace("'", "")
+        # print("ballgame is : ", ballgame)
+        if "off" in ballgame:
+            continue
+        else:
+            if naturally in ballgame:
+                woflist.append(t)
+    if woflist:
+        txtbillb.insert(END, "\n--node-- band opr lgr pwr  ----- last\n")
+        for what in woflist:
+            txtbillb.insert(END, "%8s %4s %-18s %4s\n" % (what, d[what][0], d[what][1], d[what][2]))
+        topper()
+    txtbillb.see(END)
 
 
 def rndlet():
@@ -2911,7 +2908,7 @@ def testcmd(name8, rex, _):
 def setoper(op):
     """set operator"""
     global operator
-    # print "setoper",op
+    # print("setoper", op)
     ini, name9, call14, age7, vist3 = str.split(op, ', ')
     operator = "%s: %s, %s, %s, %s" % (ini, name9, call14, age7, vist3)
     # Adding red to the display - KD4SIR
@@ -2968,8 +2965,8 @@ def ckpowr():
     pwr = ival(pwrnt.get())
     if pwr < 0:
         pwr = "0"
-    elif pwr > 1500:
-        pwr = "1500"
+    elif pwr > 100:
+        pwr = "100"
     pwrnt.delete(0, END)
     pwrnt.insert(END, pwr)
     if natv.get():
@@ -3345,12 +3342,14 @@ def proc_key(ch):
                     em = ''
                     if band == "off":
                         em += " Band "
-                    if power == 0:
+                    if power == "0":  # python 3 needs a str not a digit here
                         em += " Power "
                     if len(operator) < 2:
                         em += " Contestant "
                     if len(logger) < 2:
                         em += " Logger "
+                    print("em is ", em)
+                    print("power is ", power)
                     if em != '':
                         txtbillb.insert(END, "\n - WARNING: ( %s ) NOT SET" % em)
                         txtbillb.insert(END, "  Please try again\n")
@@ -3948,7 +3947,6 @@ class EditDialog(Toplevel):
             # print "the Contestant has changed."
             changer = 1
         self.oe.config(bg='white')
-        # if participants.has_key(t): # has_key deprecated here
         if t in participants:
             newopr = t
             # print newopr
@@ -3960,7 +3958,6 @@ class EditDialog(Toplevel):
             # print "the logger has changed."
             changer = 1
         self.le.config(bg='white')
-        # if participants.has_key(t): # has_key deprecated here
         if t in participants:
             newlogr = t
             # print newlogr
@@ -4087,7 +4084,7 @@ for name, desc, default, okre, maxlen in (
         ('fdstrt', 'yymmdd.hhmm   FD start time (UTC)', '020108.1800', r'[\d.]{11}$', 11),
         ('fdend', 'yymmdd.hhmm    FD end time (UTC)', '990629.2100', r'[\d.]{11}$', 11),
         ('tmast', '<text>         Time Master Node', '', r'[A-Za-z\d-]{0,8}$', 8),
-        ('kick', '<n>             Time to kick inactivity', '0', r'\d{1,2}$', 2)):
+        ('kick', '<n>            Time to kick inactivity', '0', r'\d{1,2}$', 2)):
     gd.new(name, desc, default, okre, maxlen)
 
 # setup for phonetics printout  # Added by Scott Hibbs KD4SIR to get phonetics on bottom of gui?
@@ -4128,7 +4125,7 @@ kbuf = ""  # keyboard line buffer
 goBack = ""  # needed to print the last line entered with up arrow - Scott Hibbs KD4SIR Jul/05/2018
 selected = ""  # selected is used for the mouse functions
 stat = 0
-kick = 0
+kick = 10  # This is the setting in minutes to kick off for inactivity
 acttime = 0
 
 # Load globals after all these default values are set.
@@ -4301,7 +4298,7 @@ for g in range(0, 2400, 100):
     tzchart += "%04d %04d %04d %04d %04d %04d\n" % (g, p, m, c, e, x)
 resourcemenu.add_command(label="Time Conversion Chart", command=lambda: viewtextv(tzchart, "Time Conversion Chart"))
 
-# Font Menu
+# Font Menu - Scott Hibbs KD4SIR 09Aug2022
 fontmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Font", menu=fontmenu)
 fontmenu.add_command(label="Consolas - slash zero 10pt", command=fntconsolas10)
@@ -4558,7 +4555,5 @@ exit(1)
 #
 #  add phonetic alphabet display (started: some code commented out) 2016 Field Day notes
 #
-#  Tried and tried to get wof (whoseonfirst) to return only the one value for the mouse over.
-#    I don't have the python skilz... If you can awesome!!! -Scott Mar/18/2017
 #
 # eof

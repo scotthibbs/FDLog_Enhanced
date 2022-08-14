@@ -12,7 +12,6 @@ To Do and Ideas:
 	* Add more scoring: 
 			complex gota points, youth, information table, official visitors, 
 			max 20 radios, power multipliers, educational activity... 
-	* Fix so reports another's last contact time - this now reports node last heard on network. 
 	* Change natural to battery? or add a battery button?
 	* Try showing all sections to the side - marking those worked.
 	* Work on Phonetic helper for GOTA station
@@ -23,8 +22,7 @@ To Do and Ideas:
 	* Need to rewrite all the documentation. It's everywhere...
 	* Should protect from Contestant being on multiple nodes (can't operate two radios at a time) 	
 
-	Bugs:
-		Mouse over bands (wof function) remembers previous bands. (minor)  
+	Bugs:  
 		Inability to edit participants. (major)
 	
 	Linux to do list: 
@@ -32,13 +30,20 @@ To Do and Ideas:
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
 
+2022_Beta 3.1.3 13Aug2022 
+	Mouse over better update
+	
+ + Bug fix: Mouse over bands (wof function) erronously remembered all previous bands. (minor) -KD4SIR
+ + Mouse over, enhancement #6 and 34, now shows the node on the band/mode instead of all of them. -KD4SIR
+ + fixed bug to reject 0 power contacts from getting into the log (python 2 to 3 fix) - KD4SIR
+ 
 
 2022_Beta 3.1.2 10Aug2022   
 	Inactivity timer update
 	
- + Timer label (#91) modified to show minutes of inactivity while on band.  
+ + Timer label (#91) modified to show minutes of inactivity while on band. -KD4SIR 
 94 Inactivity feature: ".set kick 30" command will now set thirty minutes to kick a user off the band without activity. 
-    The default is 10 minutes. Set to 0 to turn this feature off.  
+    The default is 10 minutes. Set to 0 to turn this feature off.  -KD4SIR
 
 2022_Beta 3.1.1 09Aug2022   
     Font update
