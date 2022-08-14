@@ -67,8 +67,8 @@ __ Timer label (#91) modified to show minutes of inactivity while on band.
 	Major update and rearrangement of the GUI
 
 __ Moved main program code to be more readable, grouped all the grids together.  
- 86 The log window will now reprint when it recieves a delete record from another node. - Scott Hibbs KD4SIR   
- 87 left arrow act like backspace instead of nothing. - Scott Hibbs KD4SIR
+ 86 The log window will now reprint when it recieves a delete record from another node. - Scott Hibbs KD4SIR     
+ 87 left arrow act like backspace instead of nothing. - Scott Hibbs KD4SIR      
 __ QST messages now allow upper case characters in them.  
  88 Added an "All CW", "All Digital" and "All Phone" log choice in the logs menu - Scott Hibbs KD4SIR   
  89 CW and Digital scores are now separated instead of adding together. - Scott Hibbs KD4SIR  
