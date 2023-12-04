@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced 
-We have added 94 enhancements to the original FDLog so far.
+We have added 99 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984. 
 
@@ -20,16 +20,25 @@ To Do and Ideas:
 	* Dupe check for requested fills - 2 UNconnected nodes can dupe and both count when connected. 
 	  (currently dupe checking is at entry - not on fills)
 	* Need to rewrite all the documentation. It's everywhere...
-	* Should protect from Contestant being on multiple nodes (can't operate two radios at a time) 	
-
-	Bugs:  
-		Inability to edit participants. (major)
 	
 	Linux to do list: 
-		Off buttons keep the red background color when not selected, should turn grey
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
+		
+2023_beta 4.0.0 03Dec2023 
+	NOT COMPATIBLE WITH PREVIOUS VERSIONS
+	Contestant Tracking - stable
+	
+ 95 fixed the ability to edit participants. Can't delete/edit initials by design. 
+ 96 Nodes send "user" packets which communicate the contestant, logger, and band.
+ 97 Contestants are now tracked and maintained by each node. 
+ 98 Nodes can't select a contestant that is currently working a node (current or another node).
+	(can't operate two radios, but can be control operator of two radios - aka the logger)
+ 99 Added a "Contestants Working" button that will show who is working at each node.
+ +  The off buttons keeping the red color when not selected is the nature of tkinter for linux. 
+	There is no fix for this. Bug removed.
 
+ 
 2022_Beta 3.1.3 13Aug2022 
 	Mouse over better update
 	
@@ -54,7 +63,7 @@ To Do and Ideas:
 2022_Beta 3.1.0 06Aug2022
 	Major update and rearrangement of the GUI
  +  Moved main program code to be more readable, grouped all the grids together.  
- 86 The log window will now reprint when it recieves a delete record from another node. - Scott Hibbs KD4SIR
+ 86 The log window will now reprint when it recieves a deleteq record from another node. - Scott Hibbs KD4SIR
  87 left arrow act like backspace instead of nothing. - Scott Hibbs KD4SIR
  +  QST messages now allow upper case characters in them.
  88 Added an "All CW", "All Digital" and "All Phone" log choice in the logs menu - Scott Hibbs KD4SIR
@@ -81,7 +90,7 @@ To Do and Ideas:
  84	Ability to reprint the log window with a clean log. A menu item for now, but will be a button later. - Scott Hibbs kd4sir		
 		
 2022_Beta 3.0.1 21Jul2022
-	Fixed edit/delete that became broken. Still needs to be sorted and have this reprint in the correct colors. (Currently all blue)
+	Fixed edit/deleteq that became broken. Still needs to be sorted and have this reprint in the correct colors. (Currently all blue)
 
 2022_Beta 3.0 21Jul2022
  83 Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, I have finished porting this to 
@@ -695,7 +704,7 @@ New for 2004
 	added .testq test qso generator.
 
 1.75  2002/04/14 02:21:54  akbiocca
-	fixed bug in delete, present in beta 3.
+	fixed bug in deleteq, present in beta 3.
 	added more .set commands.
 
 1.74  2002/04/13 20:32:11  akbiocca

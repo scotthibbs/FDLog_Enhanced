@@ -1,4 +1,4 @@
-# FDLog_Enhanced (Now Ported to Python 3)
+# FDLog_Enhanced (Python 3)
 This is a complete Field Day group contest logging solution!
 Download this on all computers (Windows, Mac, Linux including Raspberry Pis) and start logging. 
 Visitors sign in and log because it is so simple. GOTA is integrated (separate dupes of course) on same network.
@@ -10,13 +10,17 @@ Log entry is just three simple things : KD4SIR 1D IN
 
 The last Python 2.7 version is in the release section.   
 
-The code here is now in Python 3 (should be stable) and working toward a 2023 stable release. I test on Linux and Windows with a 192.168.x.x network. This needs to be tested on different networks and with Macs.
+The code here is Python3 (should be stable) and tested on Linux and Windows with a 192.168.x.x network. This needs to be tested on different networks and with Macs.
 
 This is the top of the Release Log for FDLog_Enhanced
 The release log will have the present back to the beginning of FDLog in 1984. 
 
-We have added 94 enhancements to the original FDLog so far.
-scotthibbs at gmail.com (email ideas for enhancements/bugs)
+Release Log for FDLog and FDLog_Enhanced 
+We have added 99 enhancements to the original FDLog so far.
+
+This release log has the present back to the beginning of FDLog in 1984. 
+
+Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
 To Do and Ideas: 
 		
@@ -33,15 +37,23 @@ To Do and Ideas:
 	* Dupe check for requested fills - 2 UNconnected nodes can dupe and both count when connected. 
 	  (currently dupe checking is at entry - not on fills)
 	* Need to rewrite all the documentation. It's everywhere...
-	* Should protect from Contestant being on multiple nodes (can't operate two radios at a time) 	
-
-	Bugs:  
-		Inability to edit participants. (major)
 	
 	Linux to do list: 
-		Off buttons keep the red background color when not selected, should turn grey
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
+		
+2023_beta 4.0.0 03Dec2023   
+	NOT COMPATIBLE WITH PREVIOUS VERSIONS  
+	Contestant Tracking - stable  
+	
+ 95 fixed the ability to edit participants. Can't delete/edit initials by design.      
+ 96 Nodes send "user" packets which communicate the contestant, logger, and band.   
+ 97 Contestants are now tracked and maintained by each node.    
+ 98 Nodes can't select a contestant that is currently working a node (current or another node).  
+(can't operate two radios, but can be control operator of two radios - aka the logger)   
+ 99 Added a "Contestants Working" button that will show who is working at each node.   
+__The off buttons keeping the red color when not selected is the nature of tkinter for linux.
+	There is no fix for this. Bug removed.  
 
 2022_Beta 3.1.3 13Aug2022    
 	Mouse over better update
@@ -67,8 +79,8 @@ __ Timer label (#91) modified to show minutes of inactivity while on band.
 	Major update and rearrangement of the GUI
 
 __ Moved main program code to be more readable, grouped all the grids together.  
- 86 The log window will now reprint when it recieves a delete record from another node. - Scott Hibbs KD4SIR     
- 87 left arrow act like backspace instead of nothing. - Scott Hibbs KD4SIR      
+ 86 The log window will now reprint when it recieves a deleteq record from another node. - Scott Hibbs KD4SIR   
+ 87 left arrow act like backspace instead of nothing. - Scott Hibbs KD4SIR
 __ QST messages now allow upper case characters in them.  
  88 Added an "All CW", "All Digital" and "All Phone" log choice in the logs menu - Scott Hibbs KD4SIR   
  89 CW and Digital scores are now separated instead of adding together. - Scott Hibbs KD4SIR  
@@ -92,7 +104,7 @@ __ Added def logwredraw() to reprint the log display window on command.
  84	Ability to reprint the log window with a clean log. A menu item for now, but will be a button later. - Scott Hibbs KD4SIR    
  
  2022_Beta 3.0.1 21Jul2022  
-__ Fixed edit/delete that became broken. Still needs to be sorted and have this reprint in the correct colors. (Currently all blue) -Scott
+__ Fixed edit/deleteq that became broken. Still needs to be sorted and have this reprint in the correct colors. (Currently all blue) -Scott
 
 2022_Beta 3.0 21Jul2022  
  83 Thanks to David and his work on B1QUAD/FDLog_Enhanced_python3, I have finished porting this to Python 3. - Scott Hibbs KD4SIR  

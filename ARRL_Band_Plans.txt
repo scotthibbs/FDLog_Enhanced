@@ -1,6 +1,6 @@
-[downloaded 18Jun2022 from http://www.arrl.org/band-plan. Saved with Unix EOL]
+[03Dec2023 downloaded from http://www.arrl.org/band-plan. Saved with Unix EOL]
 
-Band Plan 
+Band Plan
 A band plan refers to a voluntary division of a band to avoid interference between incompatible modes.
 
 Resources
@@ -626,15 +626,16 @@ From	To	Width	From	To	Width	MHz	(Note 1)	(Note 1)	Functional Use
 3410.000	3430.000	20.0	 	 	 	 	Analog & Digital, including Full Duplex	>1.0 MHz	Analog & Digital; paired with 3310.0-3330.0; 100 MHz Split
 3430.000	3439.000	9.0	 	 	 	 	Analog & Digital, including Full Duplex	0.1 - 1.0 MHz	Analog & Digital; paired with 3300.0-3309.0; 130 MHz Split
 3439.000	3445.800	6.8	 	 	 	 	Analog & Digital, including Full Duplex	0.1 - 1.0 MHz	Analog & Digital; paired with 3339.0-3345.8; 100 MHz Split
-3445.800	3452.500	6.7	 	 	 	 	 	 	Experimental
-3452.500	3455.000	2.5	 	 	 	 	Analog & Digital, including Full Duplex	0.05 - 0.2 MHz	Analog & Digital; paired with 3352.5-3355.0; 100 MHz Split
-3455.000	3455.500	0.5	 	 	 	 	 	100 kHz or less	Crossband linear translator (input or output)
-3455.500	3457.000	1.5	 	 	 	 	CW, SSB, NBFM, Digital	6 kHz or less	Terrestrial Weak Signal Band - Legacy (Note 2)
- 	 	 	 	 	 	3456.100	 	6 kHz or less	Weak Signal Terrestrial Calling Frequency
- 	 	 	3456.300	3457.000	0.1	 	CW, Digital	1 kHz or less	Propagation Beacons
-3457.000	3460.000	3.0	 	 	 	 	Analog & Digital, including Full Duplex	50 kHz or less	Analog & Digital; paired with 3357.0-3360.0; 100 MHz Split
-3460.000	3500.000	40.0	 	 	 	 	OFDM, others	22 MHz max.	Broadband Modes (Note 3)
- 	 	 	3460.000	3480.000	20.0	 	ATV	 	Amateur Television of all authorized modulation standards/formats at local option
+3445.800	3450.000	6.7	 	 	 	 	 	 	Experimental
+ 	 	 	 	 	 	 	 	 	 
+FCC announced that all Amateur Radio use of the band 3.45 - 3.5 GHz must cease effective April 14, 2022. See http://www.arrl.org/3-ghz-band for detailed history on recent challenges to the allocation.
+ 	 	 	 	 	 	 	 	 
+ 	 	 	 	 	 	 	 	 	 
+ 	 	 	 	 	 	 	 	 	 
+ 	 	 	 	 	 	 	 	 	 
+ 	 	 	 	 	 	 	 	 	 
+ 	 	 	 	 	 	 	 	 	 
+ 	 	 	 	 	 	 	 	 	 
 9 cm Band Plan Notes 
 
 Note 1 – Includes all other emission modes authorized in the 9 cm amateur band whose necessary bandwidth does not exceed the suggested bandwidths listed.

@@ -1,9 +1,18 @@
-# Checked: 2022 - Scott Hibbs KD4SIR
+# Updated: 03Dec2023 - Scott Hibbs KD4SIR
+# Source: https://contests.arrl.org/contestmultipliers.php?a=wve
 # Do not modify (no double spaces!). Read by program.
 # section-state-area-name
 #
 # ARRL/CANADIAN SECTION ABBREVIATIONS
 #
+CO CO 0 Colorado
+IA IA 0 Iowa
+KS KS 0 Kansas
+MN MN 0 Minnesota
+MO MO 0 Missouri
+NE NE 0 Nebraska
+ND ND 0 North Dakota
+SD SD 0 South Dakota
 CT CT 1 Connecticut
 EMA MA 1 Eastern Massachusetts
 ME ME 1 Maine
@@ -26,13 +35,13 @@ GA GA 4 Georgia
 KY KY 4 Kentucky
 NC NC 4 North Carolina
 NFL FL 4 Northern Florida
+PR -- 4 Puerto Rico
 SC SC 4 South Carolina
 SFL FL 4 Southern Florida
-WCF FL 4 West Central Florida
 TN TN 4 Tennessee
 VA VA 4 Virginia
-PR -- 4 Puerto Rico
 VI -- 4 Virgin Islands
+WCF FL 4 West Central Florida
 AR AR 5 Arkansas
 LA LA 5 Louisiana
 MS MS 5 Mississippi
@@ -44,13 +53,14 @@ WTX TX 5 West Texas
 EB CA 6 East Bay
 LAX CA 6 Los Angeles
 ORG CA 6 Orange
+PAC HI 6 Pacific
 SB CA 6 Santa Barbara
 SCV CA 6 Santa Clara Valley
 SDG CA 6 San Diego
 SF CA 6 San Francisco
 SJV CA 6 San Joaquin Valley
 SV CA 6 Sacramento Valley
-PAC HI 6 Pacific
+AK AK 7 Alaska
 AZ AZ 7 Arizona
 EWA WA 7 Eastern Washington
 ID ID 7 Idaho
@@ -60,35 +70,27 @@ OR OR 7 Oregon
 UT UT 7 Utah
 WWA WA 7 Western Washington
 WY WY 7 Wyoming
-AK AK 7 Alaska
 MI MI 8 Michigan
 OH OH 8 Ohio
 WV WV 8 West Virginia
 IL IL 9 Illinois
 IN IN 9 Indiana
 WI WI 9 Wisconsin
-CO CO 0 Colorado
-IA IA 0 Iowa
-KS KS 0 Kansas
-MN MN 0 Minnesota
-MO MO 0 Missouri
-NE NE 0 Nebraska
-ND ND 0 North Dakota
-SD SD 0 South Dakota
 #
-MAR -- C Maritime
+AB -- C Alberta
+BC -- C British Columbia
+GH -- C Ontario Golden Horseshoe
+MB -- C Manitoba
+NB -- C New Brunswick
 NL -- C Newfoundland/Labrador
-PE -- C Prince Edward Island
-QC -- C Quebec
+NS -- C Nova Scotia
 ONE -- C Ontario East
 ONN -- C Ontario North
 ONS -- C Ontario South
-GTA -- C Greater Toronto Area
-MB -- C Manitoba
+PE -- C Prince Edward Island
+QC -- C Quebec
 SK -- C Saskatchewan
-AB -- C Alberta
-BC -- C British Columbia
-NT -- C Northern northwest/Yukon/Nunavut
+TER -- C Territories
 #
 DX -- - Foreign
 #

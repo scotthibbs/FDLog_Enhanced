@@ -1,6 +1,6 @@
 Field Day Log Program Manual
 
-Last updated 21Jul2022 by Scott Hibbs KD4SIR
+Last updated 03Dec2023 by Scott Hibbs KD4SIR
 If you have any questions or suggestions for the program please email me. 
 
 Thanks for using the program,
@@ -26,7 +26,7 @@ In a Nutshell:
 
 SHORT HISTORY AND INTRODUCTION: 
 
-	This program is 39 years old!! 
+	This program is 40 years old!! 
 
 	Alan K Biocca W6AKB (Formerly WB6ZQZ) Wrote this in 1984 using small c 
 	and it was titled "WB6ZQZ's Field Day Logging Program". In 2002, Mr Biocca 
@@ -53,7 +53,7 @@ WHY LOVE FDLOG_ENHANCED?:
 	are on. Since the data is distributed, your contacts get sent to all the other users 
 	in real time. No one can dupe and non-dupe contacts are displayed as you log. You can 
 	send messages to all users. You can see how many contacts you have made, how many contacts
-	you have logged and see the combined phone and digital contacts for the group. It tracks 
+	you have logged and see the combined phone and digital and CW contacts for the group. It tracks 
 	who is the control operator (logger) for non-hams (as Contestant). The GOTA station log is 
 	maintained WITH the regular log without conflicting with dupes. It is simple to use. Really.
 
@@ -61,7 +61,7 @@ WHY LOVE FDLOG_ENHANCED?:
 	crash - like Zed is dead baby - and Field Day goes on. Add a new computer to 
 	the network and all the other computers will catch the new one up very quickly. 
 
-	Because it is Python 2.7, all you need is a PC - Linux, Mac, any Windoze, RaspberryPi - 
+	Because it is Python 3, all you need is a PC - Linux, Mac, any Windoze, RaspberryPi - 
 	we don't care - doesn't matter. 
 	
 	Oh... Did you notice that it is HALF THE SIZE of a one page PDF file? (the ARRL Band Chart)?
@@ -82,12 +82,12 @@ PROGRAM SETUP:
 	to on field day. Test it to make sure it works. And don't leave it home. 
 	I've had to buy cheap routers the morning of - I got a collection.
 	
-	You will need a copy of python 2.7 from python.org for windows, Mac, & Linux. 
+	You will need a copy of python 3 from python.org for windows, Mac, & Linux. 
 	Python because someone will not have python installed and you may be offline.
 	
 	With a USB flash drive:
 		Find a blank USB Flash Drive. You will need this program folder, and the python
-		2.7 install files on a on a flash drive. Once the USB flash drive is created, copy 
+		3 install files on a on a flash drive. Once the USB flash drive is created, copy 
 		the program folder to your desktop and install python or unzip the program as needed. 
 	Without a USB flash drive:
 		Have a zip and/or tar of the folder in the same folder as miniweb.py along with the
@@ -151,9 +151,24 @@ PROGRAM SETUP:
 USING THE PROGRAM:	
 	
 	The Contestant is the person using the radio. The Logger is the one using the
-	program. The Operator field caused my club to debate if the person was Control Operator. We made a version that required a license for the operator. The problem then, was that a ham & non-ham pair had no idea who operated the radio or logged since it could only be entered one way. The ham got credit for contacts while logging and the non-ham had no idea about the number they logged or contacted (added together). So the Radio Operator and Control Operator are different and confusing for this program. We changed the Operator name to Contestant.
+	program. The Operator field caused my club to debate if the person was 
+	Control Operator. We made a version that required a license for the operator. 
+	The problem then, was that a ham & non-ham pair had no idea who operated the 
+	radio or logged since it could only be entered one way. The ham got credit for 
+	contacts while logging and the non-ham had no idea about the number they 
+	logged or contacted (added together). So the Radio Operator and Control Operator
+	are different and confusing for this program. We changed the Operator name 
+	to Contestant.
 	
-	Non-hams are allowed and encouraged to operate with a Control Operator logging. This program has always tracked the logger. So the Operator field is renamed Contestant for the person at the radio. Thus, we can track the number of contacts or data entries logged, and keep accurate logs for everyone, even for non-hams. Hams can accurately know how many contacts they worked and who logged for them. They can also see if they logged themselves and who they logged for in turn. This maintains a score for contacts and a score for logging for each participant. The program will check for a Control Operator (license needed for Contestant or logger) before allowing a contact. - Scott Hibbs KD4SIR Mar/29/2017
+	Non-hams are allowed and encouraged to operate with a Control Operator logging.
+	This program has always tracked the logger. So the Operator field is renamed 
+	Contestant for the person at the radio. Thus, we can track the number of contacts 
+	or data entries logged, and keep accurate logs for everyone, even for non-hams. 
+	Hams can accurately know how many contacts they worked and who logged for them. 
+	They can also see if they logged themselves and who they logged for in turn. 
+	This maintains a score for contacts and a score for logging for each participant. 
+	The program will check for a Control Operator (license needed for Contestant or 
+	logger) before allowing a contact. - Scott Hibbs KD4SIR Mar/29/2017
 	
 	
 LOGGING LIKE A PRO: 
