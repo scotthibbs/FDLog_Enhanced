@@ -18,8 +18,6 @@ The release log will have the present back to the beginning of FDLog in 1984.
 Release Log for FDLog and FDLog_Enhanced 
 We have added 99 enhancements to the original FDLog so far.
 
-This release log has the present back to the beginning of FDLog in 1984. 
-
 Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
 To Do and Ideas: 
