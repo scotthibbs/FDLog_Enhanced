@@ -24,6 +24,16 @@ To Do and Ideas:
 		
 	* An Information Table node that will allow sign in, show our group score, 
 			the top 5 Contestors, the top 5 visitors, Worked All States, NTP server/client as time master etc.
+             Use plotly.express for this:
+	     	import plotly.express as px
+		fig = px.choropleth(df,
+		                    locations='state', 
+		                    locationmode="USA-states", 
+		                    scope="usa",
+		                    color='value',
+		                    color_continuous_scale="darkmint", 
+		                    title='Map'
+		                    )
 	* Add more scoring: 
 			complex gota points, youth, information table, official visitors, 
 			max 20 radios, power multipliers, educational activity... 
