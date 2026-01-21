@@ -14,19 +14,42 @@ In a Nutshell:
 	If you see red, select something.
 	Bands are vertical. Modes are horizontal.
 	The modes are (C)ode, (D)igital, and (P)hone.
-	-Call-Class-Sect- is separated by spaces. 
+	-Call-Class-Sect- is separated by spaces.
 	An example is kd4sir 1d ky <Enter>
 	Don't hit enter until after the contact is made.
 	Without "QSL - May I have another?" it didn't work.
 	Hit <Escape> to start over.
 	You can use the up arrow to retype the last contact.
-	You can now copy/past full entries. 
-	Type ? for help. 
+	You can now copy/past full entries.
+	Type ? for help.
+
+
+COMMAND-LINE OPTIONS:
+
+	You can run FDLog_Enhanced with command-line arguments to skip the
+	interactive prompts. This is useful for scripting and automation.
+
+	Usage: python FDLog_Enhanced.py [--node NAME] [--auth KEY]
+
+	Options:
+	  --node, -n    Station node name (7 chars, e.g., station1, station2, gota)
+	  --auth, -a    Authentication key (e.g., 24 for year 2024, or tst for testing)
+	  --help, -h    Show help message
+
+	Examples:
+	  python FDLog_Enhanced.py                        # Interactive mode
+	  python FDLog_Enhanced.py --node station1 --auth 24   # CLI mode
+	  python FDLog_Enhanced.py -n gota -a 24          # GOTA station (short form)
+
+	Notes:
+	- All nodes must use the same --auth key to communicate on the network
+	- Node names are padded to 8 characters with random letters for uniqueness
+	- If options are not provided, you will be prompted interactively 
 
 
 SHORT HISTORY AND INTRODUCTION: 
 
-	This program is 40 years old!! 
+	This program is over 40 years old!! 
 
 	Alan K Biocca W6AKB (Formerly WB6ZQZ) Wrote this in 1984 using small c 
 	and it was titled "WB6ZQZ's Field Day Logging Program". In 2002, Mr Biocca 
@@ -63,8 +86,6 @@ WHY LOVE FDLOG_ENHANCED?:
 
 	Because it is Python 3, all you need is a PC - Linux, Mac, any Windoze, RaspberryPi - 
 	we don't care - doesn't matter. 
-	
-	Oh... Did you notice that it is HALF THE SIZE of a one page PDF file? (the ARRL Band Chart)?
 	
 	If I didn't HAVE you when I said, "free", "Zed is dead", and "I really don't care what 
 	kind you have", maybe this program isn't for you. :)

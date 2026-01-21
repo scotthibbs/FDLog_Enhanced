@@ -1,79 +1,12 @@
 # FDLog_Enhanced (Python 3)
 This is a complete Field Day group contest logging solution!
-Download this on all computers (Windows, Mac, Linux including Raspberry Pis) and start logging.
+Download this on all computers (Windows, Mac, Linux including Raspberry Pis) and start logging. 
 Visitors sign in and log because it is so simple. GOTA is integrated (separate dupes of course) on same network.
-All computers (even GOTA) have a copy of the database (distributed) and tracks operations so everyone
-can see and co-operate. Tracks Dupes, shows previous contacts, see who is on which radio (node)
-and which band, who is contesting and who is logging. Displays number of contacts and how many log entries made. Has an inactivity timer and can auto log off a band to make it available for others. QST messages can be sent to all nodes and a lot more.
+All computers (even GOTA) have a copy of the database (distributed) and tracks operations so everyone 
+can see and co-operate. Tracks Dupes, shows previous contacts, see who is on which radio (node) 
+and which band, who is contesting and who is logging. Displays number of contacts and how many log entries made. Has an inactivity timer and can auto log off a band to make it available for others. QST messages can be sent to all nodes and a lot more. 
 
-Log entry is just three simple things : KD4SIR 1D IN
-
-## Quick Start
-
-```bash
-# Interactive mode (prompts for node name and auth key)
-python FDLog_Enhanced.py
-
-# Command-line mode (no prompts - useful for scripting/automation)
-python FDLog_Enhanced.py --node station1 --auth 24
-
-# GOTA station
-python FDLog_Enhanced.py --node gota --auth 24
-
-# Show help
-python FDLog_Enhanced.py --help
-```
-
-## Command-Line Options
-
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--node` | `-n` | Station node name (7 characters, e.g., `station1`, `station2`, `gota`) |
-| `--auth` | `-a` | Authentication key (use two-digit year for contests, e.g., `24` for 2024, or `tst` for testing) |
-| `--help` | `-h` | Show help message |
-
-**Notes:**
-- If `--node` is not provided and no saved node exists, you'll be prompted interactively
-- If `--auth` is not provided and no saved auth key exists, you'll be prompted interactively
-- All nodes on the same network must use the same `--auth` key to communicate
-- Node names are automatically padded to 8 characters with random letters for uniqueness
-
-## Installation
-
-**Option 1: Download Standalone Executable (Easiest)**
-- Download `FDLog_Enhanced.exe` (Windows) or `FDLog_Enhanced` (Mac/Linux) from Releases
-- No Python installation needed - just run it!
-
-**Option 2: Run from Source**
-```bash
-# Install Python 3.8+ from python.org
-# Install dependencies:
-pip install -r requirements.txt
-
-# Run:
-python FDLog_Enhanced.py
-```
-
-## Building Standalone Executables
-
-To create a standalone executable that users can run without Python:
-
-```bash
-# Install build dependencies
-pip install pyinstaller
-
-# Run the build script
-python build.py
-
-# Or manually with PyInstaller
-pyinstaller FDLog_Enhanced.spec
-```
-
-The executable will be created in the `dist/` folder. Distribute this single file to users.
-
-**Build outputs:**
-- Windows: `dist/FDLog_Enhanced.exe`
-- Linux/Mac: `dist/FDLog_Enhanced`
+Log entry is just three simple things : KD4SIR 1D IN 
 
 The last Python 2.7 version is in the release section.   
 

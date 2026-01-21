@@ -1,0 +1,5 @@
+# FDLog_Enhanced Dependencies
+# Install with: pip install -r requirements.txt
+
+pandas>=1.3.0
+plotly>=5.0.0

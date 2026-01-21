@@ -13,11 +13,18 @@ import socket
 import hashlib
 import random
 import sqlite3
-from tkinter import END, NORMAL, DISABLED, Toplevel, Frame, Label, Entry, Button, \
-    W, EW, E, NONE, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
-    Checkbutton, RAISED, IntVar, Listbox
+import argparse
+import pandas as pd
+import plotly.express as px
+from tkinter import END, Toplevel, Frame, Label, Entry, Button, \
+    W, EW, E, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
+    Checkbutton, IntVar, Listbox
 
-#  Current version 2023_Beta 4.0.0 03Dec2023 (Contestant Awareness)
+# Modify map_was_lst if needed
+# map_was_lst.append("TX")  # For example, adding another state
+
+############################################################
+#  Current version 2023_Beta 4.0.2 19Jan2026 (Claude Code updates)
 
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
@@ -25,7 +32,7 @@ from tkinter import END, NORMAL, DISABLED, Toplevel, Frame, Label, Entry, Button
 
 #  all history moved to release.txt file
 
-prog = 'FDLog_Enhanced v2023_Beta 4.0.0 03Dec2023\n\n' \
+prog = 'FDLog_Enhanced v2026_Beta 4.1.1 20Jan2026\n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2023. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
@@ -38,29 +45,27 @@ Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017
     Previous code contributors were: 
     Eric WD6CMU, Steve KA6S, Glenn WB6W, Frank WB6MRQ and others
 
-FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2023.
+FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2026.
     Copyright also shared with Code Contributors:
     Art Miller KC7SDA 2019              Curtis E. Mills WE7U 2019
-    David (github.com/B1QUAD) 2022      ChatGPTv3.5 2023
+    David (github.com/B1QUAD) 2022      ChatGPT v3.5 2023
+    Claude Code 2026
     
 """
 
-# Known Bug List
-#
-# some foreign call signs not supported properly
-#   8a8xx
-#   need to change the way this works
-#   define a suffix as trailing letters
-#   prefix as anything ending in digits
-#   bring down a previous suffix with a character such as ' or .
-
 
 def fingerprint():
-    t = open('FDLog_Enhanced.py').read()
-    h = hashlib.md5()
-    t = t.encode()
-    h.update(t)
-    print(" FDLog_Enhanced Fingerprint", h.hexdigest())
+    """Calculate and print MD5 fingerprint of source file."""
+    try:
+        with open('FDLog_Enhanced.py') as f:
+            t = f.read()
+        h = hashlib.md5()
+        t = t.encode()
+        h.update(t)
+        print(" FDLog_Enhanced Fingerprint", h.hexdigest())
+    except FileNotFoundError:
+        # Running as bundled executable - source file not available
+        print(" FDLog_Enhanced (standalone build)")
 
 
 def ival(s):
@@ -144,7 +149,7 @@ class ClockClass:
             adj = rate
         elif adj < -rate:
             adj = -rate + 0.05  # This so it doesn't kick back and forth - 30Nov2023 Scott KD4SIR
-            # ChatGPT3.5 recommended "...0.05  # small positive offset to prevent oscillations" - ChatGPTv3.5
+            # ChatGPT 3.5 recommended "...0.05  # small positive offset to prevent oscillations" - ChatGPTv3.5
         self.offset += adj
         # or self.offset = float(database.get('tmast',0)) instead of the line above.
         self.adjusta -= adj
@@ -275,10 +280,12 @@ def initialize():
                 print(kinp, "will be the grid.")
         if kfd != 2:
             # questions for vhf and fd, skip for wfd
-            # Public Place
+            # Bonus Points Questions - Added comprehensive prompts Jan 2026
             anscount = ""
-            print("Will the location be in a public place?")
-            print("Y = yes and N = no")
+            print("\n--- BONUS POINTS SETUP ---")
+            print("Are you ready to answer bonus point questions?")
+            print("(You can set these later with 'set' command)")
+            print("Y = yes, N = skip all bonus questions")
             while anscount != "1":
                 kinp = str.lower(str.strip(sys.stdin.readline())[:1])
                 if kinp == "y":
@@ -288,37 +295,195 @@ def initialize():
                 if anscount == "":
                     print("Press Y or N please")
             if kinp == "y":
-                globDb.put('public', "A public location")
-                qdb.globalshare('public', "A public location")  # global to db
-                renew_title()
-                print("Enjoy the public place.")
-            if kinp == "n":
-                globDb.put('public', "")
-                qdb.globalshare('public', "")  # global to db
-                renew_title()
-                print("maybe next year...")
-            # Info Booth
-            anscount = ""
-            print("Will you have an info booth?")
-            print("Y = yes and N = no")
-            while anscount != "1":
-                kinp = str.lower(str.strip(sys.stdin.readline())[:1])
+                # Public Place
+                anscount = ""
+                print("\n1. Will the location be in a public place? (100 pts)")
+                print("Y = yes, N = no")
+                while anscount != "1":
+                    kinp = str.lower(str.strip(sys.stdin.readline())[:1])
+                    if kinp == "y":
+                        anscount = "1"
+                    if kinp == "n":
+                        anscount = '1'
+                    if anscount == "":
+                        print("Press Y or N please")
                 if kinp == "y":
-                    anscount = "1"
-                if kinp == "n":
-                    anscount = '1'
-                if anscount == "":
-                    print("Press Y or N please")
-            if kinp == "y":
-                globDb.put('infob', "1")
-                qdb.globalshare('infob', "1")  # global to db
-                renew_title()
-                print("Love information tables!")
-            if kinp == "n":
-                globDb.put('infob', "0")
-                qdb.globalshare('infob', "0")  # global to db
-                renew_title()
-                print("An information table is easy points")
+                    globDb.put('public', "A public location")
+                    qdb.globalshare('public', "A public location")
+                    print("  Public location bonus enabled!")
+                else:
+                    globDb.put('public', "")
+                    qdb.globalshare('public', "")
+                # Info Booth
+                anscount = ""
+                print("\n2. Will you have an information booth/table? (100 pts)")
+                print("Y = yes, N = no")
+                while anscount != "1":
+                    kinp = str.lower(str.strip(sys.stdin.readline())[:1])
+                    if kinp == "y":
+                        anscount = "1"
+                    if kinp == "n":
+                        anscount = '1'
+                    if anscount == "":
+                        print("Press Y or N please")
+                if kinp == "y":
+                    globDb.put('infob', "1")
+                    qdb.globalshare('infob', "1")
+                    print("  Information booth bonus enabled!")
+                else:
+                    globDb.put('infob', "0")
+                    qdb.globalshare('infob', "0")
+                # Safety Officer
+                anscount = ""
+                print("\n3. Will you have a designated Safety Officer? (100 pts)")
+                print("Y = yes, N = no")
+                while anscount != "1":
+                    kinp = str.lower(str.strip(sys.stdin.readline())[:1])
+                    if kinp == "y":
+                        anscount = "1"
+                    if kinp == "n":
+                        anscount = '1'
+                    if anscount == "":
+                        print("Press Y or N please")
+                if kinp == "y":
+                    globDb.put('safety', "1")
+                    qdb.globalshare('safety', "1")
+                    print("  Safety Officer bonus enabled!")
+                else:
+                    globDb.put('safety', "0")
+                    qdb.globalshare('safety', "0")
+                # Site Responsibilities
+                anscount = ""
+                print("\n4. Will someone handle Site Responsibilities? (50 pts)")
+                print("   (Ensuring site is hazard-free throughout event)")
+                print("Y = yes, N = no")
+                while anscount != "1":
+                    kinp = str.lower(str.strip(sys.stdin.readline())[:1])
+                    if kinp == "y":
+                        anscount = "1"
+                    if kinp == "n":
+                        anscount = '1'
+                    if anscount == "":
+                        print("Press Y or N please")
+                if kinp == "y":
+                    globDb.put('sitere', "1")
+                    qdb.globalshare('sitere', "1")
+                    print("  Site Responsibilities bonus enabled!")
+                else:
+                    globDb.put('sitere', "0")
+                    qdb.globalshare('sitere', "0")
+                # Educational Activity
+                anscount = ""
+                print("\n5. Will you have an Educational Activity? (100 pts)")
+                print("   (Formal amateur radio education component)")
+                print("Y = yes, N = no")
+                while anscount != "1":
+                    kinp = str.lower(str.strip(sys.stdin.readline())[:1])
+                    if kinp == "y":
+                        anscount = "1"
+                    if kinp == "n":
+                        anscount = '1'
+                    if anscount == "":
+                        print("Press Y or N please")
+                if kinp == "y":
+                    globDb.put('eduact', "1")
+                    qdb.globalshare('eduact', "1")
+                    print("  Educational Activity bonus enabled!")
+                else:
+                    globDb.put('eduact', "0")
+                    qdb.globalshare('eduact', "0")
+                # Social Media
+                anscount = ""
+                print("\n6. Will you promote on Social Media? (100 pts)")
+                print("Y = yes, N = no")
+                while anscount != "1":
+                    kinp = str.lower(str.strip(sys.stdin.readline())[:1])
+                    if kinp == "y":
+                        anscount = "1"
+                    if kinp == "n":
+                        anscount = '1'
+                    if anscount == "":
+                        print("Press Y or N please")
+                if kinp == "y":
+                    globDb.put('social', "1")
+                    qdb.globalshare('social', "1")
+                    print("  Social Media bonus enabled!")
+                else:
+                    globDb.put('social', "0")
+                    qdb.globalshare('social', "0")
+                # GOTA Coach
+                anscount = ""
+                print("\n7. Will you have a GOTA Coach? (100 pts if 10+ GOTA QSOs)")
+                print("Y = yes, N = no")
+                while anscount != "1":
+                    kinp = str.lower(str.strip(sys.stdin.readline())[:1])
+                    if kinp == "y":
+                        anscount = "1"
+                    if kinp == "n":
+                        anscount = '1'
+                    if anscount == "":
+                        print("Press Y or N please")
+                if kinp == "y":
+                    globDb.put('gotaco', "1")
+                    qdb.globalshare('gotaco', "1")
+                    print("  GOTA Coach bonus enabled!")
+                else:
+                    globDb.put('gotaco', "0")
+                    qdb.globalshare('gotaco', "0")
+                # Youth Participants
+                print("\n8. How many youth participants (under 18)? (20 pts each, max 100)")
+                print("   Enter a number 0-99 (0 if none):")
+                while True:
+                    kinp = str.strip(sys.stdin.readline())
+                    if kinp.isdigit() and 0 <= int(kinp) <= 99:
+                        break
+                    print("Please enter a number 0-99")
+                globDb.put('youth', kinp)
+                qdb.globalshare('youth', kinp)
+                if int(kinp) > 0:
+                    print("  Youth participation: %s youth!" % kinp)
+                # Government Official Visit
+                print("\n9. Name of visiting elected government official? (100 pts)")
+                print("   (Leave blank if none, or enter name):")
+                kinp = str.strip(sys.stdin.readline())[:35]
+                globDb.put('svego', kinp)
+                qdb.globalshare('svego', kinp)
+                if kinp:
+                    print("  Government official visit: %s" % kinp)
+                # Agency Representative Visit
+                print("\n10. Name of visiting agency representative? (100 pts)")
+                print("    (Red Cross, FEMA, etc. Leave blank if none):")
+                kinp = str.strip(sys.stdin.readline())[:35]
+                globDb.put('svroa', kinp)
+                qdb.globalshare('svroa', kinp)
+                if kinp:
+                    print("  Agency representative visit: %s" % kinp)
+                # Web Submission
+                anscount = ""
+                print("\n11. Will you submit entry via web? (50 pts)")
+                print("Y = yes, N = no")
+                while anscount != "1":
+                    kinp = str.lower(str.strip(sys.stdin.readline())[:1])
+                    if kinp == "y":
+                        anscount = "1"
+                    if kinp == "n":
+                        anscount = '1'
+                    if anscount == "":
+                        print("Press Y or N please")
+                if kinp == "y":
+                    globDb.put('websub', "1")
+                    qdb.globalshare('websub', "1")
+                    print("  Web submission bonus enabled!")
+                else:
+                    globDb.put('websub', "0")
+                    qdb.globalshare('websub', "0")
+                print("\n--- Bonus points setup complete! ---")
+                print("Use 'set' command to change these later.")
+                print("Use 'score' command to see your score.\n")
+            else:
+                print("\nSkipping bonus questions. Use 'set' command later.")
+                print("Available bonus fields: public, infob, safety, sitere,")
+                print("eduact, social, gotaco, youth, svego, svroa, websub\n")
         # Time Master - oh yeah the big question
         anscount = ""
         print("\n It is recommended that the first computer")
@@ -353,139 +518,51 @@ def exin(op):
     return r
 
 
-def fntcourier10():
-    """ Font menu selection to change the font and size"""
-    #  Added by Scott Hibbs KD4SIR 09Aug2022
+def set_font(face, size):
+    """ Font menu selection to change the font and size
+        Consolidated from 10 separate functions - Scott Hibbs KD4SIR 09Aug2022
+    """
     global typeface, fontsize, fdfont
-    typeface = "Courier"
-    fontsize = 10
-    fdfont = typeface, fontsize
-    redrawall()
-
-
-def fntcourier11():
-    """ Font menu selection to change the font and size"""
-    #  Added by Scott Hibbs KD4SIR 09Aug2022
-    global typeface, fontsize, fdfont
-    typeface = "Courier"
-    fontsize = 11
-    fdfont = typeface, fontsize
-    redrawall()
-
-
-def fntcourier12():
-    """ Font menu selection to change the font and size"""
-    #  Added by Scott Hibbs KD4SIR 09Aug2022
-    global typeface, fontsize, fdfont
-    typeface = "Courier"
-    fontsize = 12
-    fdfont = typeface, fontsize
-    redrawall()
-
-
-def fntcourier13():
-    """ Font menu selection to change the font and size"""
-    #  Added by Scott Hibbs KD4SIR 09Aug2022
-    global typeface, fontsize, fdfont
-    typeface = "Courier"
-    fontsize = 13
-    fdfont = typeface, fontsize
-    redrawall()
-
-
-def fntcourier14():
-    """ Font menu selection to change the font and size"""
-    #  Added by Scott Hibbs KD4SIR 09Aug2022
-    global typeface, fontsize, fdfont
-    typeface = "Courier"
-    fontsize = 14
-    fdfont = typeface, fontsize
-    redrawall()
-
-
-def fntconsolas10():
-    """ Font menu selection to change the font and size"""
-    #  Added by Scott Hibbs KD4SIR 09Aug2022
-    global typeface, fontsize, fdfont
-    typeface = "Consolas"
-    fontsize = 10
-    fdfont = typeface, fontsize
-    redrawall()
-
-
-def fntconsolas11():
-    """ Font menu selection to change the font and size"""
-    #  Added by Scott Hibbs KD4SIR 09Aug2022
-    global typeface, fontsize, fdfont
-    typeface = "Consolas"
-    fontsize = 11
-    fdfont = typeface, fontsize
-    redrawall()
-
-
-def fntconsolas12():
-    """ Font menu selection to change the font and size"""
-    #  Added by Scott Hibbs KD4SIR 09Aug2022
-    global typeface, fontsize, fdfont
-    typeface = "Consolas"
-    fontsize = 12
-    fdfont = typeface, fontsize
-    redrawall()
-
-
-def fntconsolas13():
-    """ Font menu selection to change the font and size"""
-    #  Added by Scott Hibbs KD4SIR 09Aug2022
-    global typeface, fontsize, fdfont
-    typeface = "Consolas"
-    fontsize = 13
-    fdfont = typeface, fontsize
-    redrawall()
-
-
-def fntconsolas14():
-    """ Font menu selection to change the font and size"""
-    #  Added by Scott Hibbs KD4SIR 09Aug2022
-    global typeface, fontsize, fdfont
-    typeface = "Consolas"
-    fontsize = 14
-    fdfont = typeface, fontsize
+    typeface = face
+    fontsize = size
+    fdfont = (typeface, fontsize)
     redrawall()
 
 
 def redrawall():
     """ Used by Font menu selections to redraw all the elements again """
     #  Added by Scott Hibbs KD4SIR 09Aug2022
+    #  Refactored to use recursive traversal - no need to name every widget
     global fdfont
-    lblnet.config(font=fdfont)
-    lblnode.config(font=fdfont)
+
+    def update_fonts_recursive(widget):
+        """Recursively update fonts for all child widgets."""
+        for child in widget.winfo_children():
+            # Check if widget supports font option before trying to set it
+            try:
+                if 'font' in child.keys():
+                    child.config(font=fdfont)
+            except tkinter.TclError:
+                # Skip any widgets that cause errors
+                pass
+            # Recurse into children
+            update_fonts_recursive(child)
+
+    # Update fonts on all widgets starting from root
+    update_fonts_recursive(root)
+
+    # These special function calls rebuild their sections (more than just font)
     bandbuttons(f1)
     bandset(band)
-    opmb.config(font=fdfont)
-    opmu.config(font=fdfont)
-    opds.config(font=fdfont)
-    opdsu.config(font=fdfont)
-    logmb.config(font=fdfont)
-    logmu.config(font=fdfont)
-    logds.config(font=fdfont)
-    logdsu.config(font=fdfont)
-    pwrmb.config(font=fdfont)
-    pwrmu.config(font=fdfont)
-    pwrnt.config(font=fdfont)
-    powlbl.config(font=fdfont)
-    powcb.config(font=fdfont)
-    redrawbutton.config(font=fdfont)
-    extrabutton.config(font=fdfont)
     renew_title()
     logwredraw()
-    topper()
 
 
 class SQDB:
     """SQL database upgrade"""
 
     # sqlite3.connect(":memory:", check_same_thread = False)
-    # I found this online to correct thread errors with sql locking to one thread only.
+    # I found this online to correct thread errors with SQL locking to one thread only.
     # Scott Hibbs 7/5/2015
 
     def __init__(self):
@@ -530,10 +607,18 @@ class SQDB:
 
 
 class QsoDb:
-    """ This is the database class for QSOs. """
+    """Database class for QSOs."""
 
     def __init__(self):
         self.seq = None
+        self.src = None
+        self.date = None
+        self.band = None
+        self.call = None
+        self.rept = None
+        self.powr = None
+        self.oper = None
+        self.logr = None
 
     byid = {}  # qso database by src.seq
     bysfx = {}  # call list by suffix.band
@@ -546,17 +631,31 @@ class QsoDb:
         n.src = source  # source id
         return n
 
-    def tolog(self):
-        """ make log file entry """
-        SQDB().log(self)  # to database
-        self.lock.acquire()  # and to ascii journal file as well
-        fd = open(logdbf, "a")
-        fd.write("\nq|%s|%s|%s|%s|%s|%s|%s|%s|%s|" %
-                 (self.src, self.seq,
-                  self.date, self.band, self.call, self.rept,
-                  self.powr, self.oper, self.logr))
-        fd.close()
-        self.lock.release()
+    def to_log(self):
+        """Make log file entry."""
+        self._log_to_database()
+        self._log_to_file()
+
+    def _log_to_database(self):
+        SQDB().log(self)
+
+    def _log_to_file(self):
+        with self.lock:
+            with open(logdbf, "a") as fd:
+                fd.write(f"\nq|{self.src}|{self.seq}|{self.date}|{self.band}|{self.call}|{self.rept}|{self.powr}|"
+                         f"{self.oper}|{self.logr}|")
+
+    # def to_log(self):
+    #     """ make log file entry """
+    #     SQDB().log(self)  # to database
+    #     self.lock.acquire()  # and to ascii journal file as well
+    #     fd = open(logdbf, "a")
+    #     fd.write("\nq|%s|%s|%s|%s|%s|%s|%s|%s|%s|" %
+    #              (self.src, self.seq,
+    #               self.date, self.band, self.call, self.rept,
+    #               self.powr, self.oper, self.logr))
+    #     fd.close()
+    #     self.lock.release()
 
     def ldrec(self, line):
         """Load log entry from text"""
@@ -567,7 +666,7 @@ class QsoDb:
 
     @staticmethod
     def loadfile():
-        """ Used to load the log file"""
+        """Load the log file."""
         # global sqdb  # setup sqlite database connection
         print("Loading Log File")
         icounter, s, log = 0, 0, []
@@ -655,13 +754,13 @@ class QsoDb:
                  (s.date[4:11], s.band, s.call[:11], s.rept[:24], s.powr, s.oper, s.logr, s.seq, s.src)
         return ln
 
-    def prlog(self):
+    def pr_log(self):
         """Print the log, in time order"""
         llist = self.filterlog("")
         for strii in llist:
             print(strii)
 
-    def pradif(self):
+    def pr_adif(self):
         """print clean log in adif format"""
         pgm = "FDLog_Enhanced (https://github.com/scotthibbs/FDLog_Enhanced)"
         print("<PROGRAMID:%d>%s" % (len(pgm), pgm))
@@ -731,25 +830,25 @@ class QsoDb:
 
     def qsl(self, time1, call3, bandmod, report):
         """log a qsl"""
-        return self.postnewinfo(time1, call3, bandmod, report)
+        return self.post_new_info(time1, call3, bandmod, report)
 
     def qst(self, msg):
         """put a qst in database + log"""
-        return self.postnewinfo(now(), '', '*QST', msg)
+        return self.post_new_info(now(), '', '*QST', msg)
 
     def globalshare(self, name1, value):
         """put global var set in db + log"""
-        return self.postnewinfo(now(), name1, '*set', value)
+        return self.post_new_info(now(), name1, '*set', value)
 
-    def postnewinfo(self, time2, call4, bandmod, report):
+    def post_new_info(self, time2, call4, bandmod, report):
         """post new locally generated info"""
         # Added tmob so that we can count time inactive - Scott Hibbs KD4SIR 09Aug2022
         global tmob
         tmob = now()
-        return self.postnew(time2, call4, bandmod, report, exin(operator),
-                            exin(logger), power)
+        return self.post_new(time2, call4, bandmod, report, exin(operator),
+                             exin(logger), power)
 
-    def postnew(self, time3, call5, bandmod, report, oper, logr, powr):
+    def post_new(self, time3, call5, bandmod, report, oper, logr, powr):
         """post new locally generated info"""
         s = self.new(node)
         s.date, s.call, s.band, s.rept, s.oper, s.logr, s.powr = time3, call5, bandmod, report, oper, logr, powr
@@ -772,7 +871,7 @@ class QsoDb:
             s.dispatch('user')
             txtbillb.insert(END, " DELETE Successful %s %s %s\n" % (tm, call6, bandmod))
             topper()
-            logw.config(state=NORMAL)
+            logw.config(state="normal")
             logw.delete(0.1, END)
             logw.insert(END, "\n")
             # This Redraws the logw text window (on delete) to only show valid calls in the log.
@@ -790,7 +889,7 @@ class QsoDb:
                     else:
                         logw.insert(END, i9.prlogln(i9))
                         logw.insert(END, "\n")
-            logw.config(state=DISABLED)
+            logw.config(state="disabled")
         else:
             txtbillb.insert(END, " DELETE Ignored [%s,%s] Not Found\n" % (nod, seq))
             topper()
@@ -811,7 +910,7 @@ class QsoDb:
             s.dispatch('udelete')
             txtbillb.insert(END, " DELETE Successful %s %s %s\n" % (tm, call6, bandmod))
             topper()
-            logw.config(state=NORMAL)
+            logw.config(state="normal")
             logw.delete(0.1, END)
             logw.insert(END, "\n")
             # This Redraws the logw text window (on delete) to only show valid calls in the log.
@@ -829,47 +928,120 @@ class QsoDb:
                     else:
                         logw.insert(END, i9.prlogln(i9))
                         logw.insert(END, "\n")
-            logw.config(state=DISABLED)
+            logw.config(state="disabled")
         else:
             txtbillb.insert(END, " DELETE Ignored [%s,%s] Not Found\n" % (nod, seq))
             topper()
 
+    def qdelete_silent(self, nod, seq, reason):
+        """Remove a QSO by creating delete record - no GUI updates (for network operations)"""
+        # Added by Scott Hibbs KD4SIR Jan 2026 for network dupe checking
+        global node
+        a, dummy, dummy = self.cleanlog()
+        k3 = "%s|%s" % (nod, seq)
+        if k3 in a and a[k3].band[0] != '*':  # only visible qso records
+            call6, bandmod = a[k3].call, a[k3].band
+            rept = "*del:%s:%s:%s" % (nod, seq, reason)
+            s = self.new(node)
+            s.date, s.call, s.band, s.rept, s.oper, s.logr, s.powr = \
+                now(), call6, bandmod, rept, exin(operator), exin(logger), 0
+            s.seq = -1
+            s.dispatch('user')
+            print("  Network Dupe: deleted %s %s from %s (reason: %s)" % (call6, bandmod, nod, reason))
+            return True
+        return False
+
+    def check_network_dupe(self, new_src, new_seq, new_date, new_band, new_call):
+        """Check for duplicate call-band when receiving network records.
+        If dupe found, keep the oldest record and delete the newer one.
+        Added by Scott Hibbs KD4SIR Jan 2026"""
+        global node
+        # Skip special messages
+        if new_band[0] == '*':
+            return
+        # Parse the call to get base call
+        dummy, dummy, dummy, dummy, base_call, dummy, dummy = self.qparse(new_call)
+        if not base_call:
+            base_call = new_call.lower()  # fallback to full call if parse fails
+        # Get contest time window
+        fdstart, fdend = gd.getv('fdstrt'), gd.getv('fdend')
+        # Scan all records in byid for duplicates
+        with self.lock:
+            for rec_key, rec in list(self.byid.items()):
+                # Skip special messages and delete markers
+                if rec.band[0] == '*' or rec.rept[:5] == '*del:':
+                    continue
+                # Skip records outside contest time window
+                if rec.date < fdstart or rec.date > fdend:
+                    continue
+                # Skip zero power (not real QSO)
+                if ival(rec.powr) == 0:
+                    continue
+                # Skip if same record (same src and seq)
+                if rec.src == new_src and rec.seq == int(new_seq):
+                    continue
+                # Check GOTA vs non-GOTA (separate dupe spaces)
+                if (new_src == 'gotanode') != (rec.src == 'gotanode'):
+                    continue
+                # Parse existing call
+                dummy, dummy, dummy, dummy, rec_call, dummy, dummy = self.qparse(rec.call)
+                if not rec_call:
+                    rec_call = rec.call.lower()
+                # Check if same call and band
+                if base_call == rec_call and new_band == rec.band:
+                    # Found a duplicate! Compare timestamps
+                    try:
+                        time_diff = tmsub(new_date, rec.date)
+                        if time_diff > 0:
+                            # New record is NEWER - delete the new record
+                            print("  Network Dupe Found: %s on %s (new from %s is newer than %s)" %
+                                  (new_call, new_band, new_src, rec.src))
+                            self.qdelete_silent(new_src, int(new_seq), "netdupe-newer")
+                        elif time_diff < 0:
+                            # New record is OLDER - delete the existing record
+                            print("  Network Dupe Found: %s on %s (existing from %s is newer than %s)" %
+                                  (rec.call, rec.band, rec.src, new_src))
+                            self.qdelete_silent(rec.src, rec.seq, "netdupe-older")
+                        return  # Only handle first dupe found
+                    except Exception as err:
+                        print("  Network dupe check error: %s" % str(err))
+
     def todb(self):
-        """"Q record object to db"""
+        """Q record object to db"""
         r = None
-        self.lock.acquire()
-        current = self.hiseq.get(self.src, 0)
-        self.seq = int(self.seq)
-        if self.seq == current + 1:  # filter out dup or nonsequential
-            self.byid["%s.%s" % (self.src, self.seq)] = self
-            self.hiseq[self.src] = current + 1
-            #            if debug: print "todb:",self.src,self.seq
-            r = self
-        elif self.seq == current:
-            if debug:
-                print("dup sequence log entry ignored")
-        else:
-            print("out of sequence log entry ignored", self.seq, current + 1)
-        self.lock.release()
+        # self.lock.acquire()
+        with self.lock:
+            current = self.hiseq.get(self.src, 0)
+            self.seq = int(self.seq)
+            if self.seq == current + 1:  # filter out dup or nonsequential
+                self.byid["%s.%s" % (self.src, self.seq)] = self
+                self.hiseq[self.src] = current + 1
+                # if debug: print "todb:",self.src,self.seq
+                r = self
+            elif self.seq == current:
+                if debug:
+                    print("dup sequence log entry ignored")
+            else:
+                print("out of sequence log entry ignored", self.seq, current + 1)
+        # self.lock.release()
         return r
 
     def pr(self):
-        """"print Q record object"""
+        """print Q record object"""
         sms.prmsg(self.prlogln(self))
 
     def dispatch(self, src):
-        """"process new db rec (fm logf,user,net) to where it goes"""
+        """process new db rec (fm logf,user,net) to where it goes"""
         # src is the reason this was called.
-        self.lock.acquire()
-        self.seq = int(self.seq)
-        if self.seq == -1:  # assign new seq num
-            self.seq = self.hiseq.get(self.src, 0) + 1
-        r = self.todb()
-        self.lock.release()
+        with self.lock:
+            self.seq = int(self.seq)
+            if self.seq == -1:  # assign new seq num
+                self.seq = self.hiseq.get(self.src, 0) + 1
+            r = self.todb()
         if r:  # r was set to self.todb() so always true
             self.pr()  # prints the q record object
             if src != 'logf':
-                self.tolog()
+                self.to_log()
             if src == 'user':
                 net.bc_qsomsg(self.src, self.seq)
             if self.band == '*set':
@@ -887,7 +1059,7 @@ class QsoDb:
                 self.logdup()
         return r  # remember r is self.todb()
 
-    def bandrpt(self):
+    def band_rpt(self):
         """band report q/band pwr/band, q/oper q/logr q/station"""
         qpb, ppb, qpop, qplg, qpst, tq, score, maxp = {}, {}, {}, {}, {}, 0, 0, 0
         cwq, digq, fonq = 0, 0, 0
@@ -946,7 +1118,7 @@ class QsoDb:
                 fonq += 1
         return qpb, ppb, qpop, qplg, qpst, tq, score, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat
 
-    def statussofar(self):
+    def status_so_far(self):
         """ .ba command band status station on, q/band, xx needs upgd"""
         # This function from 152i
         qpb, tmlq, dummy = {}, {}, {}
@@ -1047,34 +1219,47 @@ class QsoDb:
                     stat = 1  # at least partial time
             if xcall is not None:
                 stat = 0  # invalid unless something matches
-                m4 = re.match(r'([a-z]+)$', xcall)
-                if m4:
-                    stat = 2  # suffix
-                    sfx = xcall
-                m4 = re.match(r'(\d+)$', xcall)
-                if m4:
-                    stat = 2  # suffix
-                    sfx = xcall
-                m4 = re.match(r'([a-z]+\d+)$', xcall)
-                if m4:
-                    stat = 3  # prefix
-                    pfx = xcall
-                m4 = re.match(r'(\d+[a-z]+)$', xcall)
-                if m4:
-                    stat = 3  # prefix
-                    pfx = xcall
-                m4 = re.match(r'(([a-z]+\d+)([a-z]+))(/[\da-z]*)?$', xcall)
-                if m4:
-                    stat = 4  # whole call
-                    call7 = m4.group(1)
-                    pfx = m4.group(2)
-                    sfx = m4.group(3)
-                m4 = re.match(r'((\d+[a-z]+)(\d+))(/[\da-z]*)?$', xcall)
-                if m4:
-                    stat = 4  # whole call
-                    call7 = m4.group(1)
-                    pfx = m4.group(2)
-                    sfx = m4.group(3)
+                # Handle slash notation for portable/international operations
+                basecall = xcall
+                if '/' in xcall:
+                    basecall = xcall[:xcall.index('/')]
+
+                if basecall:
+                    has_digit = any(ch.isdigit() for ch in basecall)
+                    has_letter = any(ch.isalpha() for ch in basecall)
+
+                    if not has_digit:
+                        # Only letters - it's a suffix
+                        stat = 2
+                        sfx = basecall
+                    elif not has_letter:
+                        # Only digits - treat as partial suffix
+                        stat = 2
+                        sfx = basecall
+                    else:
+                        # Reverse-scan: suffix = letters after last digit
+                        # prefix = everything up to and including last digit
+                        sfx_chars = []
+                        pfx_chars = []
+                        hit_digit = False
+
+                        for char in reversed(basecall):
+                            if char.isdigit():
+                                hit_digit = True
+                            if not hit_digit:
+                                sfx_chars.append(char)
+                            else:
+                                pfx_chars.append(char)
+
+                        sfx = ''.join(reversed(sfx_chars))
+                        pfx = ''.join(reversed(pfx_chars))
+
+                        if sfx and pfx:
+                            stat = 4  # complete call
+                            call7 = basecall
+                        elif pfx and not sfx:
+                            stat = 3  # prefix only (ends with digit)
+
                 if (stat == 4) & (rept > ""):
                     stat = 0
                     m4 = re.match(r'[\da-zA-Z]+[\da-zA-Z ]*$', rept)
@@ -1082,9 +1267,9 @@ class QsoDb:
                         stat = 5  # complete qso
                 if len(xcall) > 12:
                     stat = 0  # limit lengths
-                if len(pfx) > 5:
+                if len(pfx) > 6:
                     stat = 0
-                if len(sfx) > 3:
+                if len(sfx) > 4:
                     stat = 0
                 if tm:  # if forced time exists
                     if len(tm) < 7:  # it must be complete
@@ -1119,6 +1304,7 @@ class QsoDb:
                 if gd.getv('contst').upper() == "VHF":
                     return xcall  # vhf contest
                 return call9  # field day
+        return None
 
     def logdup(self):
         """enter into dup log"""
@@ -1152,71 +1338,154 @@ class QsoDb:
         self.lock.release()
         #        print qsodb.bysfx
 
-    def waslogreport(self):
-        """worked all states log report in the menu"""
+    def was_log_report(self):
+        """Generate a report on worked states."""
         sectost, stcnt, r, ee = {}, {}, [], []
+
+        # Read section data
         try:
-            fd = open("Arrl_sect.dat", "r")  # read section data
-            while 1:
-                ln = fd.readline()  # read a line
-                if not ln:
-                    break
-                #  if ln == "": continue
-                if ln[0] == '#':
-                    continue
-                try:
-                    sec, st, dummy, dummy = str.split(ln, " ", 3)
-                    sectost[sec] = st
-                    stcnt[st] = 0
-                    #  print sec, st
-                except ValueError as ee:
-                    print("rd arrl sec dat err, itm skpd: ", ee)
-            fd.close()
+            with open("Arrl_sections_ref.txt", "r") as fd:
+                for ln in fd:
+                    if ln.startswith('#'):
+                        continue
+                    try:
+                        sec, st, *_ = ln.split(" ", 3)
+                        sectost[sec] = st
+                        stcnt[st] = 0
+                    except ValueError as ee:
+                        print("Error reading section data:", ee)
         except IOError as ee:
-            print("io error during arrl section data file load", ee)
-        a, dummy, dummy = self.cleanlog()
-        for ii in list(a.values()):
+            print("Error loading section data file:", ee)
+
+        # Clean log
+        a, _, _ = self.cleanlog()
+        for ii in a.values():
             sect, state = "", ""
-            if ii.rept[:1] == '*':
-                continue
-            if ii.band[0] == '*':
-                continue
-            if ii.band == 'off':
-                continue
-            if ii.powr == '0':
+            if ii.rept[:1] == '*' or ii.band[0] == '*' or ii.band == 'off' or ii.powr == '0':
                 continue
             m2 = re.match(r' *\d+[a-fiohA-FIOH] +([A-Za-z]{2,4})', ii.rept)
             if m2:
-                sect = m2.group(1)
-                sect = str.upper(sect)
+                sect = str.upper(m2.group(1))
                 state = sectost.get(sect, "")
-                #  print "sec", sect, "state", state
                 if state:
                     stcnt[state] += 1
             if not state:
-                #  print "section not recognized in:\n  %s" %i.prlogln(i)
-                #  print "sec", sect, "state", state
                 ee.append(ii.prlogln(ii))
-        h, n = [], []  # make have and need lists
-        for ii in list(stcnt.keys()):
-            if ii != "--":
-                if stcnt[ii] == 0:
-                    n.append("%s" % ii)
-                else:
-                    h.append("%s" % ii)
+
+        # Generate report
+        h = [ii for ii in stcnt.keys() if ii != "--" and stcnt[ii] != 0]
+        n = [ii for ii in stcnt.keys() if ii != "--" and stcnt[ii] == 0]
         n.sort()
-        r.append("Worked All States Report\n%s Warning(s) Below\nNeed %s States:" % (len(ee), len(n)))
-        for ii in n:
-            r.append(ii)
         h.sort()
+        r.append("Worked All States Report\n%s Warning(s) Below\nNeed %s States:" % (len(ee), len(n)))
+        r.extend(n)
         r.append("\nHave %s States:" % len(h))
-        for ii in h:
-            r.append("%s %s" % (ii, stcnt[ii]))
+        r.extend("%s %s" % (ii, stcnt[ii]) for ii in h)
         if len(ee) > 0:
             r.append("\nWarnings - Cannot Discern US Section in Q(s):\n")
-            for ii in ee:
-                r.append(ii)
+            r.extend(ee)
+        # print(r)
         return r
+
+    def get_have_states(self):
+        """Extract and return the 'have' states from the report."""
+        report = self.was_log_report()
+        have_states = []
+        # Find the index of the element that starts with "\nHave"
+        start_index = None
+        end_index = len(report)
+        for idx, line in enumerate(report):
+            if line.startswith("\nHave"):
+                start_index = idx + 1
+            elif line.startswith("\nWarnings"):
+                end_index = idx
+                break
+        if start_index is None:
+            return have_states  # No states found
+        for line in report[start_index:end_index]:
+            if line.startswith("--"):
+                continue
+            state_info = line.split()
+            if state_info:
+                state = state_info[0]  # State abbreviation is first element
+                have_states.append(state)
+        return have_states
+
+    # Example usage:
+    # have_states = get_have_states(r)
+    #     # print(have_states)
+
+    def was_sections_report(self):
+        """Generate a report on worked ARRL/RAC sections."""
+        sectcnt, r, ee = {}, [], []
+        all_sections = []
+
+        # Read section data
+        try:
+            with open("Arrl_sections_ref.txt", "r") as fd:
+                for ln in fd:
+                    if ln.startswith('#'):
+                        continue
+                    try:
+                        sec, st, area, *_rest = ln.split(" ", 3)
+                        all_sections.append(sec)
+                        sectcnt[sec] = 0
+                    except ValueError as ee:
+                        print("Error reading section data:", ee)
+        except IOError as ee:
+            print("Error loading section data file:", ee)
+
+        # Clean log
+        a, _, _ = self.cleanlog()
+        for ii in a.values():
+            if ii.rept[:1] == '*' or ii.band[0] == '*' or ii.band == 'off' or ii.powr == '0':
+                continue
+            m2 = re.match(r' *\d+[a-fiohA-FIOH] +([A-Za-z]{2,4})', ii.rept)
+            if m2:
+                sect = str.upper(m2.group(1))
+                if sect in sectcnt:
+                    sectcnt[sect] += 1
+                else:
+                    ee.append(ii.prlogln(ii))
+            else:
+                ee.append(ii.prlogln(ii))
+
+        # Generate report
+        h = [ii for ii in sectcnt.keys() if sectcnt[ii] != 0]
+        n = [ii for ii in sectcnt.keys() if sectcnt[ii] == 0]
+        n.sort()
+        h.sort()
+        r.append("Worked All Sections Report\n%s Warning(s) Below\nNeed %s Sections:" % (len(ee), len(n)))
+        r.extend(n)
+        r.append("\nHave %s Sections:" % len(h))
+        r.extend("%s %s" % (ii, sectcnt[ii]) for ii in h)
+        if len(ee) > 0:
+            r.append("\nWarnings - Cannot Discern Section in Q(s):\n")
+            r.extend(ee)
+        # print(r)
+        return r
+
+    def get_have_sections(self):
+        """Extract and return the 'have' sections from the report."""
+        report = self.was_sections_report()
+        have_sections = []
+        # Find the index of the element that starts with "\nHave"
+        start_index = None
+        end_index = len(report)
+        for idx, line in enumerate(report):
+            if line.startswith("\nHave"):
+                start_index = idx + 1
+            elif line.startswith("\nWarnings"):
+                end_index = idx
+                break
+        if start_index is None:
+            return have_sections  # No sections found
+        for line in report[start_index:end_index]:
+            section_info = line.split()
+            if section_info:
+                section = section_info[0]  # Section abbreviation is first element
+                have_sections.append(section)
+        return have_sections
 
     def vhf_cabrillo(self):
         """output VHF contest cabrillo QSO data"""
@@ -1339,7 +1608,7 @@ def logwredraw():
     # Added by Scott Hibbs KD4SIR 31Jul2022
     global node
     a, dummy, dummy = qdb.cleanlog()
-    logw.config(state=NORMAL, font=fdfont)
+    logw.config(state="normal", font=fdfont)
     logw.delete(0.1, END)
     logw.insert(END, "\n")
     logw.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", "b")
@@ -1355,14 +1624,14 @@ def logwredraw():
             logw.insert(END, i32.prlogln(i32))
             logw.insert(END, "\n")
     logw.see(END)
-    logw.config(state=DISABLED)
+    logw.config(state="disabled")
 
 # def logwredrawminus():
 #     """redraw the logw window with only valid log entries minus QSTs"""
 #     # Added by Scott Hibbs KD4SIR 31Jul2022
 #     global node
 #     a, dummy, dummy = qdb.cleanlog()
-#     logw.config(state=NORMAL)
+#     logw.config(state="normal")
 #     logw.delete(0.1, END)
 #     logw.insert(END, "\n")
 #     # i32.prlogln(i32) gives the line of the log output.
@@ -1373,7 +1642,7 @@ def logwredraw():
 #         else:
 #             logw.insert(END, i32.prlogln(i32))
 #             logw.insert(END, "\n")
-#     logw.config(state=DISABLED)
+#     logw.config(state="disabled")
 #     logw.see(END)
 
 
@@ -1399,6 +1668,8 @@ class NodeInfoClass:
         s.seq, s.date, s.call, s.band, s.rept, s.oper, s.logr, s.powr = \
             seq, t, c3, b, rp, o, logr1, p1
         s.dispatch('net')
+        # Check for network dupes after dispatch - Added Jan 2026
+        qdb.check_network_dupe(src, seq, t, b, c3)
 
     @staticmethod
     def netnum(ip, mask):
@@ -1763,7 +2034,7 @@ class GlobalDataClass:
         # name3 = call, value = rept, timestamp is just that.
         if node == "":
             txtbillb.insert(END, "error - no node id\n")
-            return
+            return "error - no node id"
         if name3[:2] == 'p:':  # set oper/logr
             i23 = self.byname.get(name3, self.new(name3, '', '', '', 0))
         else:
@@ -1790,6 +2061,7 @@ class GlobalDataClass:
                     # if name3 == 'deleteq':
                     #     del (participants[ini])
                 buildmenus()
+        return None
 
     def getv(self, name4):
         if name4 not in self.byname:  # new
@@ -1827,7 +2099,7 @@ class SynchMessage:
         self.lock.acquire()
         while self.msgs:
             # print(str(self.msgs))
-            logw.config(state=NORMAL)
+            logw.config(state="normal")
             logw.see(END)
             nod = self.msgs[0][70:81]  # color local entries
             seq = self.msgs[0][65:69].strip()
@@ -1847,7 +2119,7 @@ class SynchMessage:
                     logw.insert(END, "%s\n" % self.msgs[0], "b")
             else:
                 logw.insert(END, "%s\n" % self.msgs[0])
-            logw.config(state=DISABLED)
+            logw.config(state="disabled")
             del self.msgs[0]
         self.lock.release()
         if shonuff == "yes":
@@ -1991,7 +2263,7 @@ def contestlog(pr):
     datime = now()
     dummy, bycall, gotabycall = qdb.cleanlog()  # get a clean log
     qpb, ppb, qpop, qplg, qpst, dummy, dummy, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
-        qdb.bandrpt()  # and count it
+        qdb.band_rpt()  # and count it
     print("..", end=' ')
     sys.stdout = open(logfile, "w")  # redirect output to file
     print("Field Day 20%s Entry Form" % datime[:2])
@@ -2088,7 +2360,7 @@ def contestlog(pr):
         tot_bonus += natural_bp
         print("    %3s Five Alternate power QSOs completed (%s/5) (list below)" % (natural_bp, natural_q))
     #  w1aw_msg_bp = 0  # not used
-    if len(w1aw_msg) > 30:  # ignore short file place holder 152i
+    if len(w1aw_msg) > 30:  # ignore short file placeholder 152i
         w1aw_msg_bp = 100
         tot_bonus += w1aw_msg_bp
         print("    %3s W1AW FD Message Received (copy below)" % w1aw_msg_bp)
@@ -2102,20 +2374,44 @@ def contestlog(pr):
         site_visited_roa_bp = 100
         tot_bonus += site_visited_roa_bp
         print("    %3s Site Visited by representative of agency (%s)" % (site_visited_roa_bp, gd.getv('svroa')))
-    #  gota_max_bp = 0  # not used
-    if gotaq >= 100:
-        gota_max_bp = 100
-        tot_bonus += gota_max_bp
-        print("    %3s GOTA Station 100 QSOs bonus achieved" % gota_max_bp)
-    #  youth_bp = 0  # not used
+    # GOTA Contacts Bonus - 5 points per GOTA QSO (up to 500 QSOs max)
+    if gotaq > 0:
+        gota_contact_bp = 5 * min(gotaq, 500)  # Cap at 500 GOTA QSOs
+        tot_bonus += gota_contact_bp
+        print("    %3s GOTA Contacts Bonus (%s QSOs x 5 pts)" % (gota_contact_bp, min(gotaq, 500)))
+    # GOTA Coach Bonus - 100 points if coach supervised 10+ contacts
+    if gd.getv('gotaco') == "1" and gotaq >= 10:
+        gota_coach_bp = 100
+        tot_bonus += gota_coach_bp
+        print("    %3s GOTA Coach Bonus (supervised 10+ contacts)" % gota_coach_bp)
+    # Youth Participation Bonus - 20 points per youth (max 100 = 5 youth)
     if int(gd.getv('youth')) > 0:
         youth_bp = 20 * int(gd.getv('youth'))
         if youth_bp > 5 * 20:
             youth_bp = 5 * 20
         tot_bonus += youth_bp
-        print("    %3s Youth Participation Bonus" % youth_bp)
-    # keep this last
-    #  web_sub_bp = 0  # not used
+        print("    %3s Youth Participation Bonus (%s youth x 20 pts)" % (youth_bp, min(int(gd.getv('youth')), 5)))
+    # Educational Activity Bonus - 100 points
+    if gd.getv('eduact') == "1":
+        eduact_bp = 100
+        tot_bonus += eduact_bp
+        print("    %3s Educational Activity Bonus" % eduact_bp)
+    # Social Media Bonus - 100 points
+    if gd.getv('social') == "1":
+        social_bp = 100
+        tot_bonus += social_bp
+        print("    %3s Social Media Bonus" % social_bp)
+    # Safety Officer Bonus - 100 points
+    if gd.getv('safety') == "1":
+        safety_bp = 100
+        tot_bonus += safety_bp
+        print("    %3s Safety Officer Bonus" % safety_bp)
+    # Site Responsibilities Bonus - 50 points
+    if gd.getv('sitere') == "1":
+        sitere_bp = 50
+        tot_bonus += sitere_bp
+        print("    %3s Site Responsibilities Bonus" % sitere_bp)
+    # keep web submission last
     if gd.getv('websub') == "1":
         web_sub_bp = 50
         tot_bonus += web_sub_bp
@@ -2332,7 +2628,7 @@ def contestlog(pr):
     print()
     print("Worked All States during FD Status")
     print()
-    r = qdb.waslogreport()
+    r = qdb.was_log_report()
     for i25 in r:
         print(i25)
     print()
@@ -2341,12 +2637,12 @@ def contestlog(pr):
     print()
     print("  Date Range", gd.getv('fdstrt'), "-", gd.getv('fdend'), "UTC")
     print()
-    qdb.prlog()
+    qdb.pr_log()
     print()
     print()
     print("ADIF Log")
     print()
-    qdb.pradif()
+    qdb.pr_adif()
     print()
     print("VHF Cabrillo")
     print()
@@ -2436,13 +2732,13 @@ class NewParticipantDialog:
             s.age.insert(END, ageio)
             s.vist.insert(END, vistio)
 
-        partlbox = Listbox(fr1, bg='light grey', height=0, width=0, selectmode="single", exportselection=False)
+        partlbox = Listbox(fr1, bg='light gray', height=0, width=0, selectmode="single", exportselection=False)
         partlbox.grid(row=0, column=0, sticky=NSEW)
         lpart1 = list(participants.values())
         lpart1.sort()
         partlboxind = -1
         for player in lpart1:
-            # print("player is : ", player)
+            #  print("player is : " , player)
             partlboxind += 1
             partlbox.insert(partlboxind, player)
         partlbox.bind('<<ListboxSelect>>', getpartsel)  # Select click
@@ -2609,8 +2905,8 @@ def renew_title():
     root.title('  FDLog_Enhanced      %s %s %s      Current Time %s:%s UTC %s/%s' %
                (call12, clas, sec, t[-6:-4], t[-4:-2], t[2:4], t[4:6]))
     # Adding a lbltimeonband that needs updated with the title. - Scott Hibbs KD4SIR 06Aug2022
-    # lbltimeonband.config(text=" Time on Band: %d:%02d " % (h, m9), font=fdfont, foreground='blue',
-    #                      background='light grey')
+    # lbltimeonband.config(text= " Time on Band: %d:%02d " % (h, m9), font=fdfont, foreground='blue',
+    #                      background='light gray')
     timeonband(h, m9)
     net.bcast_now()  # this is periodic bcast...
     net.bc_user(node, operator, logger, band)
@@ -2627,7 +2923,7 @@ def timeonband(h, m9):
         #  print("Act time: %s" % acttime)
     else:
         lbltimeonband.config(text=" Inactive:  %d:%02d " % (h, m9), font=fdfont, foreground='blue',
-                             background='light grey')
+                             background='light gray')
         acttime = m9
         #  print("Act time: %s" % acttime)
 
@@ -2641,7 +2937,7 @@ def setnode(new):
     renew_title()
     # Added so the new lblnode could be updated. - Scott Hibbs KD4SIR Mar/28/2017
     lblnode.config(text=" My Node: %s Port: %s " % (node, port_base), font=fdfont, foreground='blue',
-                   background='light grey')
+                   background='light gray')
 
 
 def applyprop():
@@ -2698,7 +2994,7 @@ def viewprep(ttl=''):
     #    w.transient(root)
     w.title("FDLog_Enhanced - %s" % ttl)
     t = Text(w, takefocus=0, height=20, width=85, font=fdfont,
-             wrap=NONE, setgrid=True)
+             wrap="none", setgrid=True)
     s = Scrollbar(w, command=t.yview)
     t.config(yscrollcommand=s.set)
     t.grid(row=0, column=0, sticky=NSEW)
@@ -2713,7 +3009,7 @@ def viewtextv(txt, ttl=''):
     """view text variable"""
     w = viewprep(ttl)
     w.insert(END, txt)
-    w.config(state=DISABLED)
+    w.config(state="disabled")
 
 
 def viewtextl(lthing, ttl=''):
@@ -2721,7 +3017,7 @@ def viewtextl(lthing, ttl=''):
     w = viewprep(ttl)
     for i26 in lthing:
         w.insert(END, "%s\n" % i26)
-    w.config(state=DISABLED)
+    w.config(state="disabled")
 
 
 def viewtextf(fn, ttl=''):
@@ -2757,8 +3053,13 @@ def viewlogfs(nod):
 
 
 def viewwasrpt():
-    r = qdb.waslogreport()
+    r = qdb.was_log_report()
     viewtextl(r, "Worked All States Report")
+
+
+def viewsectionsrpt():
+    r = qdb.was_sections_report()
+    viewtextl(r, "Worked All Sections Report")
 
 
 def updatebb():
@@ -2773,7 +3074,7 @@ def updatebb():
             sc = 'white'
             n = len(r.get(bm3, ''))  # This is the number of nodes on same band/mode.
             if n == 0:  # no one on this band/mode.
-                bc = 'light grey'
+                bc = 'light gray'
             elif n == 1:  # only one on this band/mode.
                 bc = 'gold'
             else:  # more than one on this band/mode.
@@ -2826,11 +3127,11 @@ def updateqct():
     """update contact count aka individual scoring"""
     # Separated CW and Digital scores instead of adding them - Scott Hibbs KD4SIR 05Aug2022
     dummy, dummy, qpop, qplg, dummy, dummy, dummy, dummy, cwq, digq, fonq, dummy, gotaq, dummy, dummy = \
-        qdb.bandrpt()  # xx reduce processing here
+        qdb.band_rpt()  # xx reduce processing here
     for i28, j6 in (('FonQ', 'Phone: %5s' % fonq),
                     ('CW/D', 'CW: %s & Dig: %s' % (cwq, digq)),
                     ('GOTAq', 'GOTA: %6s' % gotaq)):
-        bandb[i28].config(text=j6, background='light grey')
+        bandb[i28].config(text=j6, background='light gray')
         # Update for the operator OpQ - KD4SIR for FD 2014
         if operator == "":
             coin2 = "Contestant"
@@ -2842,12 +3143,12 @@ def updateqct():
             # print("tails is %s" % tails)
             if coin in qpop:
                 coin2 = qpop['%s' % coin]
-                opmb.config(text='Contacts: %2s' % coin2, background='light grey')
-                opds.config(text=tails, background='light grey')
+                opmb.config(text='Contacts: %2s' % coin2, background='light gray')
+                opds.config(text=tails, background='light gray')
             else:
                 coin2 = "0"
-                opmb.config(text='Contacts: %2s' % coin2, background='light grey')
-                opds.config(text=tails, background='light grey')
+                opmb.config(text='Contacts: %2s' % coin2, background='light gray')
+                opds.config(text=tails, background='light gray')
         # Update for the logger LoQ - KD4SIR for FD 2014
         if logger == "":
             coil2 = "Logger"
@@ -2858,12 +3159,12 @@ def updateqct():
             heads, dummy, dummy, dummy = str(logger).split(",")
             if coil in qplg:
                 coil2 = qplg['%s' % coil]
-                logmb.config(text='Logs: %2s' % coil2, background='light grey')
-                logds.config(text=heads, background='light grey')
+                logmb.config(text='Logs: %2s' % coil2, background='light gray')
+                logds.config(text=heads, background='light gray')
             else:
                 coil2 = "0"
-                logmb.config(text='Logs: %2s' % coil2, background='light grey')
-                logds.config(text=heads, background='light grey')
+                logmb.config(text='Logs: %2s' % coil2, background='light gray')
+                logds.config(text=heads, background='light gray')
     t = ""  # check for net config trouble
     if net.fills:
         t = "NEED FILL"
@@ -2885,7 +3186,7 @@ def updateqct():
     if t:
         lblnet.config(text=t, background='gold')
     else:
-        lblnet.config(text="Network OK", background='light grey')
+        lblnet.config(text="Network OK", background='light gray')
 
 
 def bandbuttons(w):
@@ -2893,7 +3194,7 @@ def bandbuttons(w):
     a = 0
     sv = StringVar()
     sv.set(band)
-    mac = os.name == 'posix'  # detect the mac added 152i
+    mac = os.name == 'posix'  # detect the Mac added 152i
     for i29 in bands:
         b = 0
         for j5 in modes:
@@ -2902,12 +3203,12 @@ def bandbuttons(w):
                 bm4 = 'off'
                 # indicatoron = 0 makes square button with text inside but doesn't work well on Mac,
                 # with value 1 it makes a circle alongside the text and works on both so detect
-                # mac and change it for mac only
-                bandb[bm4] = Radiobutton(master=w, text=bm4, font=fdfont, background='light grey', indicatoron=mac,
+                # Mac and change it for Mac only
+                bandb[bm4] = Radiobutton(master=w, text=bm4, font=fdfont, background='light gray', indicatoron=mac,
                                          variable=sv, value=bm4, selectcolor='red',
                                          command=lambda b03=bm4: (bandset(b03)))
             else:  # This creates all the buttons for band/mode.
-                bandb[bm4] = Radiobutton(master=w, text=bm4, font=fdfont, background='light grey', indicatoron=mac,
+                bandb[bm4] = Radiobutton(master=w, text=bm4, font=fdfont, background='light gray', indicatoron=mac,
                                          variable=sv, value=bm4, selectcolor='red',
                                          command=lambda b04=bm4: (bandset(b04)))
                 buttonbinder(bm4)  # Added to have each button have a binding - Scott Hibbs KD4SIR 13Aug2022
@@ -3045,7 +3346,7 @@ def setoper(op):
     operatorsonline.update({node: ini})
     net.bc_user(node, operator, logger, band)
     # Adding red to the display - KD4SIR
-    operatorcolor = 'light grey'
+    operatorcolor = 'light gray'
     opds.config(text=operator, background=operatorcolor)
     opmb.config(background='gold')
     saveglob()
@@ -3058,7 +3359,7 @@ def setlog(logr):
     # print "setlog",logr
     ini, name10, call15, age8, vist4 = str.split(logr, ', ')
     logger = "%s: %s, %s, %s, %s" % (ini, name10, call15, age8, vist4)
-    loggercolor = 'light grey'
+    loggercolor = 'light gray'
     logds.config(text=logger, background=loggercolor)
     logmb.config(background='gold')
     saveglob()
@@ -3122,7 +3423,7 @@ def ckpowr():
         powcb.config(background=pcolor1)
         powlbl.config(background=pcolor1)
     else:
-        pcolor1 = 'light grey'
+        pcolor1 = 'light gray'
         pwrmb.config(background=pcolor1)
         pwrnt.config(background=pcolor1)
         powcb.config(background=pcolor1)
@@ -3134,7 +3435,7 @@ def ckpowr():
         powcb.config(background=pcolor1)
         powlbl.config(background=pcolor1)
     else:
-        # pcolor == 'light grey' # Statement has no effect
+        # pcolor == 'light gray' # Statement has no effect
         pwrmb.config(background=pcolor1)
         pwrnt.config(background=pcolor1)
         powcb.config(background=pcolor1)
@@ -3161,7 +3462,7 @@ def setpwr(p4):
         powcb.config(background=pcolor2)
         powlbl.config(background=pcolor2)
     else:
-        pcolor2 = 'light grey'
+        pcolor2 = 'light gray'
         pwrmb.config(background=pcolor2)
         pwrnt.config(background=pcolor2)
         powcb.config(background=pcolor2)
@@ -3241,10 +3542,10 @@ def mhelp():
 
 
 def readsections():
-    """this will read the Arrl_sect.dat file for sections"""
+    """this will read the Arrl_sections_ref.txt file for sections"""
     # This modified from Alan Biocca FDLog version 153d - Scott Hibbs Feb/6/2017
     try:
-        fd = open("Arrl_sect.dat", "r")  # read section data
+        fd = open("Arrl_sections_ref.txt", "r")  # read section data
         while 1:
             ln = fd.readline().strip()  # read a line and put in db
             if not ln:
@@ -3375,7 +3676,7 @@ def proc_key(ch):
             txtbillb.insert(END, "\n")
             return
         if re.match(r'[.]ba$', kbuf):
-            qdb.statussofar()
+            qdb.status_so_far()
             kbuf = ""
             txtbillb.insert(END, "\n")
             return
@@ -3431,7 +3732,7 @@ def proc_key(ch):
             print()
             print("  band  cw q   pwr dig q   pwr fon q   pwr")
             qpb, ppb, dummy, dummy, dummy, tq, score, maxp, dummy, dummy, dummy, dummy, dummy, \
-                dummy, dummy = qdb.bandrpt()
+                dummy, dummy = qdb.band_rpt()
             for b in (160, 80, 40, 20, 15, 10, 6, 2, 220, 440, 1200, 'sat', 'gota'):
                 print("%6s" % b, end=' ')
                 for m12 in 'cdp':
@@ -3665,10 +3966,6 @@ def proc_key(ch):
                 txtbillb.insert(END, ch)
             else:
                 print("ignored key")
-                # print("stat over zerow? stat = ", stat)
-                # print("len(buf) = ", len(buf))
-                # print("it has to be less than fitty")
-                # return
 
 
 def kevent(event):
@@ -3756,7 +4053,7 @@ def log_select(event):
                 txtbillb.insert(END, "\n Previously edited contact - Not in the log.\n")
                 topper()
                 # print("Previously edited contact - Not in the log.")
-                return
+                return 'break'
         else:
             # Added to click on a participant to delete them. - Scott Hibbs KD4SIR 20Aug2022
             if "p:" in cxll:
@@ -3775,7 +4072,7 @@ def log_select(event):
                 else:
                     # Check to see if participant has contacts in the log.
                     dummy, dummy, qpop, qplg, dummy, dummy, dummy, dummy, dummy, dummy, \
-                        dummy, dummy, dummy, dummy, dummy = qdb.bandrpt()
+                        dummy, dummy, dummy, dummy, dummy = qdb.band_rpt()
                     if cxll2 in qpop or cxll2 in qplg:
                         pnts = "yes"
                     else:
@@ -3963,9 +4260,9 @@ def paste(event):
             selected = root.clipboard_get()  # Get the copied item from system clipboard
         except tkinter.TclError:
             selected = ""
-            return
+            return "break"
         pasteinterpreter()
-        return
+        return "break"
 
 
 def copy(event):
@@ -3985,7 +4282,7 @@ def copy(event):
             root.clipboard_append(selected)  # Append to system clipboard
         except tkinter.TclError:
             selected = ""
-            return
+            return "break"
 
 
 class EditDialog(Toplevel):
@@ -3993,7 +4290,7 @@ class EditDialog(Toplevel):
     #  Added functionality to check for dupes and change the title to show the error - Scott Hibbs Jul/02/2016
     #  Had to add variables for each text box to know if they changed to do dupe check.
     crazytxt = "Edit Log Entry"
-    crazyclr = "light grey"
+    crazyclr = "light gray"
     crazylbl = Label
 
     def __init__(self, parent, node2, seq):
@@ -4005,9 +4302,9 @@ class EditDialog(Toplevel):
         Toplevel.__init__(self, parent)  # only needed to avoid pycharm error.
         Toplevel.destroy(self)  # avoid showing as separate gui to avoid pycharm error above. :)
         self.crazytxt = "Edit Log Entry"
-        self.crazyclr = "light grey"
-        self.crazylbl = tl = Label(top, text=self.crazytxt, font=fdfont, bg=self.crazyclr, relief=RAISED)
-        # tl = Label(top, text='Edit Log Entry', font=fdfont, bg='light grey', relief=RAISED)
+        self.crazyclr = "light gray"
+        self.crazylbl = tl = Label(top, text=self.crazytxt, font=fdfont, bg=self.crazyclr, relief="raised")
+        # tl = Label(top, text='Edit Log Entry', font=fdfont, bg='light gray', relief="raised")
         tl.grid(row=0, columnspan=2, sticky=EW)
         tl.grid_columnconfigure(0, weight=1)
         Label(top, text='Date', font=fdfont).grid(row=1, sticky=W)
@@ -4168,7 +4465,7 @@ class EditDialog(Toplevel):
                 # print "no errors, enter data"
                 reason = "edited"
                 qdb.qdelete(self.node, self.seq, reason)
-                qdb.postnew(newdate, newcall, newband, newrept, newopr, newlogr, newpowr)
+                qdb.post_new(newdate, newcall, newband, newrept, newopr, newlogr, newpowr)
                 self.top.destroy()
                 txtbillb.insert(END, " EDIT Successful\n")
                 topper()
@@ -4185,7 +4482,7 @@ class EditDialog(Toplevel):
                     # print "no errors, enter data"
                     reason = "edited"
                     qdb.qdelete(self.node, self.seq, reason)
-                    qdb.postnew(newdate, newcall, newband, newrept, newopr, newlogr, newpowr)
+                    qdb.post_new(newdate, newcall, newband, newrept, newopr, newlogr, newpowr)
                     self.top.destroy()
                     txtbillb.insert(END, " EDIT Successful\n")
                     topper()
@@ -4236,7 +4533,7 @@ def deledialog(cxll2, seq, stn):
         logwredraw()
         s1.destroy()
 
-    part1lbox = Listbox(fr1z, bg='light grey', height=0, width=0, selectmode="single", exportselection=False)
+    part1lbox = Listbox(fr1z, bg='light gray', height=0, width=0, selectmode="single", exportselection=False)
     part1lbox.grid(row=0, column=0, sticky=NSEW)
     lpart1z = list(participants.values())
     lpart1z.sort()
@@ -4293,14 +4590,511 @@ def deledialog(cxll2, seq, stn):
     s1.call.insert(END, callio)
     s1.age.insert(END, ageio)
     s1.vist.insert(END, vistio)
-    part1lbox.config(state=DISABLED)  # to keep from changing participants
+    part1lbox.config(state="disabled")  # to keep from changing participants
+
+
+class USAStateMap:
+    """This class displays a map of the USA with colored states based on a DataFrame"""
+    # Added with the help of ChatGPT 3.5 - Scott Hibbs 01Mar2024
+
+    def __init__(self, states_to_color):
+        """ Initialize the USAStateMap object. """
+        self.states_to_color = states_to_color
+
+    def color_states(self):
+        """ Color states based on the list of state initials."""
+        # Define data for both Canada and the USA
+        combined_data = {'state': ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+                                   'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+                                   'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+                                   'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+                                   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'],
+                         'value': list(range(1, 51))}
+        # Create DataFrame
+        df = pd.DataFrame(combined_data)
+        # Initialize a new column for colors
+        df['color'] = 'white'
+        # Change the color of the specified states to dark blue
+        for state_initial in self.states_to_color:
+            # Ensure state_initial is a string and convert to uppercase
+            state_initial_str = str(state_initial).upper()
+            state_index = df.index[df['state'] == state_initial_str].tolist()
+            if state_index:
+                df.at[state_index[0], 'color'] = 'darkblue'
+            else:
+                print(f"State '{state_initial_str}' not found in the DataFrame.")
+        # Create a choropleth map with the updated colors
+        fig = px.choropleth(df,
+                            locations='state',
+                            locationmode="USA-states",
+                            projection='albers usa',
+                            scope="north america",
+                            color='color',  # Use the 'color' column for color
+                            title='Map',
+                            color_discrete_map={'white': 'white', 'darkblue': 'darkblue'},
+                            category_orders={'color': ['white', 'darkblue']}
+                            )
+        fig.show()
+
+
+def generate_map():
+    qso_db = QsoDb()
+    have_states = qso_db.get_have_states()
+    if not have_states:
+        have_states = []  # Show blank map if no states worked
+    state_map = USAStateMap(have_states)
+    state_map.color_states()
+
+
+class SectionMap:
+    """This class displays a grid map of ARRL/RAC sections organized by call area"""
+    # Added by Claude - Section Map similar to WAS Map
+
+    # Define sections by ARRL call area
+    SECTIONS_BY_AREA = {
+        '0': ['CO', 'IA', 'KS', 'MN', 'MO', 'NE', 'ND', 'SD'],
+        '1': ['CT', 'EMA', 'ME', 'NH', 'RI', 'VT', 'WMA'],
+        '2': ['ENY', 'NLI', 'NNJ', 'NNY', 'SNJ', 'WNY'],
+        '3': ['DE', 'EPA', 'MDC', 'WPA'],
+        '4': ['AL', 'GA', 'KY', 'NC', 'NFL', 'PR', 'SC', 'SFL', 'TN', 'VA', 'VI', 'WCF'],
+        '5': ['AR', 'LA', 'MS', 'NM', 'NTX', 'OK', 'STX', 'WTX'],
+        '6': ['EB', 'LAX', 'ORG', 'PAC', 'SB', 'SCV', 'SDG', 'SF', 'SJV', 'SV'],
+        '7': ['AK', 'AZ', 'EWA', 'ID', 'MT', 'NV', 'OR', 'UT', 'WWA', 'WY'],
+        '8': ['MI', 'OH', 'WV'],
+        '9': ['IL', 'IN', 'WI'],
+        'CA': ['AB', 'BC', 'GH', 'MB', 'NB', 'NL', 'NS', 'ONE', 'ONN', 'ONS', 'PE', 'QC', 'SK', 'TER'],
+        'DX': ['DX']
+    }
+
+    def __init__(self, sections_to_color):
+        """Initialize the SectionMap object."""
+        self.sections_to_color = [s.upper() for s in sections_to_color]
+
+    def show_map(self):
+        """Display the section map in a new window."""
+        # Create a new top-level window
+        map_window = Toplevel()
+        map_window.title("Worked All Sections Map")
+        map_window.configure(background='white')
+
+        # Count totals
+        total_sections = sum(len(sects) for sects in self.SECTIONS_BY_AREA.values())
+        worked_count = len(self.sections_to_color)
+
+        # Title label
+        title_label = Label(map_window, text=f"Worked All Sections: {worked_count}/{total_sections}",
+                           font=('Courier', 14, 'bold'), background='white', foreground='darkblue')
+        title_label.grid(row=0, column=0, columnspan=12, pady=10, sticky='ew')
+
+        # Create section grid
+        row_offset = 1
+        for area, sections in self.SECTIONS_BY_AREA.items():
+            # Area header
+            area_label = Label(map_window, text=f"Area {area}:" if area.isdigit() else f"{area}:",
+                              font=('Courier', 10, 'bold'), background='white', width=8, anchor='e')
+            area_label.grid(row=row_offset, column=0, padx=5, pady=2, sticky='e')
+
+            # Section labels
+            for col, sect in enumerate(sections):
+                is_worked = sect in self.sections_to_color
+                bg_color = 'darkblue' if is_worked else 'white'
+                fg_color = 'white' if is_worked else 'black'
+                border_color = 'darkblue'
+
+                # Create a frame for border effect
+                frame = Frame(map_window, background=border_color, padx=1, pady=1)
+                frame.grid(row=row_offset, column=col + 1, padx=2, pady=2)
+
+                sect_label = Label(frame, text=sect, font=('Courier', 10),
+                                  background=bg_color, foreground=fg_color,
+                                  width=4, relief='flat')
+                sect_label.pack()
+
+            row_offset += 1
+
+        # Legend
+        legend_frame = Frame(map_window, background='white')
+        legend_frame.grid(row=row_offset, column=0, columnspan=12, pady=10)
+
+        Label(legend_frame, text="Legend: ", font=('Courier', 10, 'bold'),
+              background='white').pack(side='left', padx=5)
+
+        worked_box = Frame(legend_frame, background='darkblue', padx=1, pady=1)
+        worked_box.pack(side='left', padx=2)
+        Label(worked_box, text="    ", background='darkblue').pack()
+        Label(legend_frame, text="= Worked", font=('Courier', 10),
+              background='white').pack(side='left', padx=(0, 15))
+
+        needed_box = Frame(legend_frame, background='darkblue', padx=1, pady=1)
+        needed_box.pack(side='left', padx=2)
+        Label(needed_box, text="    ", background='white').pack()
+        Label(legend_frame, text="= Needed", font=('Courier', 10),
+              background='white').pack(side='left')
+
+        # Center the window
+        map_window.update_idletasks()
+        width = map_window.winfo_width()
+        height = map_window.winfo_height()
+        x_pos = (map_window.winfo_screenwidth() // 2) - (width // 2)
+        y_pos = (map_window.winfo_screenheight() // 2) - (height // 2)
+        map_window.geometry(f'+{x_pos}+{y_pos}')
+
+
+def generate_section_map():
+    """Generate and display the Worked All Sections map."""
+    qso_db = QsoDb()
+    have_sections = qso_db.get_have_sections()
+    section_map = SectionMap(have_sections)
+    section_map.show_map()
+
+
+class InfoTableWindow:
+    """Information Table display for Field Day visitors.
+
+    This provides a kiosk-style display showing current contest status,
+    top operators/loggers, and allows visitors to register as participants.
+    """
+
+    def __init__(self, root_window, qso_db, global_data, network):
+        self.root = root_window
+        self.qdb = qso_db
+        self.gd = global_data
+        self.net = network
+        self.update_job = None
+        self.title_label = None
+        self.call_label = None
+        self.gota_label = None
+        self.time_label = None
+        self.score_label = None
+        self.qso_label = None
+        self.mode_label = None
+        self.contestant_labels = []
+        self.logger_labels = []
+        self.was_label = None
+        self.sections_label = None
+        self.setup_ui()
+        self.update_display()
+
+    def setup_ui(self):
+        """Configure the root window and create all UI elements."""
+        global txtbillb
+        # Clear any existing widgets from root (from normal GUI setup)
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        # Remove any existing menus
+        self.root.config(menu='')
+
+        # Create a hidden dummy txtbillb for NewParticipantDialog compatibility
+        txtbillb = Text(self.root)
+        # Don't pack it - keep it hidden but available for the dialog
+
+        self.root.title('FDLog_Enhanced - Information Table')
+        self.root.configure(background='#1a1a2e')
+
+        # Make window fullscreen/maximized
+        self.root.state('zoomed')  # Maximized on Windows
+        # Alternative for true fullscreen: self.root.attributes('-fullscreen', True)
+
+        # Main container frame
+        main_frame = Frame(self.root, background='#1a1a2e', padx=20, pady=10)
+        main_frame.pack(fill='both', expand=True)
+
+        # Register button at TOP so it's always visible
+        self.create_register_button(main_frame)
+
+        # Header section
+        self.create_header(main_frame)
+
+        # Score panel
+        self.create_score_panel(main_frame)
+
+        # Leaderboards frame (side by side)
+        leaderboards_frame = Frame(main_frame, background='#1a1a2e')
+        leaderboards_frame.pack(fill='x', pady=5)
+        leaderboards_frame.columnconfigure(0, weight=1)
+        leaderboards_frame.columnconfigure(1, weight=1)
+
+        # Top Contestants panel
+        self.create_contestants_panel(leaderboards_frame)
+
+        # Top Loggers panel
+        self.create_loggers_panel(leaderboards_frame)
+
+        # Progress section (WAS and Sections)
+        self.create_progress_panel(main_frame)
+
+    def create_header(self, parent):
+        """Create the header section with club name, calls, and time."""
+        header_frame = Frame(parent, background='#1a1a2e', padx=15, pady=15)
+        header_frame.pack(fill='x', pady=(0, 15))
+
+        # Get data with error handling
+        org_name = self.gd.getv('grpnam')
+        if org_name.startswith('get error'):
+            org_name = ''
+        fd_call = self.gd.getv('fdcall')
+        if fd_call.startswith('get error'):
+            fd_call = ''
+        else:
+            fd_call = fd_call.upper()
+        gota_call = self.gd.getv('gcall')
+        if gota_call.startswith('get error'):
+            gota_call = ''
+        else:
+            gota_call = gota_call.upper()
+
+        # Horizontal layout: Title | FD Call | GOTA Call | Time (justified across width)
+        title_text = f"FIELD DAY - {org_name}" if org_name else "FIELD DAY"
+        self.title_label = Label(header_frame, text=title_text,
+                                  font=('Helvetica', 24, 'bold'),
+                                  foreground='white', background='#1a1a2e')
+        self.title_label.pack(side='left', expand=True)
+
+        # FD Call
+        fd_call_text = f"FD Call: {fd_call}" if fd_call else "FD Call: Not Set"
+        self.call_label = Label(header_frame, text=fd_call_text,
+                                 font=('Helvetica', 14, 'bold'),
+                                 foreground='white', background='#1a1a2e')
+        self.call_label.pack(side='left', expand=True)
+
+        # GOTA Call (only if set)
+        if gota_call:
+            self.gota_label = Label(header_frame, text=f"GOTA Call: {gota_call}",
+                                     font=('Helvetica', 14, 'bold'),
+                                     foreground='white', background='#1a1a2e')
+            self.gota_label.pack(side='left', expand=True)
+
+        # Current time (on the right)
+        self.time_label = Label(header_frame, text="",
+                                 font=('Helvetica', 14, 'bold'),
+                                 foreground='white', background='#1a1a2e')
+        self.time_label.pack(side='left', expand=True)
+
+    def create_score_panel(self, parent):
+        """Create the score display panel."""
+        score_frame = Frame(parent, background='#1a1a2e', padx=15, pady=15)
+        score_frame.pack(fill='x', pady=10)
+
+        # Horizontal layout: Score | Total QSOs | Mode breakdown (justified across width)
+        self.score_label = Label(score_frame, text="CURRENT SCORE: 0",
+                                  font=('Helvetica', 24, 'bold'),
+                                  foreground='white', background='#1a1a2e')
+        self.score_label.pack(side='left', expand=True)
+
+        # QSO counts
+        self.qso_label = Label(score_frame, text="Total QSOs: 0",
+                                font=('Helvetica', 16, 'bold'),
+                                foreground='white', background='#1a1a2e')
+        self.qso_label.pack(side='left', expand=True)
+
+        # Mode breakdown
+        self.mode_label = Label(score_frame, text="CW: 0  |  Digital: 0  |  Phone: 0",
+                                 font=('Helvetica', 14, 'bold'),
+                                 foreground='white', background='#1a1a2e')
+        self.mode_label.pack(side='left', expand=True)
+
+    def create_contestants_panel(self, parent):
+        """Create the top Contestants leaderboard."""
+        contestants_frame = Frame(parent, background='#1a1a2e', padx=10)
+        contestants_frame.grid(row=0, column=0, sticky='nsew', padx=(0, 5))
+
+        # Title
+        Label(contestants_frame, text="TOP 5 CONTESTANTS",
+              font=('Helvetica', 14, 'bold'),
+              foreground='white', background='#1a1a2e').pack(pady=(0, 10))
+
+        # Leaderboard entries
+        self.contestant_labels = []
+        for idx in range(5):
+            entry_frame = Frame(contestants_frame, background='#16213e', padx=10, pady=5)
+            entry_frame.pack(fill='x', pady=2)
+            lbl = Label(entry_frame, text=f"{idx+1}. ---",
+                        font=('Courier', 12),
+                        foreground='white', background='#16213e', anchor='w')
+            lbl.pack(fill='x')
+            self.contestant_labels.append(lbl)
+
+    def create_loggers_panel(self, parent):
+        """Create the top Loggers leaderboard."""
+        loggers_frame = Frame(parent, background='#1a1a2e', padx=10)
+        loggers_frame.grid(row=0, column=1, sticky='nsew', padx=(5, 0))
+
+        # Title
+        Label(loggers_frame, text="TOP 5 LOGGERS",
+              font=('Helvetica', 14, 'bold'),
+              foreground='white', background='#1a1a2e').pack(pady=(0, 10))
+
+        # Leaderboard entries
+        self.logger_labels = []
+        for idx in range(5):
+            entry_frame = Frame(loggers_frame, background='#16213e', padx=10, pady=5)
+            entry_frame.pack(fill='x', pady=2)
+            lbl = Label(entry_frame, text=f"{idx+1}. ---",
+                        font=('Courier', 12),
+                        foreground='white', background='#16213e', anchor='w')
+            lbl.pack(fill='x')
+            self.logger_labels.append(lbl)
+
+    def create_progress_panel(self, parent):
+        """Create the WAS and Sections progress panel."""
+        progress_frame = Frame(parent, background='#1a1a2e', padx=15, pady=15)
+        progress_frame.pack(fill='x', pady=10)
+
+        # WAS progress (justified across width)
+        self.was_label = Label(progress_frame, text="WORKED ALL STATES: 0/50",
+                                font=('Helvetica', 16, 'bold'),
+                                foreground='white', background='#1a1a2e')
+        self.was_label.pack(side='left', expand=True)
+
+        # Sections progress
+        self.sections_label = Label(progress_frame, text="SECTIONS: 0/84",
+                                     font=('Helvetica', 16, 'bold'),
+                                     foreground='white', background='#1a1a2e')
+        self.sections_label.pack(side='left', expand=True)
+
+    def create_register_button(self, parent):
+        """Create the visitor registration button."""
+        button_frame = Frame(parent, background='#1a1a2e', pady=20)
+        button_frame.pack(fill='x')
+
+        # Use a more visible style for Windows compatibility
+        register_btn = Button(button_frame, text=">>> Sign In Here Please <<<",
+                               font=('Helvetica', 18, 'bold'),
+                               foreground='black', background='#00ff00',
+                               activeforeground='white', activebackground='#00aa00',
+                               relief='raised', borderwidth=4,
+                               padx=40, pady=20,
+                               cursor='hand2',
+                               command=self.register_visitor)
+        register_btn.pack(pady=10)
+
+    def update_display(self):
+        """Refresh all data on the display."""
+        self.update_time()
+        self.update_score()
+        self.update_leaderboards()
+        self.update_progress()
+
+        # Schedule next update in 10 seconds
+        self.update_job = self.root.after(10000, self.update_display)
+
+    def update_time(self):
+        """Update the current time display."""
+        import time
+        t = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
+        self.time_label.config(text=t)
+
+    def update_score(self):
+        """Update the score display."""
+        score_data = self.get_score_data()
+        total_score, cwq, digq, fonq, total_qsos = score_data
+
+        self.score_label.config(text=f"CURRENT SCORE: {total_score:,}")
+        self.qso_label.config(text=f"Total QSOs: {total_qsos}")
+        self.mode_label.config(text=f"CW: {cwq}  |  Digital: {digq}  |  Phone: {fonq}")
+
+    def update_leaderboards(self):
+        """Update the top operators and loggers lists."""
+        top_ops = self.get_top_operators(5)
+        top_loggers = self.get_top_loggers(5)
+
+        # Update contestant labels
+        for idx, lbl in enumerate(self.contestant_labels):
+            if idx < len(top_ops):
+                ini, count = top_ops[idx]
+                lbl.config(text=f"{idx+1}. {ini.upper()} - {count} QSOs")
+            else:
+                lbl.config(text=f"{idx+1}. ---")
+
+        # Update logger labels
+        for idx, lbl in enumerate(self.logger_labels):
+            if idx < len(top_loggers):
+                ini, count = top_loggers[idx]
+                lbl.config(text=f"{idx+1}. {ini.upper()} - {count} QSOs")
+            else:
+                lbl.config(text=f"{idx+1}. ---")
+
+    def update_progress(self):
+        """Update the WAS and sections progress."""
+        have_states = self.qdb.get_have_states()
+        have_sections = self.qdb.get_have_sections()
+
+        self.was_label.config(text=f"WORKED ALL STATES: {len(have_states)}/50")
+        self.sections_label.config(text=f"SECTIONS: {len(have_sections)}/84")
+
+    @staticmethod
+    def _safe_int(value, default_val=0):
+        """Safely convert a value to int, returning default_val on failure."""
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return default_val
+
+    def get_score_data(self):
+        """Calculate and return current score data.
+
+        Returns: (total_score, cwq, digq, fonq, total_qsos)
+        """
+        qpb, ppb, qpop, qplg, qpst, tq, score, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
+            self.qdb.band_rpt()
+
+        # Calculate QSO points
+        qsop = cwq * 2 + digq * 2 + fonq
+
+        # Calculate power multiplier (with safe int conversion)
+        powm = 5
+        psgen = self._safe_int(self.gd.getv('psgen'))
+        pscom = self._safe_int(self.gd.getv('pscom'))
+        if psgen > 0 or pscom > 0:
+            powm = 2
+        if maxp > 5:
+            powm = 2
+        if maxp > 150:
+            powm = 1
+        if maxp > 1500:
+            powm = 0
+
+        total_score = qsop * powm
+        total_qsos = cwq + digq + fonq
+
+        return total_score, cwq, digq, fonq, total_qsos
+
+    def get_top_operators(self, n=5):
+        """Get the top n operators by QSO count.
+
+        Returns: List of (initials, qso_count) tuples
+        """
+        qpb, ppb, qpop, qplg, qpst, tq, score, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
+            self.qdb.band_rpt()
+
+        # Sort operators by QSO count descending
+        sorted_ops = sorted(qpop.items(), key=lambda item: item[1], reverse=True)
+        return sorted_ops[:n]
+
+    def get_top_loggers(self, n=5):
+        """Get the top n loggers by QSO count.
+
+        Returns: List of (initials, qso_count) tuples
+        """
+        qpb, ppb, qpop, qplg, qpst, tq, score, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
+            self.qdb.band_rpt()
+
+        # Sort loggers by QSO count descending
+        sorted_loggers = sorted(qplg.items(), key=lambda item: item[1], reverse=True)
+        return sorted_loggers[:n]
+
+    @staticmethod
+    def register_visitor():
+        """Open the new participant dialog for visitor registration."""
+        NewParticipantDialog.dialog()
 
 
 def update():
     """Main program's timed updater"""
     # This function updated from 152i
     global updatect
-    root.after(1000, update)  # reschedule early for reliability
+    root.after(1000, update)  # type: ignore  # reschedule early for reliability
     sms.prout()  # 1 hz items
     updatebb()
     net.si.age_data()
@@ -4340,6 +5134,7 @@ newpart = NewParticipantDialog()
 cf = {}
 participants = {}
 operatorsonline = {}
+
 # modified the sect setting regex to accept both lower and upper case, added additional form fields
 # (also fixed 'from' to 'form') for wfd NOTE: set commands have a max length of 6! - Art Miller KC7SDA 2019
 for name, desc, default, okre, maxlen in (
@@ -4364,6 +5159,11 @@ for name, desc, default, okre, maxlen in (
         ('svroa', '<name>         agency site visitor name', '', r'[A-Za-z., -]{0,35}$', 35),
         ('youth', '<n>            participating youth', '0', r'\d{1,2}$', 2),
         ('websub', '0/1            web submission bonus', '0', r'[0-1]$', 1),
+        ('eduact', '0/1            educational activity bonus', '0', r'[0-1]$', 1),
+        ('gotaco', '0/1            GOTA coach bonus', '0', r'[0-1]$', 1),
+        ('social', '0/1            social media bonus', '0', r'[0-1]$', 1),
+        ('safety', '0/1            safety officer bonus', '0', r'[0-1]$', 1),
+        ('sitere', '0/1            site responsibilities bonus', '0', r'[0-1]$', 1),
         ('psgen', '0/1            using generator power', '0', r'[0-1]$', 1),
         ('pscom', '0/1            using commercial power', '0', r'[0-1]$', 1),
         ('psbat', '0/1            using battery power', '0', r'[0-1]$', 1),
@@ -4374,20 +5174,62 @@ for name, desc, default, okre, maxlen in (
         ('kick', '<n>            Time to kick inactivity', '0', r'\d{1,2}$', 2)):
     gd.new(name, desc, default, okre, maxlen)
 
-# setup for phonetics printout  # Added by Scott Hibbs KD4SIR to get phonetics on bottom of gui?
-# d = {"a":"alpha ","b":"bravo ","c":"charlie ","d":"delta ","e":"echo ", \
-#     "f":"foxtrot ","g":"golf ","h":"hotel ","i":"india ","j":"juliett ", \
-#     "k":"kilo ","l":"lima ","m":"mike ","n":"november ","o":"oscar ", \
-#     "p":"papa ","q":"quebec ","r":"romeo ","s":"sierra ","t":"tango ", \
-#     "u":"uniform ","v":"victor ","w":"whiskey ","x":"x-ray ","y":"yankee ", \
-#     "z":"zulu ","-":"dash ", "/":"dash ", "0":"Zero ", "1":"One ", "2":"Two ", "3":"Three ", \
-#     "4":"Four ", "5":"Five ", "6":"Six ", "7":"Seven ", "8":"Eight ", "9":"Nine "}
-# phonetics = "ab9cde" #str.lower(gd.getv('fdcall'))
-# let:char = d
-# phocall = ""
-# for char in phonetics:
-#    if char in d:
-#        phocall = phocall.join(char)
+# Phonetic alphabet dictionary - Added by Scott Hibbs KD4SIR
+PHONETIC_ALPHABET = {
+    "a": "Alpha", "b": "Bravo", "c": "Charlie", "d": "Delta", "e": "Echo",
+    "f": "Foxtrot", "g": "Golf", "h": "Hotel", "i": "India", "j": "Juliett",
+    "k": "Kilo", "l": "Lima", "m": "Mike", "n": "November", "o": "Oscar",
+    "p": "Papa", "q": "Quebec", "r": "Romeo", "s": "Sierra", "t": "Tango",
+    "u": "Uniform", "v": "Victor", "w": "Whiskey", "x": "X-ray", "y": "Yankee",
+    "z": "Zulu", "0": "Zero", "1": "One", "2": "Two", "3": "Three",
+    "4": "Four", "5": "Five", "6": "Six", "7": "Seven", "8": "Eight", "9": "Nine",
+    "-": "Dash", "/": "Stroke"
+}
+
+
+def callsign_to_phonetic(callsign):
+    """Convert a callsign to its phonetic alphabet representation."""
+    if not callsign:
+        return ""
+    phonetic_parts = []
+    for char in callsign.lower():
+        if char in PHONETIC_ALPHABET:
+            phonetic_parts.append(PHONETIC_ALPHABET[char])
+    return " ".join(phonetic_parts)
+
+
+def get_phonetic_response(callsign, mode):
+    """
+    Generate the phonetic response based on mode.
+    mode: 'cq' = CQ Field Day format
+          'qrz' = QRZed format
+          'answer' = Just the phonetic callsign
+    """
+    if not callsign:
+        return ""
+    phonetic = callsign_to_phonetic(callsign)
+    callsign_upper = callsign.upper()
+    if mode == 'cq':
+        return f"CQ Field Day {callsign_upper}, {phonetic} Field Day"
+    elif mode == 'qrz':
+        return f"{phonetic} QRZed?"
+    else:  # answer
+        return phonetic
+
+
+def update_phonetic_display():
+    """Update the phonetic display based on current callsign and selected mode.
+    Uses gcall (GOTA call) for gotanode, otherwise uses fdcall."""
+    try:
+        if node == 'gotanode':
+            callsign = gd.getv('gcall')
+        else:
+            callsign = gd.getv('fdcall')
+        mode = phonetic_mode.get()
+        response = get_phonetic_response(callsign, mode)
+        phonetic_label.config(text=response)
+    except (NameError, tkinter.TclError, AttributeError):
+        pass  # Silently ignore if widgets not ready
 
 # setup persistent globals before GUI
 suffix = ""
@@ -4414,17 +5256,45 @@ selected = ""  # selected is used for the mouse functions
 stat = 0
 kick = 10  # This is the setting in minutes to kick off for inactivity
 acttime = 0
+# map_was_lst = []  # list of state initials to color for map below
+# have_states1 = QsoDb.get_have_states
+# map_was_lst = have_states1
+# usa_map = USAStateMap(map_was_lst)  # Instantiate the USAStateMap object
+
+# Parse command-line arguments
+parser = argparse.ArgumentParser(
+    description='FDLog_Enhanced - Field Day Logging Software',
+    epilog='Example: python FDLog_Enhanced.py --node station1 --auth 24'
+)
+parser.add_argument('--node', '-n', type=str, help='Station node name (7 chars, e.g., station1)')
+parser.add_argument('--auth', '-a', type=str, help='Authentication key (e.g., 24 for year 2024)')
+args = parser.parse_args()
 
 # Load globals after all these default values are set.
 globDb = GlobalDb()
 loadglob()  # load persistent globals from file
 print()
 
-if node == "":
+# Handle node ID - use CLI arg, saved value, or prompt
+if args.node:
+    # CLI argument provided
+    k = str.lower(args.node)[:8]
+    if k == 'gota':
+        node = 'gotanode'
+    elif k == 'info':
+        node = 'infotable'
+    else:
+        # Pad to 7 chars if needed
+        while len(k) < 7:
+            k = k + random.choice('abcdefghijklmnopqrstuvwxyz')
+        node = k[:7] + random.choice('abcdefghijklmnopqrstuvwxyz')
+    print("Node ID set from command line")
+elif node == "":
     # Revised 4/19/2014 for 8 characters so the log lines up nicely. - Scott Hibbs KD4SIR
     print("  Enter the station name (lower case)")
     print("  Please be 7 characters! (I will add letters to be unique)")
     print("  (Use 'gota' for get on the air station)")
+    print("  (Use 'info' for information table display)")
     #    print "  (Previous Node ID: '%s')"%node
     print("  (7 characters}")
     k = str.lower(str.strip(sys.stdin.readline())[:8])
@@ -4432,14 +5302,22 @@ if node == "":
         print("That's too many.. (Marc? is that you?)")  # Thanks to Marc Fountain K9MAF for the correction. Mar/23/2017
         k = k[:7]
     z = len(k)
-    if k != 'gota':
+    if k == 'info':
+        print("Starting Information Table display...")
+        node = 'infotable'
+        print()
+    elif k != 'gota':
         while z != 7:
             if k == 'gota':
                 print("please restart the program.")
                 sys.exit()
+            elif k == 'info':
+                print("Starting Information Table display...")
+                node = 'infotable'
+                break
             else:
                 if z < 4:
-                    print("um yeah.. 7 characters....    (restart if your gota)")
+                    print("um yeah.. 7 characters....    (restart if your gota or info)")
                     k = str.lower(str.strip(sys.stdin.readline())[:8])
                     z = len(k)
                 else:
@@ -4461,17 +5339,26 @@ if node == "":
         print()
 print("Using Node ID: '%s' " % node)
 print()
-# get auth key  auth xxxpppzzz...  fdlogxxx.fdd  port ppp   hashkey (all)
-# allow user to select new one, or re-use previous
-print("Enter Authentication Key (Return to re-use previous '%s')" % authk)
-print("  (use 'tst' for testing, two digit year for contest):")
-k = str.strip(sys.stdin.readline())
-if k != "":
-    print("New Key entered, Contestant and logger cleared")
-    authk = k
+
+# Handle auth key - use CLI arg, saved value, or prompt
+if args.auth:
+    # CLI argument provided
+    print("Authentication key set from command line")
+    authk = args.auth
     operator = ""
     logger = ""
-    print()
+else:
+    # get auth key  auth xxxpppzzz...  fdlogxxx.fdd  port ppp   hashkey (all)
+    # allow user to select new one, or re-use previous
+    print("Enter Authentication Key (Return to re-use previous '%s')" % authk)
+    print("  (use 'tst' for testing, two digit year for contest):")
+    k = str.strip(sys.stdin.readline())
+    if k != "":
+        print("New Key entered, Contestant and logger cleared")
+        authk = k
+        operator = ""
+        logger = ""
+        print()
 print("Using Authentication Key: '%s'" % authk)
 print("Using", authk[0:3], "for setting port, file")
 port_offset = ival(authk[3:6]) * 7
@@ -4487,7 +5374,7 @@ print("Starting Network")
 net = NetworkSync()  # setup net
 net.setport(port_base)
 net.setauth(authk)
-print("Saving Persistent Configuration in", globf)
+print("Saving Persistent Configuration in", globDb.dbPath)
 saveglob()
 if operator != "":
     ini3 = operator.split(':', 1)[0]
@@ -4518,6 +5405,7 @@ logmenu.add_command(label='Full Log', command=lambda: viewlogf(""))
 logmenu.add_command(label='QSTs', command=lambda: viewlogf(r"[*]QST"))
 logmenu.add_command(label='GOTA', command=lambda: viewlogfs("gota"))
 logmenu.add_command(label='WAS', command=viewwasrpt)
+logmenu.add_command(label='Sections', command=viewsectionsrpt)
 for j in modes:
     lab = StringVar
     m = Menu(logmenu, tearoff=0)
@@ -4546,7 +5434,7 @@ menu.add_cascade(label="Resources", menu=resourcemenu)
 #  os.startfile only works on Windows. Use os.system("open file.txt") which works on Macs.
 resourcemenu.add_command(label="ARRL FD Rules (pdf)", command=lambda: os.system('Rules.pdf'))
 # Changed this to a .dat file to remove the duplicate txt file - Scott Hibbs KD4SIR Mar/28/2017
-resourcemenu.add_command(label="ARRL Sections", command=lambda: viewtextf('Arrl_sect.dat', 'ARRL Sections'))
+resourcemenu.add_command(label="ARRL Sections", command=lambda: viewtextf('Arrl_sections_ref.txt', 'ARRL Sections'))
 resourcemenu.add_command(label="ARRL Band Chart (pdf)", command=lambda: os.system('Bands.pdf'))
 resourcemenu.add_command(label="ARRL Band Plan", command=lambda: viewtextf('ARRL_Band_Plans.txt', "ARRL Band Plan"))
 # This is not needed with the band chart giving the same info - Scott Hibbs KD4SIR Mar/28/2017
@@ -4590,16 +5478,16 @@ resourcemenu.add_command(label="Time Conversion Chart", command=lambda: viewtext
 # Font Menu - Scott Hibbs KD4SIR 09Aug2022
 fontmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Font", menu=fontmenu)
-fontmenu.add_command(label="Consolas - slash zero 10pt", command=fntconsolas10)
-fontmenu.add_command(label="Consolas - 11pt", command=fntconsolas11)
-fontmenu.add_command(label="Consolas - 12pt", command=fntconsolas12)
-fontmenu.add_command(label="Consolas - 13pt", command=fntconsolas13)
-fontmenu.add_command(label="Consolas - 14pt", command=fntconsolas14)
-fontmenu.add_command(label="Courier - normal type 10pt", command=fntcourier10)
-fontmenu.add_command(label="Courier - 11pt", command=fntcourier11)
-fontmenu.add_command(label="Courier - 12pt", command=fntcourier12)
-fontmenu.add_command(label="Courier - 13pt", command=fntcourier13)
-fontmenu.add_command(label="Courier - 14pt", command=fntcourier14)
+fontmenu.add_command(label="Consolas - slash zero 10pt", command=lambda: set_font("Consolas", 10))
+fontmenu.add_command(label="Consolas - 11pt", command=lambda: set_font("Consolas", 11))
+fontmenu.add_command(label="Consolas - 12pt", command=lambda: set_font("Consolas", 12))
+fontmenu.add_command(label="Consolas - 13pt", command=lambda: set_font("Consolas", 13))
+fontmenu.add_command(label="Consolas - 14pt", command=lambda: set_font("Consolas", 14))
+fontmenu.add_command(label="Courier - normal type 10pt", command=lambda: set_font("Courier", 10))
+fontmenu.add_command(label="Courier - 11pt", command=lambda: set_font("Courier", 11))
+fontmenu.add_command(label="Courier - 12pt", command=lambda: set_font("Courier", 12))
+fontmenu.add_command(label="Courier - 13pt", command=lambda: set_font("Courier", 13))
+fontmenu.add_command(label="Courier - 14pt", command=lambda: set_font("Courier", 14))
 
 # Help menu
 helpmenu = Menu(menu, tearoff=0)
@@ -4622,10 +5510,10 @@ frn1 = Frame(root, bd=1)
 # Network label
 lblnet = Label(frn1, text="Waiting for Network", font=fdfont, relief='raised', foreground='blue', background='gold')
 # Time on Band label
-lbltimeonband = Label(frn1, text=" ", font=fdfont, relief='raised', foreground='blue', background='light grey')
+lbltimeonband = Label(frn1, text=" ", font=fdfont, relief='raised', foreground='blue', background='light gray')
 # Node label
 lblnode = Label(frn1, text=" Node: %s Port: %s " % (node, port_base), font=fdfont, relief='raised',
-                foreground='black', background='light grey')
+                foreground='black', background='light gray')
 
 # Band Buttons
 f1 = Frame(root, bd=1)
@@ -4635,7 +5523,7 @@ bandbuttons(f1)
 f1b = Frame(root, bd=0)
 #  Changed the color of the user buttons to red until assigned - KD4SIR Scott Hibbs 7/14/2013
 #  Changed colors to be less garish: Yellow to gold, orange to dark orange, green to pale green,
-#  grey to light grey. - Curtis E. Mills WE7U 21Jun2019
+#  gray to light gray. - Curtis E. Mills WE7U 21Jun2019
 ocolor = 'red'
 lcolor = 'red'
 pcolor = 'red'
@@ -4687,23 +5575,25 @@ setpwr(power)
 
 # Function buttons
 redrawbutton = Button(f1b, text="Redraw Log", font=fdfont, relief='raised', foreground='blue', command=logwredraw,
-                      background='light grey')
+                      background='light gray')
 opsonlinebutton = Button(f1b, text="Contestants Working", font=fdfont, relief='raised', foreground='blue',
-                         command=showoperatorsonline, background='light grey')
-extrabutton = Button(f1b, text="Future Buttons Here", font=fdfont, relief='raised', foreground='blue',
-                     command=logwredraw, background='light grey')
+                         command=showoperatorsonline, background='light gray')
+mapbutton = Button(f1b, text="WAS Map", font=fdfont, relief='raised', foreground='blue',
+                   command=generate_map, background='light gray')
+sectionmapbutton = Button(f1b, text="Section Map", font=fdfont, relief='raised', foreground='blue',
+                          command=generate_section_map, background='light gray')
 
 # Who's on First Window to display operators on bands
-# lblwof = Label(f1b, text="", font=fdfont, foreground='blue', background='light grey')
+# lblwof = Label(f1b, text="", font=fdfont, foreground='blue', background='light gray')
 # lblwof.grid(row=2, column=0, columnspan=9, sticky=NSEW)
 # Port window
-# lblport = Label(f1b, text="Port: %s" % port_base, font=fdfont, foreground='blue', background='light grey')
+# lblport = Label(f1b, text="Port: %s" % port_base, font=fdfont, foreground='blue', background='light gray')
 # lblport.grid(row=3, column=9, columnspan=1, sticky=NSEW)
 
 # log window
 logw = Text(root, takefocus=0, height=11, width=80, font=fdfont,
-            background='light grey', wrap=NONE, setgrid=True)
-scroll = Scrollbar(root, command=logw.yview, background='light grey')
+            background='light gray', wrap="none", setgrid=True)
+scroll = Scrollbar(root, command=logw.yview, background='light gray')
 logw.config(yscrollcommand=scroll.set)
 scroll.grid(row=3, column=1, sticky=NS)
 logw.tag_config("b", foreground="blue")
@@ -4714,7 +5604,7 @@ logw.insert(END, "%s\n" % prog, "b")
 
 # Text Billboard - our entry window.
 txtbillb = Text(root, takefocus=1, height=10, width=80, font=fdfont,
-                wrap=NONE, setgrid=True, background='light grey')
+                wrap="none", setgrid=True, background='light gray')
 scrollt = Scrollbar(root, command=txtbillb.yview)
 txtbillb.config(yscrollcommand=scrollt.set)
 txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", "b")
@@ -4727,27 +5617,33 @@ txtbillb.insert(END, "-Call-Class-Sect- \n")
 txtbillb.config(insertwidth=3)
 txtbillb.focus_set()
 
-#     Add a bottom window for station information
-# f1c = Frame(root, bd=1)
-# f1c.grid(row=4,columnspan=4,sticky=NSEW)
-#     Add entry box for entering data
-# entqsl = Entry(f1c,font=fdfont,background='light grey')
-# entqsl.grid(row=4,column=0,sticky=NSEW)
-# txtentry = Text(f1c,takefocus=1,height=2,width=39,font=fdfont,\
-# wrap=NONE,setgrid=1)
-# txtentry.grid(row=4,column=4,sticky=NSEW)
-# root.grid_rowconfigure(4,weight=1)
-# txtentry.insert(END,"Call-Class-Sect- \n")
-# fth2lbl = Label(f1c,text="-\n<",font=fdfont,background='light grey')
-# fth2lbl.grid(row=4,column=3,sticky=NSEW)
-# Phonetics box
-# fthw2 = Text(f1c,takefocus=0,height=2,width=40,font=fdfont,\
-#            background='light grey',wrap=NONE,setgrid=1)
-# fthw2.config(cursor='arrow')
-# fthw2.grid(row=4,column=2,sticky=NSEW)
-# root.grid_rowconfigure(4,weight=1)
-# fthw2.insert(END,"phonetics box")
-# txtentry.insert(END,"\n")
+# Phonetic alphabet display frame - Added by Scott Hibbs KD4SIR
+phonetic_frame = Frame(root, bd=1, background='light gray')
+phonetic_mode = StringVar(value='answer')  # Default to Answer mode
+
+# Radio buttons for phonetic mode selection (Callsign first as default)
+phonetic_rb_answer = Radiobutton(phonetic_frame, text="Callsign", font=fdfont,
+                                  variable=phonetic_mode, value='answer',
+                                  background='light gray', selectcolor='gold',
+                                  command=update_phonetic_display)
+phonetic_rb_cq = Radiobutton(phonetic_frame, text="CQ", font=fdfont,
+                              variable=phonetic_mode, value='cq',
+                              background='light gray', selectcolor='gold',
+                              command=update_phonetic_display)
+phonetic_rb_qrz = Radiobutton(phonetic_frame, text="QRZ", font=fdfont,
+                               variable=phonetic_mode, value='qrz',
+                               background='light gray', selectcolor='gold',
+                               command=update_phonetic_display)
+
+# Label for phonetic mode
+phonetic_mode_label = Label(phonetic_frame, text="Phonetic:", font=fdfont,
+                            background='light gray', foreground='blue')
+
+# Label for displaying the phonetic callsign response
+phonetic_label = Label(phonetic_frame, text="", font=fdfont,
+                       background='light gray', foreground='black',
+                       anchor='w', justify='left')
+
 # startup
 
 contestlog(0)  # define globals
@@ -4769,6 +5665,39 @@ else:
 print("To change system time, stop FDLog, change the time or zone, then restart")
 print()
 net.start()  # start threads
+
+# Check if this is an Information Table node
+if node == "infotable":
+    print("Starting Information Table display mode...")
+    print("This node will display contest status for visitors.")
+    print()
+
+    # Create dummy widgets and functions needed by NewParticipantDialog
+    txtbillb = Text(root)  # Hidden text widget for compatibility
+    opdsu = Menu(root)  # Dummy menu for buildmenus()
+    logdsu = Menu(root)  # Dummy menu for buildmenus()
+
+    # Override topper() to do nothing in infotable mode
+    def topper():
+        pass
+
+    # Override buildmenus() to do nothing in infotable mode
+    def buildmenus():
+        pass
+
+    # Launch Info Table interface instead of normal UI
+    info_table = InfoTableWindow(root, qdb, gd, net)
+    root.mainloop()
+    print("\nShutting down Information Table")
+    band = 'off'
+    net.bcast_now()
+    time.sleep(0.2)
+    saveglob()
+    print("  globals saved")
+    print("\n\n FDLog_Enhanced Information Table has shut down.")
+    time.sleep(0.5)
+    exit(0)
+
 renew_title()
 secName = {}
 readsections()
@@ -4798,7 +5727,8 @@ powcb.grid(row=2, column=7, sticky=NSEW)
 # Grid for functionbuttons
 redrawbutton.grid(row=3, column=0, sticky=NSEW)
 opsonlinebutton.grid(row=3, column=1, sticky=NSEW)
-extrabutton.grid(row=3, column=2, sticky=NSEW)
+mapbutton.grid(row=3, column=2, sticky=NSEW)
+sectionmapbutton.grid(row=3, column=3, sticky=NSEW)
 # Grid for log window
 root.grid_rowconfigure(2, weight=1)
 logw.grid(row=3, column=0, sticky=NSEW)
@@ -4807,6 +5737,14 @@ root.grid_columnconfigure(0, weight=1)
 root.grid_rowconfigure(3, weight=1)
 txtbillb.grid(row=4, column=0, sticky=NSEW)
 scrollt.grid(row=4, column=1, sticky=NSEW)
+# Grid for phonetic alphabet display
+phonetic_frame.grid(row=5, column=0, columnspan=2, sticky=NSEW)
+phonetic_mode_label.grid(row=0, column=0, padx=5, sticky=NSEW)
+phonetic_rb_answer.grid(row=0, column=1, padx=5, sticky=NSEW)
+phonetic_rb_cq.grid(row=0, column=2, padx=5, sticky=NSEW)
+phonetic_rb_qrz.grid(row=0, column=3, padx=5, sticky=NSEW)
+phonetic_label.grid(row=0, column=4, padx=10, sticky=NSEW)
+phonetic_frame.grid_columnconfigure(4, weight=1)
 
 #  Bindings
 root.bind('<ButtonRelease-1>', focevent)
@@ -4818,7 +5756,8 @@ txtbillb.bind('<Control-Key-c>', copy)  # copy event for the copy function
 txtbillb.bind('<Control-Key-v>', paste)  # paste event for the paste function
 
 bandset('off')
-root.after(1000, update)  # 1 hz activity
+update_phonetic_display()  # initial phonetic display update
+root.after(1000, update)  # type: ignore  # 1 hz activity
 root.mainloop()  # gui up
 print("\nShutting down")
 # the end was updated from 152i
@@ -4834,15 +5773,8 @@ exit(1)
 
 # Suggestions/To Do:
 #
-# Would love another file to use for the "InfoNode" computer. Scott 2017 Field Day notes
-#       It will allow visitors/participants to log in
-#       It will show top 5 operators and top 5 loggers
-#       It will show worked all states
-#       Provide info on Amateur Radio (video and/or short articles to print?)
-#       Provide info on the local club
-#       fool-proof - no logging from this node.
 #
-#  add phonetic alphabet display (started: some code commented out) 2016 Field Day notes
+#  add phonetic alphabet display (DONE: implemented Jan 2026) 2016 Field Day notes
 #
 #
 # eof
