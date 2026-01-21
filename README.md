@@ -15,10 +15,10 @@ Log entry is just three simple things : KD4SIR 1D IN
 python FDLog_Enhanced.py
 
 # Command-line mode (no prompts - useful for scripting/automation)
-python FDLog_Enhanced.py --node station1 --auth 24
+python FDLog_Enhanced.py --node station1 --auth 26
 
 # GOTA station
-python FDLog_Enhanced.py --node gota --auth 24
+python FDLog_Enhanced.py --node gota --auth 26
 
 # Show help
 python FDLog_Enhanced.py --help
@@ -29,7 +29,7 @@ python FDLog_Enhanced.py --help
 | Option | Short | Description |
 |--------|-------|-------------|
 | `--node` | `-n` | Station node name (7 characters, e.g., `station1`, `station2`, `gota`) |
-| `--auth` | `-a` | Authentication key (use two-digit year for contests, e.g., `24` for 2024, or `tst` for testing) |
+| `--auth` | `-a` | Authentication key (use two-digit year for contests, e.g., `26` for 2026, or `tst` for testing) |
 | `--help` | `-h` | Show help message |
 
 **Notes:**
@@ -72,43 +72,99 @@ pyinstaller FDLog_Enhanced.spec
 The executable will be created in the `dist/` folder. Distribute this single file to users.
 
 **Build outputs:**
-- Windows: `dist/FDLog_Enhanced.exe`
+- Windows: `dist/FDLog_Enhanced.exe` and main folder
 - Linux/Mac: `dist/FDLog_Enhanced`
 
 The last Python 2.7 version is in the release section.   
 
-The code here is Python3 (should be stable) and tested on Linux and Windows with a 192.168.x.x network. This needs to be tested on different networks and with Macs.
+The code here is Python3 (should be stable) This needs to be tested on different networks and non-windows.
 
 This is the top of the Release Log for FDLog_Enhanced
 The release log will have the present back to the beginning of FDLog in 1984. 
 
 Release Log for FDLog and FDLog_Enhanced 
-We have added 99 enhancements to the original FDLog so far.
+We have added 106 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984. 
 
 Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
 To Do and Ideas: 
-		
-	* An Information Table node that will allow sign in, show our group score, 
-			the top 5 Contestors, the top 5 visitors, Worked All States, NTP server/client as time master etc.
-	* Add more scoring: 
-			complex gota points, youth, information table, official visitors, 
-			max 20 radios, power multipliers, educational activity... 
-	* Change natural to battery? or add a battery button?
-	* Try showing all sections to the side - marking those worked.
-	* Work on Phonetic helper for GOTA station
-	* believe prefix check only returns first prefix in the log. Actually there is a note in the code from
-		Alan Biocca to fix this as foreign callsigns are not supported properly.
-	* Dupe check for requested fills - 2 UNconnected nodes can dupe and both count when connected. 
-	  (currently dupe checking is at entry - not on fills)
 	* Need to rewrite all the documentation. It's everywhere...
-	
+	* Morse Code functionality. 
 	Linux to do list: 
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
+
+2026_4.1.1 20Jan2026 Claude Code Updates 
+
+	107 Fixed oldest bug from 1984. The program could not handle international
+	    callsigns. Using https://github.com/scotthibbs/Call_Sign_Parser_and_Lookup 
+		Claude Code was able to fix this bug. 
+	+ WAS Map Fix - Now opens even when no states have been worked (shows blank map)
+	+ Fixed Font changes to be more robust (some fonts were being missed)
+	106 Network Dupe Checking - Automatic duplicate detection during network fills:
+		- Detects when two disconnected nodes worked the same station on the same band
+		- Compares timestamps and keeps the oldest contact
+		- Deletes the newer duplicate automatically
+		- Delete markers propagate across the network
+
+2026_beta 4.1.0 19Jan2026 Claude Code Updates
+	
+	105 Info Table Node added:
+		- Node selection: Type "info" to launch the information table display
+		- Header: Club name, FD Call, GOTA Call (if set), and current time
+		- Score panel: Total score with CW/Digital/Phone breakdown
+		- Leaderboards: Top 5 Contestants and Top 5 Loggers
+		- Progress tracking: Worked All States (X/50) and Sections (X/84)
+		- Visitor registration: Green button that opens the full participant dialog
+		- Auto-refresh: Updates every 10 seconds
 		
+	104 Phonetic Alphabet Display - Added at the bottom of the GUI with:
+		- Radio buttons: Callsign (default), CQ, QRZ
+		- Shows appropriate phonetic response format
+		- Uses GOTA call for gotanode, FD call for others
+	
+2026_beta 4.0.1 19Jan2026 Claude Code updates
+
+	103 Added Worked All Sections map and log report
+
+	+ Consolidated font functions
+     - Replaced 10 separate font functions (fntcourier10, fntcourier11, etc.)
+       with single set_font(face, size) function
+     - Updated menu commands to use lambda: set_font("Courier", 12)
+     - Font changes no longer print "-Call-Class-Sect-" repeatedly
+
+	+ Fixed WAS Map crash
+     - Fixed get_have_states() ValueError when parsing report
+     - Map now displays correctly with contacted states colored
+
+	102 Added command-line arguments
+     - --node, -n : Station node name (e.g., station1, gota)
+     - --auth, -a : Authentication key (e.g., 24 for 2024)
+     - --help, -h : Show help
+     - Example: python FDLog_Enhanced.py --node station1 --auth 24
+
+	101 Added requirements.txt
+     - Lists dependencies: pandas, plotly
+     - Install with: pip install -r requirements.txt
+
+	100 Added PyInstaller build system
+     - build.py : Build script
+     - FDLog_Enhanced.spec : PyInstaller configuration
+     - Creates standalone 43MB executable
+     - Users don't need Python installed
+
+		Fixed fingerprint() for standalone builds
+		- Handles FileNotFoundError when running as bundled exe
+		- Displays "(standalone build)" instead of hash
+
+		NEW FILES CREATED:
+		- requirements.txt
+		- build.py
+		- FDLog_Enhanced.spec
+		- FDLog_Enhanced.exe (43MB standalone executable)
+
 2023_beta 4.0.0 03Dec2023   
 	NOT COMPATIBLE WITH PREVIOUS VERSIONS  
 	Contestant Tracking - stable  
@@ -227,5 +283,6 @@ __ (Control c,and v) will be easy to add next. - Thanks to Weo's suggestion (fou
  60 Up arrow will now retype the last entry (just in case enter was hit instead of space) - Scott Hibbs KD4SIR Jul/06/2018   
 
 Continued in releaselog.txt
+
 
 Scott Hibbs KD4SIR
