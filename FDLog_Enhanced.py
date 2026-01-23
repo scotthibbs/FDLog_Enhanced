@@ -644,7 +644,11 @@ class SQDB:
         # update sequence counts for journals?
         sqdb1.commit()  # do the commit
         if n.band == '*QST':
-            print(("QST\a " + n.rept + " -" + n.logr))  # The "\a" will emit the beep sound for QST
+            print(("QST " + n.rept + " -" + n.logr))
+            try:
+                if sound_enabled.get(): root.bell()  # Audio notification for QST (if enabled)
+            except NameError:
+                pass  # sound_enabled not yet defined during startup
 
 
 class QsoDb:
@@ -3847,6 +3851,7 @@ def proc_key(ch):
                     topper()
                 elif qdb.dupck(xcall, band):  # dupe check
                     txtbillb.insert(END, "\n\n DUPE on band %s\n" % band)
+                    if sound_enabled.get(): root.bell()  # Audio notification for dupe
                     topper()
                 elif qdb.partck(xcall):  # Participant check
                     txtbillb.insert(END, "\n Participant - not allowed \n")
@@ -4232,6 +4237,7 @@ def pasteinterpreter():
             topper()
         elif qdb.dupck(xcall, band):  # dupe check
             txtbillb.insert(END, "\n\n DUPE on band %s\n" % band)
+            if sound_enabled.get(): root.bell()  # Audio notification for dupe
             topper()
         elif qdb.partck(xcall):  # Participant check
             txtbillb.insert(END, "\n Participant - not allowed \n")
@@ -5867,6 +5873,11 @@ setpwr(power)
 # Natural/Alternate power countdown label - shows progress toward 100pt bonus (5 QSOs needed)
 natpwr_countdown = Label(f1b, text="Nat: 0/5", font=fdfont, background='light gray')
 
+# Sound notifications toggle - off by default for digital mode compatibility
+sound_enabled = IntVar(value=0)
+sound_cb = Checkbutton(f1b, text="Sound", variable=sound_enabled,
+                       font=fdfont, relief='raised', background='light gray')
+
 # Added Network label - KD4SIR Scott Hibbs Oct 4, 2013
 # Added Node label - KD4SIR Scott Hibbs Oct/13/2013
 # Added wof label - KD4SIR Scott Hibbs Jan/19/2017
@@ -6027,6 +6038,7 @@ pwrnt.grid(row=2, column=5, sticky=NSEW)
 powlbl.grid(row=2, column=6, sticky=NSEW)
 powcb.grid(row=2, column=7, sticky=NSEW)
 natpwr_countdown.grid(row=2, column=8, sticky=NSEW)
+sound_cb.grid(row=2, column=9, sticky=NSEW)
 # Grid for functionbuttons
 redrawbutton.grid(row=3, column=0, sticky=NSEW)
 opsonlinebutton.grid(row=3, column=1, sticky=NSEW)
