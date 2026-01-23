@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 112 enhancements to the original FDLog so far.
+We have added 110 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -18,16 +18,16 @@ To Do and Ideas:
 		- Text files now found correctly regardless of working directory
 		- Added UTF-8 encoding for cross-platform compatibility
 
-	112 Added Sound toggle checkbox (off by default):
+	110 Added Sound toggle checkbox (off by default):
 		- Audio notifications for duplicate contacts
 		- Audio notifications for QST messages
 		- Default off for digital mode compatibility
 
-	111 Fixed cross-platform file opening for PDFs and text files:
+	+ Fixed cross-platform file opening for PDFs and text files:
 		- Works on Windows, macOS, Linux, and Raspberry Pi
 		- Uses system default application (xdg-open on Linux)
 
-	110 Improved error handling in CW keying module:
+	+ Improved error handling in CW keying module:
 		- Replaced 20 bare except: clauses with specific exceptions
 		- Better debugging and error diagnostics
 
