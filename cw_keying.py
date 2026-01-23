@@ -173,8 +173,8 @@ class SerialKeyer(CWKeyer):
                     self.port.dtr = False
                     self.port.rts = False
                     self.port.close()
-                except:
-                    pass
+                except (OSError, AttributeError):
+                    pass  # Port may already be closed or unavailable
             self.port = None
 
     def is_connected(self) -> bool:
@@ -192,8 +192,8 @@ class SerialKeyer(CWKeyer):
                     self.port.dtr = True
                 else:  # RTS
                     self.port.rts = True
-            except:
-                pass
+            except (OSError, AttributeError):
+                pass  # Port error or not connected
 
     def key_up(self) -> None:
         """Key up using configured method."""
@@ -205,8 +205,8 @@ class SerialKeyer(CWKeyer):
                     self.port.dtr = False
                 else:  # RTS
                     self.port.rts = False
-            except:
-                pass
+            except (OSError, AttributeError):
+                pass  # Port error or not connected
 
     def ptt_on(self) -> None:
         """Enable PTT using configured line."""
@@ -220,8 +220,8 @@ class SerialKeyer(CWKeyer):
                     self.port.rts = True
                 else:  # DTR
                     self.port.dtr = True
-            except:
-                pass
+            except (OSError, AttributeError):
+                pass  # Port error or not connected
 
     def ptt_off(self) -> None:
         """Disable PTT using configured line."""
@@ -235,8 +235,8 @@ class SerialKeyer(CWKeyer):
                     self.port.rts = False
                 else:  # DTR
                     self.port.dtr = False
-            except:
-                pass
+            except (OSError, AttributeError):
+                pass  # Port error or not connected
 
     def set_wpm(self, wpm: int) -> None:
         """Set speed in words per minute."""
@@ -413,8 +413,8 @@ class WinkeyerKeyer(CWKeyer):
                     self.port.write(bytes([self.CMD_ADMIN, self.ADMIN_HOST_CLOSE]))
                     time.sleep(0.1)
                     self.port.close()
-                except:
-                    pass
+                except (OSError, AttributeError):
+                    pass  # Port may already be closed
             self.port = None
             self.version = 0
 
@@ -430,8 +430,8 @@ class WinkeyerKeyer(CWKeyer):
                 return
             try:
                 self.port.write(bytes([self.CMD_KEY_IMMEDIATE, 0x01]))
-            except:
-                pass
+            except (OSError, AttributeError):
+                pass  # Port error
 
     def key_up(self) -> None:
         """Key up (immediate keying)."""
@@ -440,8 +440,8 @@ class WinkeyerKeyer(CWKeyer):
                 return
             try:
                 self.port.write(bytes([self.CMD_KEY_IMMEDIATE, 0x00]))
-            except:
-                pass
+            except (OSError, AttributeError):
+                pass  # Port error
 
     def set_wpm(self, wpm: int) -> None:
         """Set speed in words per minute."""
@@ -451,8 +451,8 @@ class WinkeyerKeyer(CWKeyer):
                 return
             try:
                 self.port.write(bytes([self.CMD_SPEED, self._wpm]))
-            except:
-                pass
+            except (OSError, AttributeError):
+                pass  # Port error
 
     def _set_sidetone(self, freq: int) -> None:
         """Set sidetone frequency."""
@@ -465,8 +465,8 @@ class WinkeyerKeyer(CWKeyer):
             if self.port:
                 try:
                     self.port.write(bytes([self.CMD_SIDETONE, value]))
-                except:
-                    pass
+                except (OSError, AttributeError):
+                    pass  # Port error
 
     def send_char(self, char: str, dit_time: float) -> bool:
         """Send a character via Winkeyer buffered sending."""
@@ -486,8 +486,8 @@ class WinkeyerKeyer(CWKeyer):
                     self.port.write(bytes([ord(char)]))
                 # Wait for character to be sent (approximate)
                 time.sleep(dit_time * 10)  # Approximate character time
-            except:
-                return False
+            except (OSError, AttributeError):
+                return False  # Port error
 
         return not self._aborted
 
@@ -505,8 +505,8 @@ class WinkeyerKeyer(CWKeyer):
                         self.port.write(bytes([ord(char)]))
                         time.sleep(0.01)  # Small delay between chars to not overflow buffer
                 return True
-            except:
-                return False
+            except (OSError, AttributeError):
+                return False  # Port error
 
     def abort(self) -> None:
         """Abort current transmission."""
@@ -515,8 +515,8 @@ class WinkeyerKeyer(CWKeyer):
             if self.port:
                 try:
                     self.port.write(bytes([self.CMD_CLEAR_BUFFER]))
-                except:
-                    pass
+                except (OSError, AttributeError):
+                    pass  # Port error
 
     def reset_abort(self) -> None:
         """Reset abort flag."""
@@ -570,8 +570,8 @@ class CATKeyer(CWKeyer):
             if self.port and self.port.is_open:
                 try:
                     self.port.close()
-                except:
-                    pass
+                except (OSError, AttributeError):
+                    pass  # Port may already be closed
             self.port = None
 
     def is_connected(self) -> bool:
@@ -592,8 +592,8 @@ class CATKeyer(CWKeyer):
             if self.port:
                 try:
                     self.port.write(cmd)
-                except:
-                    pass
+                except (OSError, AttributeError):
+                    pass  # Port error
 
     def _send_flex_cw(self, text: str) -> None:
         """Send CW text via FlexRadio CAT command."""
@@ -604,8 +604,8 @@ class CATKeyer(CWKeyer):
             if self.port:
                 try:
                     self.port.write(cmd.encode('ascii'))
-                except:
-                    pass
+                except (OSError, AttributeError):
+                    pass  # Port error
 
     def key_down(self) -> None:
         """Key down via CAT."""
@@ -636,8 +636,8 @@ class CATKeyer(CWKeyer):
                 elif self.config.cat_rig == "FLEX":
                     cmd = f"ZZKS{wpm:02d};"
                     self.port.write(cmd.encode('ascii'))
-            except:
-                pass
+            except (OSError, AttributeError):
+                pass  # Port error
 
     def send_char(self, char: str, dit_time: float) -> bool:
         """Send a single character via CAT."""
@@ -677,8 +677,8 @@ class CATKeyer(CWKeyer):
                 try:
                     if self.config.cat_rig == "FLEX":
                         self.port.write(b"ZZCX;")  # Cancel CW
-                except:
-                    pass
+                except (OSError, AttributeError):
+                    pass  # Port error
 
     def reset_abort(self) -> None:
         """Reset abort flag."""
@@ -1125,8 +1125,8 @@ try:
             self.config.cat_port = self.cat_port_var.get()
             try:
                 self.config.cat_baud = int(self.cat_baud_var.get())
-            except:
-                self.config.cat_baud = 9600
+            except ValueError:
+                self.config.cat_baud = 9600  # Default if invalid input
             self.config.cat_rig = self.cat_rig_var.get()
 
             self.result = self.config
