@@ -3083,8 +3083,12 @@ def viewtextf(fn, ttl=''):
     """view text file"""
     if ttl == "":
         ttl = "file %s" % fn
+    # Resolve path relative to script directory for cross-platform compatibility
+    if not os.path.isabs(fn):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        fn = os.path.join(script_dir, fn)
     try:
-        fd = open(fn, 'r')
+        fd = open(fn, 'r', encoding='utf-8', errors='replace')
         lfile = fd.read()
         viewtextv(lfile, ttl)
         fd.close()

@@ -87,9 +87,13 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 	Linux to do list:
-		on my raspberry pi: read error in file readme.txt
+		(none currently)
 
 v2026_Beta 4.1.2 - Power and Audio update
+
+	+ Fixed viewtextf() path resolution for Linux/Raspberry Pi:
+		- Text files now found correctly regardless of working directory
+		- Added UTF-8 encoding for cross-platform compatibility
 
 	112 Added Sound toggle checkbox (off by default):
 		- Audio notifications for duplicate contacts

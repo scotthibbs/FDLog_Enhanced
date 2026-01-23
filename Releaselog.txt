@@ -1,19 +1,35 @@
-Release Log for FDLog and FDLog_Enhanced 
-We have added 109 enhancements to the original FDLog so far.
+Release Log for FDLog and FDLog_Enhanced
+We have added 112 enhancements to the original FDLog so far.
 
-This release log has the present back to the beginning of FDLog in 1984. 
+This release log has the present back to the beginning of FDLog in 1984.
 
 Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
-To Do and Ideas: 
-		
-	* Need to rewrite all the documentation. It's everywhere...
-	
-	Linux to do list: 
-		on my raspberry pi: pdf files are not found but can be opened.
-		on my raspberry pi: read error in file readme.txt
+To Do and Ideas:
 
-  v2026_Beta 4.1.2 - Power update
+	* Need to rewrite all the documentation. It's everywhere...
+
+	Linux to do list:
+		(none currently)
+
+  v2026_Beta 4.1.2 - Power and Audio update
+
+	+ Fixed viewtextf() path resolution for Linux/Raspberry Pi:
+		- Text files now found correctly regardless of working directory
+		- Added UTF-8 encoding for cross-platform compatibility
+
+	112 Added Sound toggle checkbox (off by default):
+		- Audio notifications for duplicate contacts
+		- Audio notifications for QST messages
+		- Default off for digital mode compatibility
+
+	111 Fixed cross-platform file opening for PDFs and text files:
+		- Works on Windows, macOS, Linux, and Raspberry Pi
+		- Uses system default application (xdg-open on Linux)
+
+	110 Improved error handling in CW keying module:
+		- Replaced 20 bare except: clauses with specific exceptions
+		- Better debugging and error diagnostics
 
 	109 Added class-based power limits per ARRL Field Day 2026 rules:
 		- Classes A, B, C: 500 watts PEP maximum
