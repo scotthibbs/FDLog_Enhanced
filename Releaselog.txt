@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced 
-We have added 106 enhancements to the original FDLog so far.
+We have added 109 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984. 
 
@@ -8,14 +8,29 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas: 
 		
 	* Need to rewrite all the documentation. It's everywhere...
-	* Morse Code functionality. 
-	
 	
 	Linux to do list: 
 		on my raspberry pi: pdf files are not found but can be opened.
 		on my raspberry pi: read error in file readme.txt
 
+  v2026_Beta 4.1.2 - Power update
 
+	109 Added class-based power limits per ARRL Field Day 2026 rules:
+		- Classes A, B, C: 500 watts PEP maximum
+		- Classes D, E, F: 100 watts PEP maximum
+		- Power is automatically capped based on your configured class
+		- Updated Power menu with class-appropriate options:
+			- 0 Watts
+			- 5 Watts (QRP)
+			- 100 Watts (Class D/E/F max)
+			- 500 Watts (Class A/B/C max)
+			- Alt/Nat options for 5W, 100W, and 500W (rule 7.3.8)
+
+	108 Added Natural/Alternate Power countdown display:
+		- Shows progress toward 100-point bonus (5 QSOs required)
+		- Displays "Nat: X/5" next to Natural checkbox
+		- Gold background while working toward goal
+		- Green background with checkmark when bonus achieved
 		
 2026_4.1.1 20Jan2026 Claude Code Updates 
 

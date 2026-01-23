@@ -2,3 +2,25 @@
 *.sq3
 .vscode
 *.log
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Build artifacts
+build/
+dist/
+*.exe
+
+# IDE
+.idea/
+.project
+.pydevproject
+
+# Claude Code
+.claude/
+
+# Misc
+nul
+*.backup

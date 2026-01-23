@@ -20,11 +20,22 @@ from tkinter import END, Toplevel, Frame, Label, Entry, Button, \
     W, EW, E, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
     Checkbutton, IntVar, Listbox
 
-# Modify map_was_lst if needed
-# map_was_lst.append("TX")  # For example, adding another state
+# Callsign parser with country lookup support
+from parser import CallSignParser, InvalidCallSignError, CallSignParserError
 
-############################################################
-#  Current version 2023_Beta 4.0.2 19Jan2026 (Claude Code updates)
+# CW Keying support - graceful fallback if pyserial not installed
+try:
+    from cw_keying import (
+        PYSERIAL_AVAILABLE, CWConfig, CWController, CWMacroManager,
+        CWSettingsDialog, CWMacroEditorDialog, list_serial_ports
+    )
+    CW_AVAILABLE = PYSERIAL_AVAILABLE
+except ImportError:
+    CW_AVAILABLE = False
+    CWConfig = None
+    CWController = None
+
+#  Current version 2026_Beta 4.0.2 23Jan2026 (Claude Code updates)
 
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
@@ -32,9 +43,9 @@ from tkinter import END, Toplevel, Frame, Label, Entry, Button, \
 
 #  all history moved to release.txt file
 
-prog = 'FDLog_Enhanced v2026_Beta 4.1.1 20Jan2026\n\n' \
+prog = 'FDLog_Enhanced v2026_Beta 4.1.2 23Jan2026\n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
-       'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2023. \n' \
+       'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2026. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
 
 about = """
@@ -1237,28 +1248,21 @@ class QsoDb:
                         stat = 2
                         sfx = basecall
                     else:
-                        # Reverse-scan: suffix = letters after last digit
-                        # prefix = everything up to and including last digit
-                        sfx_chars = []
-                        pfx_chars = []
-                        hit_digit = False
+                        # Use CallSignParser for prefix/suffix splitting
+                        try:
+                            prefix, separator, suffix = CallSignParser.parse_callsign(basecall)
+                            # Combine prefix and separator to match existing format
+                            pfx = prefix + separator
+                            sfx = suffix
 
-                        for char in reversed(basecall):
-                            if char.isdigit():
-                                hit_digit = True
-                            if not hit_digit:
-                                sfx_chars.append(char)
-                            else:
-                                pfx_chars.append(char)
-
-                        sfx = ''.join(reversed(sfx_chars))
-                        pfx = ''.join(reversed(pfx_chars))
-
-                        if sfx and pfx:
-                            stat = 4  # complete call
-                            call7 = basecall
-                        elif pfx and not sfx:
-                            stat = 3  # prefix only (ends with digit)
+                            if sfx and pfx:
+                                stat = 4  # complete call
+                                call7 = basecall
+                            elif pfx and not sfx:
+                                stat = 3  # prefix only (ends with digit)
+                        except (InvalidCallSignError, CallSignParserError, IndexError):
+                            # Fallback to partial status if parsing fails
+                            stat = 1
 
                 if (stat == 4) & (rept > ""):
                     stat = 0
@@ -1277,6 +1281,27 @@ class QsoDb:
                         #        print "stat[%s] time[%s] pfx[%s] sfx[%s] call[%s] xcall[%s] rpt[%s]"%\
                         #              (stat,tm,pfx,sfx,call,xcall,rept)
         return stat, tm, pfx, sfx, call7, xcall, rept
+
+    @staticmethod
+    def get_callsign_country(callsign):
+        """Return country for a callsign using cty.dat database.
+
+        Args:
+            callsign: The callsign to look up (can include portable suffix like W1ABC/4)
+
+        Returns:
+            str: Country name or None if not found/invalid
+        """
+        try:
+            # Handle slash notation - use base callsign for lookup
+            basecall = callsign
+            if '/' in callsign:
+                basecall = callsign[:callsign.index('/')]
+
+            prefix, separator, suffix, country, is_valid = CallSignParser.parse(basecall)
+            return country if is_valid else None
+        except (InvalidCallSignError, CallSignParserError):
+            return None
 
     def dupck(self, wcall, band2):
         """check for duplicate call on this band"""
@@ -3126,45 +3151,51 @@ def updatebb():
 def updateqct():
     """update contact count aka individual scoring"""
     # Separated CW and Digital scores instead of adding them - Scott Hibbs KD4SIR 05Aug2022
-    dummy, dummy, qpop, qplg, dummy, dummy, dummy, dummy, cwq, digq, fonq, dummy, gotaq, dummy, dummy = \
+    dummy, dummy, qpop, qplg, dummy, dummy, dummy, dummy, cwq, digq, fonq, dummy, gotaq, nat, dummy = \
         qdb.band_rpt()  # xx reduce processing here
     for i28, j6 in (('FonQ', 'Phone: %5s' % fonq),
                     ('CW/D', 'CW: %s & Dig: %s' % (cwq, digq)),
                     ('GOTAq', 'GOTA: %6s' % gotaq)):
         bandb[i28].config(text=j6, background='light gray')
-        # Update for the operator OpQ - KD4SIR for FD 2014
-        if operator == "":
-            coin2 = "Contestant"
-            opmb.config(text=coin2, background='red')
-            opds.config(text="<Select Contestant>", background='red')
+    # Update natural/alternate power countdown - 5 QSOs needed for 100pt bonus
+    nat_count = len(nat)
+    if nat_count >= 5:
+        natpwr_countdown.config(text=f"Nat: {nat_count}/5 \u2713", background='pale green')
+    else:
+        natpwr_countdown.config(text=f"Nat: {nat_count}/5", background='gold')
+    # Update for the operator OpQ - KD4SIR for FD 2014
+    if operator == "":
+        coin2 = "Contestant"
+        opmb.config(text=coin2, background='red')
+        opds.config(text="<Select Contestant>", background='red')
+    else:
+        coin = exin(operator)
+        tails, dummy, dummy, dummy = str(operator).split(",")
+        # print("tails is %s" % tails)
+        if coin in qpop:
+            coin2 = qpop['%s' % coin]
+            opmb.config(text='Contacts: %2s' % coin2, background='light gray')
+            opds.config(text=tails, background='light gray')
         else:
-            coin = exin(operator)
-            tails, dummy, dummy, dummy = str(operator).split(",")
-            # print("tails is %s" % tails)
-            if coin in qpop:
-                coin2 = qpop['%s' % coin]
-                opmb.config(text='Contacts: %2s' % coin2, background='light gray')
-                opds.config(text=tails, background='light gray')
-            else:
-                coin2 = "0"
-                opmb.config(text='Contacts: %2s' % coin2, background='light gray')
-                opds.config(text=tails, background='light gray')
-        # Update for the logger LoQ - KD4SIR for FD 2014
-        if logger == "":
-            coil2 = "Logger"
-            logmb.config(text=coil2, background='red')
-            logds.config(text="<Select Logger>", background='red')
+            coin2 = "0"
+            opmb.config(text='Contacts: %2s' % coin2, background='light gray')
+            opds.config(text=tails, background='light gray')
+    # Update for the logger LoQ - KD4SIR for FD 2014
+    if logger == "":
+        coil2 = "Logger"
+        logmb.config(text=coil2, background='red')
+        logds.config(text="<Select Logger>", background='red')
+    else:
+        coil = exin(logger)
+        heads, dummy, dummy, dummy = str(logger).split(",")
+        if coil in qplg:
+            coil2 = qplg['%s' % coil]
+            logmb.config(text='Logs: %2s' % coil2, background='light gray')
+            logds.config(text=heads, background='light gray')
         else:
-            coil = exin(logger)
-            heads, dummy, dummy, dummy = str(logger).split(",")
-            if coil in qplg:
-                coil2 = qplg['%s' % coil]
-                logmb.config(text='Logs: %2s' % coil2, background='light gray')
-                logds.config(text=heads, background='light gray')
-            else:
-                coil2 = "0"
-                logmb.config(text='Logs: %2s' % coil2, background='light gray')
-                logds.config(text=heads, background='light gray')
+            coil2 = "0"
+            logmb.config(text='Logs: %2s' % coil2, background='light gray')
+            logds.config(text=heads, background='light gray')
     t = ""  # check for net config trouble
     if net.fills:
         t = "NEED FILL"
@@ -3401,14 +3432,30 @@ def buildmenus():
         logdsu.add_command(label=i30, command=lambda n=i30: (setlog(n)))
 
 
+def get_max_power_for_class():
+    """Return maximum power in watts based on Field Day class.
+
+    Per ARRL Field Day 2026 rules:
+    - Classes A, B, C: 500 watts PEP max
+    - Classes D, E, F: 100 watts PEP max
+    - QRP entries: 5 watts max (user must self-limit)
+    """
+    fd_class = str.upper(gd.getv('class'))[-1:] if gd.getv('class') else ''
+    if fd_class in ('A', 'B', 'C'):
+        return 500
+    else:  # D, E, F and any other classes default to 100W
+        return 100
+
+
 def ckpowr():
     """ Power settings"""
     global power
+    max_power = get_max_power_for_class()
     pwr = ival(pwrnt.get())
     if pwr < 0:
         pwr = "0"
-    elif pwr > 100:
-        pwr = "100"
+    elif pwr > max_power:
+        pwr = str(max_power)
     pwrnt.delete(0, END)
     pwrnt.insert(END, pwr)
     if natv.get():
@@ -3446,15 +3493,22 @@ def ckpowr():
 
 def setpwr(p4):
     global power
+    max_power = get_max_power_for_class()
     pwri = ival(p4)
+    is_natural = p4[-1:] == 'n'
+    # Enforce class-based power limit
+    if pwri > max_power:
+        pwri = max_power
+        print(f"Power capped to {max_power}W for your Field Day class")
     pwr = str(pwri)
     pwrnt.delete(0, END)
     pwrnt.insert(END, pwr)
-    if p4[-1:] == 'n':
+    if is_natural:
         powcb.select()
+        power = pwr + 'n'
     else:
         powcb.deselect()
-    power = p4
+        power = pwr
     if power == "0":
         pcolor2 = 'red'
         pwrmb.config(background=pcolor2)
@@ -3985,8 +4039,23 @@ def kevent(event):
         proc_key('\b')
     elif k2 == 65307:  # ESC
         proc_key('\x1b')
+        # Also abort CW transmission on ESC
+        if CW_AVAILABLE:
+            cw_abort()
     elif k2 == 65293:  # return
         proc_key('\r')
+    # CW F-key macros (F1-F12: 65470-65481)
+    elif 65470 <= k2 <= 65481:
+        fkey = f'F{k2 - 65469}'  # F1=65470 -> F1, F12=65481 -> F12
+        if CW_AVAILABLE:
+            cw_send_macro(fkey)
+    # CW Speed control (PgUp/PgDn)
+    elif k2 == 65365:  # Page Up - speed up
+        if CW_AVAILABLE:
+            cw_adjust_speed(2)
+    elif k2 == 65366:  # Page Down - slow down
+        if CW_AVAILABLE:
+            cw_adjust_speed(-2)
     #  Added from Alan Biocca (W6AKB) FDLog v4-1-154c-dev during python 3 conversion. 15Jul2022 Scott Hibbs
     #  display key code for unrecognized key
     # else:
@@ -5380,11 +5449,188 @@ if operator != "":
     ini3 = operator.split(':', 1)[0]
     operatorsonline.update({node: ini3})
 print("Time Difference Window (tdwin):", tdwin, "seconds")
+
+# CW Keying initialization
+cw_controller = None
+cw_status_label = None
+
+if CW_AVAILABLE:
+    print("CW Keying support available (pyserial found)")
+
+    def cw_load_config():
+        """Load CW configuration from globDb."""
+        config = CWConfig()
+        config.port = globDb.get('cw_port', '')
+        config.method = globDb.get('cw_method', 'DTR')
+        config.wpm = int(globDb.get('cw_wpm', '20'))
+        config.ptt_lead = int(globDb.get('cw_ptt_lead', '50'))
+        config.ptt_tail = int(globDb.get('cw_ptt_tail', '50'))
+        config.ptt_enabled = globDb.get('cw_ptt_enabled', '0') == '1'
+        config.ptt_line = globDb.get('cw_ptt_line', 'RTS')
+        config.cat_enabled = globDb.get('cw_cat_enabled', '0') == '1'
+        config.cat_port = globDb.get('cw_cat_port', '')
+        config.cat_baud = int(globDb.get('cw_cat_baud', '9600'))
+        config.cat_rig = globDb.get('cw_cat_rig', '')
+        return config
+
+    def cw_save_config(config):
+        """Save CW configuration to globDb."""
+        globDb.put('cw_port', config.port)
+        globDb.put('cw_method', config.method)
+        globDb.put('cw_wpm', str(config.wpm))
+        globDb.put('cw_ptt_lead', str(config.ptt_lead))
+        globDb.put('cw_ptt_tail', str(config.ptt_tail))
+        globDb.put('cw_ptt_enabled', '1' if config.ptt_enabled else '0')
+        globDb.put('cw_ptt_line', config.ptt_line)
+        globDb.put('cw_cat_enabled', '1' if config.cat_enabled else '0')
+        globDb.put('cw_cat_port', config.cat_port)
+        globDb.put('cw_cat_baud', str(config.cat_baud))
+        globDb.put('cw_cat_rig', config.cat_rig)
+
+    def cw_save_macros(macros):
+        """Save CW macros to globDb."""
+        for key, value in macros.items():
+            globDb.put(f'cw_macro_{key}', value)
+
+    def cw_load_macros():
+        """Load CW macros from globDb."""
+        macros = {}
+        for i in range(1, 13):
+            key = f'F{i}'
+            default = CWMacroManager.DEFAULT_MACROS.get(key, '')
+            macros[key] = globDb.get(f'cw_macro_{key}', default)
+        return macros
+
+    def cw_get_variable(name):
+        """Get variable value for macro substitution."""
+        name = name.upper()
+        if name == 'MYCALL':
+            return gd.getv('call')
+        elif name == 'CALL':
+            # Get call from current input buffer
+            global kbuf
+            parts = kbuf.strip().split()
+            if parts:
+                return parts[0]
+            return ''
+        elif name == 'RST':
+            return '599'  # Default CW report
+        elif name == 'CLASS':
+            return gd.getv('class')
+        elif name == 'SECT':
+            return gd.getv('sect')
+        elif name == 'NAME':
+            return operator.split(':')[0] if operator else ''
+        else:
+            return f'{{{name}}}'
+
+    def cw_status_update(status):
+        """Update CW status display."""
+        global cw_status_label
+        if cw_status_label:
+            cw_status_label.config(text=f"CW: {status}")
+
+    def cw_settings_dialog():
+        """Open CW settings dialog."""
+        global cw_controller
+        if cw_controller:
+            def on_save(config):
+                cw_save_config(config)
+                cw_controller.config = config
+                if cw_controller.keyer:
+                    cw_controller.keyer.config = config
+                print(f"CW: Settings saved - Port: {config.port}, Method: {config.method}, WPM: {config.wpm}")
+            CWSettingsDialog(root, cw_controller.config, on_save)
+
+    def cw_macro_editor_dialog():
+        """Open CW macro editor dialog."""
+        global cw_controller
+        if cw_controller:
+            def on_save(macros):
+                cw_save_macros(macros)
+                print("CW: Macros saved")
+            CWMacroEditorDialog(root, cw_controller.macro_manager, on_save)
+
+    def cw_connect():
+        """Connect to CW keyer."""
+        global cw_controller
+        if cw_controller:
+            if cw_controller.config.port:
+                if cw_controller.connect():
+                    print(f"CW: Connected to {cw_controller.config.port}")
+                else:
+                    print("CW: Failed to connect")
+            else:
+                print("CW: No port configured - use CW > Settings to configure")
+
+    def cw_disconnect():
+        """Disconnect from CW keyer."""
+        global cw_controller
+        if cw_controller:
+            cw_controller.disconnect()
+            print("CW: Disconnected")
+
+    def cw_adjust_speed(delta):
+        """Adjust CW speed."""
+        global cw_controller
+        if cw_controller:
+            cw_controller.adjust_wpm(delta)
+            cw_save_config(cw_controller.config)
+            print(f"CW: Speed set to {cw_controller.config.wpm} WPM")
+
+    def cw_send_macro(key):
+        """Send a CW macro."""
+        global cw_controller
+        if cw_controller and cw_controller.is_connected():
+            cw_controller.send_macro(key)
+
+    def cw_abort():
+        """Abort CW transmission."""
+        global cw_controller
+        if cw_controller:
+            cw_controller.abort()
+
+else:
+    print("CW Keying support NOT available (pyserial not found)")
+    print("  Install with: pip install pyserial")
+
+    def cw_settings_dialog():
+        pass
+
+    def cw_macro_editor_dialog():
+        pass
+
+    def cw_connect():
+        pass
+
+    def cw_disconnect():
+        pass
+
+    def cw_adjust_speed(delta):
+        pass
+
+    def cw_send_macro(key):
+        pass
+
+    def cw_abort():
+        pass
+
 print("Starting GUI setup")
 
 #     ****************** GUI START **************************
 
 root = Tk()  # setup Tk GUI
+
+# Initialize CW Controller after root is created
+if CW_AVAILABLE:
+    cw_config = cw_load_config()
+    cw_controller = CWController(cw_config, root, cw_status_update)
+    cw_controller.set_variable_getter(cw_get_variable)
+    # Load saved macros
+    saved_macros = cw_load_macros()
+    cw_controller.macro_manager.load_from_dict(saved_macros)
+    print(f"CW: Initialized - Port: {cw_config.port}, Method: {cw_config.method}, WPM: {cw_config.wpm}")
+
 menu = Menu(root)
 root.config(menu=menu)
 filemenu = Menu(menu, tearoff=0)
@@ -5504,6 +5750,18 @@ helpmenu.add_command(label="Release Log", command=lambda: viewtextf('Releaselog.
 helpmenu.add_command(label="GitHub ReadMe", command=lambda: viewtextf('readme.txt'))
 helpmenu.add_command(label="About FDLOG_Enhanced", command=lambda: viewtextv(about, "About"))
 
+# CW Keying menu - only shown if pyserial is available
+if CW_AVAILABLE:
+    cwmenu = Menu(menu, tearoff=0)
+    menu.add_cascade(label="CW", menu=cwmenu)
+    cwmenu.add_command(label="Settings...", command=cw_settings_dialog)
+    cwmenu.add_command(label="Macro Editor...", command=cw_macro_editor_dialog)
+    cwmenu.add_separator()
+    cwmenu.add_command(label="Connect", command=cw_connect)
+    cwmenu.add_command(label="Disconnect", command=cw_disconnect)
+    cwmenu.add_separator()
+    cwmenu.add_command(label="Speed Up (PgUp)", command=lambda: cw_adjust_speed(2))
+    cwmenu.add_command(label="Speed Down (PgDn)", command=lambda: cw_adjust_speed(-2))
 
 # Network bar moved to the top - Scott Hibbs KD4SIR 05Aug2022
 frn1 = Frame(root, bd=1)
@@ -5514,6 +5772,13 @@ lbltimeonband = Label(frn1, text=" ", font=fdfont, relief='raised', foreground='
 # Node label
 lblnode = Label(frn1, text=" Node: %s Port: %s " % (node, port_base), font=fdfont, relief='raised',
                 foreground='black', background='light gray')
+
+# CW Status label
+if CW_AVAILABLE:
+    cw_status_label = Label(frn1, text="CW: Ready", font=fdfont, relief='raised',
+                            foreground='dark green', background='light gray')
+else:
+    cw_status_label = None
 
 # Band Buttons
 f1 = Frame(root, bd=1)
@@ -5552,21 +5817,25 @@ pwrmb = Menubutton(f1b, text="Power", font=fdfont, relief='raised', background=p
 pwrmu = Menu(pwrmb, tearoff=0)
 pwrmb.config(menu=pwrmu, direction='below')
 #  rearranged this menu - Scott Hibbs Mar/23/2017
-#  Rule change on power now limits to 100w - this needs to be fixed #########################################
-#  Be nice to have countdown of 5 Alt/Nat power contacts. Add Battery check mark etc.
+#  Power limits enforced by class: A/B/C=500W, D/E/F=100W, QRP=5W - Jan 2026
+#  Alt/Nat power countdown now shows in UI next to Natural checkbox - Jan 2026
 pwrmu.add_command(label='     0 Watts', command=lambda: (setpwr('0')))
-pwrmu.add_command(label='     5 Watts', command=lambda: (setpwr('5')))
-# pwrmu.add_command(label='    50 Watts', command=lambda: (setpwr('50')))
-pwrmu.add_command(label='  100 Watts', command=lambda: (setpwr('100')))
-# pwrmu.add_command(label='  150 Watts', command=lambda: (setpwr('150')))
+pwrmu.add_command(label='     5 Watts (QRP)', command=lambda: (setpwr('5')))
+pwrmu.add_command(label='  100 Watts (Class D/E/F max)', command=lambda: (setpwr('100')))
+pwrmu.add_command(label='  500 Watts (Class A/B/C max)', command=lambda: (setpwr('500')))
+pwrmu.add_separator()
 pwrmu.add_command(label='     5W Alt/Nat rule 7.3.8', command=lambda: (setpwr('5n')))
 pwrmu.add_command(label=' 100W Alt/Nat rule 7.3.8', command=lambda: (setpwr('100n')))
+pwrmu.add_command(label=' 500W Alt/Nat rule 7.3.8', command=lambda: (setpwr('500n')))
 pwrnt = Entry(f1b, width=4, font=fdfont, background=pcolor, validate='focusout', validatecommand=ckpowr)
 powlbl = Label(f1b, text="W", font=fdfont, background=pcolor)
 natv = IntVar()
 powcb = Checkbutton(f1b, text="Natural", variable=natv, command=ckpowr,
                     font=fdfont, relief='raised', background=pcolor)
 setpwr(power)
+
+# Natural/Alternate power countdown label - shows progress toward 100pt bonus (5 QSOs needed)
+natpwr_countdown = Label(f1b, text="Nat: 0/5", font=fdfont, background='light gray')
 
 # Added Network label - KD4SIR Scott Hibbs Oct 4, 2013
 # Added Node label - KD4SIR Scott Hibbs Oct/13/2013
@@ -5710,6 +5979,9 @@ frn1.grid_columnconfigure(1, weight=1)
 lblnet.grid(row=0, column=0, columnspan=6, sticky=NSEW)
 lbltimeonband.grid(row=0, column=7, columnspan=1, sticky=NSEW)
 lblnode.grid(row=0, column=9, columnspan=1, sticky=NSEW)
+# CW Status label grid
+if CW_AVAILABLE and cw_status_label:
+    cw_status_label.grid(row=0, column=10, columnspan=1, sticky=NSEW)
 # Grid for band buttons
 f1.grid(row=1, columnspan=2, sticky=NSEW)
 # Grid for Contestant, Logger and Power buttons
@@ -5724,6 +5996,7 @@ pwrmb.grid(row=2, column=4, sticky=NSEW)
 pwrnt.grid(row=2, column=5, sticky=NSEW)
 powlbl.grid(row=2, column=6, sticky=NSEW)
 powcb.grid(row=2, column=7, sticky=NSEW)
+natpwr_countdown.grid(row=2, column=8, sticky=NSEW)
 # Grid for functionbuttons
 redrawbutton.grid(row=3, column=0, sticky=NSEW)
 opsonlinebutton.grid(row=3, column=1, sticky=NSEW)
