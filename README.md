@@ -80,7 +80,7 @@ The last Python 2.7 version is in the release section.
 This is the top of the Release Log which has the present 
 back to the beginning of FDLog in 1984. 
 
-We have added 109 enhancements to the original FDLog so far.
+We have added 110 enhancements to the original FDLog so far.
 
 Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
@@ -91,16 +91,16 @@ To Do and Ideas:
 
 v2026_Beta 4.1.2 - Power and Audio update
 
-	112 Added Sound toggle checkbox (off by default):
+	110 Added Sound toggle checkbox (off by default):
 		- Audio notifications for duplicate contacts
 		- Audio notifications for QST messages
 		- Default off for digital mode compatibility
 
-	111 Fixed cross-platform file opening for PDFs and text files:
+	Fixed cross-platform file opening for PDFs and text files:
 		- Works on Windows, macOS, Linux, and Raspberry Pi
 		- Uses system default application (xdg-open on Linux)
 
-	110 Improved error handling in CW keying module:
+	Improved error handling in CW keying module:
 		- Replaced 20 bare except: clauses with specific exceptions
 		- Better debugging and error diagnostics
 
@@ -311,4 +311,5 @@ Continued in releaselog.txt
 
 
 Scott Hibbs KD4SIR
+
 
