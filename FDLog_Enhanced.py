@@ -14,6 +14,8 @@ import hashlib
 import random
 import sqlite3
 import argparse
+import subprocess
+import platform
 import pandas as pd
 import plotly.express as px
 from tkinter import END, Toplevel, Frame, Label, Entry, Button, \
@@ -87,6 +89,34 @@ def ival(s):
         if mm and mm.group(1):
             r = int(mm.group(1))
     return r
+
+
+def open_file(filepath):
+    """Open a file with the system's default application (cross-platform).
+
+    Works on Windows, macOS, and Linux including Raspberry Pi.
+    """
+    # Get absolute path relative to the script's directory
+    if not os.path.isabs(filepath):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        filepath = os.path.join(script_dir, filepath)
+
+    if not os.path.exists(filepath):
+        print(f"File not found: {filepath}")
+        return False
+
+    try:
+        system = platform.system()
+        if system == 'Windows':
+            os.startfile(filepath)
+        elif system == 'Darwin':  # macOS
+            subprocess.run(['open', filepath], check=True)
+        else:  # Linux, Raspberry Pi, etc.
+            subprocess.run(['xdg-open', filepath], check=True)
+        return True
+    except Exception as e:
+        print(f"Error opening file {filepath}: {e}")
+        return False
 
 
 class ClockClass:
@@ -5677,11 +5707,11 @@ for j in modes:
 resourcemenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Resources", menu=resourcemenu)
 # Changed this from fdrules to just Rules to get away from fd name in file folder - Scott Hibbs KD4SIR Mar/28/2017
-#  os.startfile only works on Windows. Use os.system("open file.txt") which works on Macs.
-resourcemenu.add_command(label="ARRL FD Rules (pdf)", command=lambda: os.system('Rules.pdf'))
+# Cross-platform file opening via open_file() function - Jan 2026
+resourcemenu.add_command(label="ARRL FD Rules (pdf)", command=lambda: open_file('Rules.pdf'))
 # Changed this to a .dat file to remove the duplicate txt file - Scott Hibbs KD4SIR Mar/28/2017
 resourcemenu.add_command(label="ARRL Sections", command=lambda: viewtextf('Arrl_sections_ref.txt', 'ARRL Sections'))
-resourcemenu.add_command(label="ARRL Band Chart (pdf)", command=lambda: os.system('Bands.pdf'))
+resourcemenu.add_command(label="ARRL Band Chart (pdf)", command=lambda: open_file('Bands.pdf'))
 resourcemenu.add_command(label="ARRL Band Plan", command=lambda: viewtextf('ARRL_Band_Plans.txt', "ARRL Band Plan"))
 # This is not needed with the band chart giving the same info - Scott Hibbs KD4SIR Mar/28/2017
 # resourcemenu.add_command(label="FD Frequency List", command=lambda: viewtextf('frequencies.txt', "FD Frequency List"))
@@ -5691,8 +5721,8 @@ resourcemenu.add_command(label="ARRL Band Plan", command=lambda: viewtextf('ARRL
 W1AWmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="W1AW", menu=W1AWmenu)
 # Changed this to a PDF file - Curtis E. Mills WE7U 20Jun2019
-W1AWmenu.add_command(label="W1AW Schedule (pdf)", command=lambda: os.system('W1AW.pdf'))
-W1AWmenu.add_command(label="NTS Message", command=lambda: os.system('NTS_eg.txt'))
+W1AWmenu.add_command(label="W1AW Schedule (pdf)", command=lambda: open_file('W1AW.pdf'))
+W1AWmenu.add_command(label="NTS Message", command=lambda: open_file('NTS_eg.txt'))
 #  Updated by Alan Biocca (W6AKB) FDLog v4-1-154c-dev during python 3 conversion. 15Jul2022 Scott Hibbs
 # Time Zone Conversion Chart
 # 000 0000 0000 0000 0000
