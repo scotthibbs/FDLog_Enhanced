@@ -80,7 +80,7 @@ The last Python 2.7 version is in the release section.
 This is the top of the Release Log which has the present 
 back to the beginning of FDLog in 1984. 
 
-We have added 110 enhancements to the original FDLog so far.
+We have added 111 enhancements to the original FDLog so far.
 
 Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
@@ -89,13 +89,13 @@ To Do and Ideas:
 	Linux to do list:
 		(none currently)
 
-v2026_Beta 4.1.2 - Power and Audio update
+v2026_Beta 4.1.2 - CW Added, Power limits, and Audio update
 
 	+ Fixed viewtextf() path resolution for Linux/Raspberry Pi:
 		- Text files now found correctly regardless of working directory
 		- Added UTF-8 encoding for cross-platform compatibility
 
-	110 Added Sound toggle checkbox (off by default):
+	111 Added Sound toggle checkbox (off by default):
 		- Audio notifications for duplicate contacts
 		- Audio notifications for QST messages
 		- Default off for digital mode compatibility
@@ -104,11 +104,11 @@ v2026_Beta 4.1.2 - Power and Audio update
 		- Works on Windows, macOS, Linux, and Raspberry Pi
 		- Uses system default application (xdg-open on Linux)
 
-	Improved error handling in CW keying module:
+	+ Improved error handling in CW keying module:
 		- Replaced 20 bare except: clauses with specific exceptions
 		- Better debugging and error diagnostics
 
-	109 Added class-based power limits per ARRL Field Day 2026 rules:
+	110 Added class-based power limits per ARRL Field Day 2026 rules:
 		- Classes A, B, C: 500 watts PEP maximum
 		- Classes D, E, F: 100 watts PEP maximum
 		- Power is automatically capped based on your configured class
@@ -119,11 +119,24 @@ v2026_Beta 4.1.2 - Power and Audio update
 			- 500 Watts (Class A/B/C max)
 			- Alt/Nat options for 5W, 100W, and 500W (rule 7.3.8)
 
-	108 Added Natural/Alternate Power countdown display:
+	109 Added Natural/Alternate Power countdown display:
 		- Shows progress toward 100-point bonus (5 QSOs required)
 		- Displays "Nat: X/5" next to Natural checkbox
 		- Gold background while working toward goal
 		- Green background with checkmark when bonus achieved
+
+	108 The CW keying interface has been fully implemented.
+		New file: cw_keying.py - Contains all CW keying classes
+		Features Implemented
+			Serial keying via DTR or RTS
+			Winkeyer support (K1EL protocol)
+			CAT keying for Flex SmartSDR and Icom 7300/7610
+			F1-F12 macros with variable substitution ({MYCALL}, {CALL}, {RST}, {CLASS}, {SECT})
+			PTT control with configurable lead-in/tail timing
+			Speed control via PgUp/PgDn (2 WPM increments)
+			ESC key aborts transmission
+			CW status display in main window
+			Settings persistence via globDb
 		
 2026_4.1.1 20Jan2026 Claude Code Updates 
 
@@ -315,5 +328,6 @@ Continued in releaselog.txt
 
 
 Scott Hibbs KD4SIR
+
 
 
