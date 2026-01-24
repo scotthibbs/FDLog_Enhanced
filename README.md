@@ -1,10 +1,13 @@
 # FDLog_Enhanced (Python 3)
-This is a complete Field Day group contest logging solution!
+
+This Field Day logging program may be better than what you use. 
 Download this on all computers (Windows, Mac, Linux including Raspberry Pis) and start logging.
 Visitors sign in and log because it is so simple. GOTA is integrated (separate dupes of course) on same network.
 All computers (even GOTA) have a copy of the database (distributed) and tracks operations so everyone
 can see and co-operate. Tracks Dupes, shows previous contacts, see who is on which radio (node)
-and which band, who is contesting and who is logging. Displays number of contacts and how many log entries made. Has an inactivity timer and can auto log off a band to make it available for others. QST messages can be sent to all nodes and a lot more.
+and which band, who is contesting and who is logging. Displays number of contacts and how many log entries made. 
+Has an inactivity timer and can auto log off a band to make it available for others. 
+QST messages can be sent to all nodes. Full CW interface and many extras.
 
 Log entry is just three simple things : KD4SIR 1D IN
 
@@ -328,6 +331,7 @@ Continued in releaselog.txt
 
 
 Scott Hibbs KD4SIR
+
 
 
 
