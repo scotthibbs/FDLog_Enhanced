@@ -8,7 +8,7 @@ Contestors are those operating a radio (only one). Loggers are those entering on
 One of them must have a license. A control operator may oversee multiple contestors if added as a logger.   
 Thus everything is tracked even the control operator for each contact.    
 GOTA is integrated (separate dupes of course) on same network.   
-INFO Node keeps score on the information table (allows sign in).
+INFO Node keeps score on the information table (allows sign in).   
 All computers (even GOTA) have a copy of the database (distributed) - no lost data.    
 Program keeps track of who is at which radio and on which band. No asking around...   
 Tracks Dupes (with GOTA separate), shows previous contacts (even for GOTA), WAS and Worked all sections.    
@@ -93,6 +93,7 @@ back to the beginning of FDLog in 1984.
 Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
 Scott Hibbs KD4SIR
+
 
 
 
