@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 111 enhancements to the original FDLog so far.
+We have added 112 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -10,7 +10,7 @@ To Do and Ideas:
 		(none currently)
 
   v2026_Beta 4.1.3 - Automated Testing
-	111 Added automated test suite (pytest)
+	112 Added automated test suite (pytest)
 		- Created tests/ directory with 80 automated tests across 5 modules
 		- test_utils.py — Tests for ival(), tmtofl(), and tmsub() utility functions
 		- test_parser.py — Tests for CallSignParser: callsign validation, prefix/separator/suffix parsing, country lookup via
@@ -24,25 +24,21 @@ To Do and Ideas:
 		- Added pytest>=7.0.0 to requirements.txt
 		- Run with: pytest tests/ -v
 
-v2026_Beta 4.1.2 - CW Added, Power limits, and Audio update
+v2026_Beta 4.1.2 23Jan2026 - CW Added, Power limits, and Audio update
 
 	+ Fixed viewtextf() path resolution for Linux/Raspberry Pi:
 		- Text files now found correctly regardless of working directory
 		- Added UTF-8 encoding for cross-platform compatibility
-
 	111 Added Sound toggle checkbox (off by default):
 		- Audio notifications for duplicate contacts
 		- Audio notifications for QST messages
 		- Default off for digital mode compatibility
-
 	+ Fixed cross-platform file opening for PDFs and text files:
 		- Works on Windows, macOS, Linux, and Raspberry Pi
 		- Uses system default application (xdg-open on Linux)
-
 	+ Improved error handling in CW keying module:
 		- Replaced 20 bare except: clauses with specific exceptions
 		- Better debugging and error diagnostics
-
 	110 Added class-based power limits per ARRL Field Day 2026 rules:
 		- Classes A, B, C: 500 watts PEP maximum
 		- Classes D, E, F: 100 watts PEP maximum
@@ -53,13 +49,11 @@ v2026_Beta 4.1.2 - CW Added, Power limits, and Audio update
 			- 100 Watts (Class D/E/F max)
 			- 500 Watts (Class A/B/C max)
 			- Alt/Nat options for 5W, 100W, and 500W (rule 7.3.8)
-
 	109 Added Natural/Alternate Power countdown display:
 		- Shows progress toward 100-point bonus (5 QSOs required)
 		- Displays "Nat: X/5" next to Natural checkbox
 		- Gold background while working toward goal
 		- Green background with checkmark when bonus achieved
-
 	108 The CW keying interface has been fully implemented.
 		New file: cw_keying.py - Contains all CW keying classes
 		Features Implemented
@@ -73,13 +67,13 @@ v2026_Beta 4.1.2 - CW Added, Power limits, and Audio update
 			CW status display in main window
 			Settings persistence via globDb
 		
-2026_4.1.1 20Jan2026 Claude Code Updates 
+2026_beta 4.1.1 20Jan2026 Claude Code Updates 
 
 	107 Fixed oldest bug from 1984. The program could not handle international
 	    callsigns. Using https://github.com/scotthibbs/Call_Sign_Parser_and_Lookup 
 		Claude Code was able to fix this bug. 
-	+ WAS Map Fix - Now opens even when no states have been worked (shows blank map)
-	+ Fixed Font changes to be more robust (some fonts were being missed)
+	+ 	WAS Map Fix - Now opens even when no states have been worked (shows blank map)
+	+ 	Fixed Font changes to be more robust (some fonts were being missed)
 	106 Network Dupe Checking - Automatic duplicate detection during network fills:
 		- Detects when two disconnected nodes worked the same station on the same band
 		- Compares timestamps and keeps the oldest contact
@@ -96,54 +90,44 @@ v2026_Beta 4.1.2 - CW Added, Power limits, and Audio update
 		- Progress tracking: Worked All States (X/50) and Sections (X/84)
 		- Visitor registration: Green button that opens the full participant dialog
 		- Auto-refresh: Updates every 10 seconds
-		
 	104 Phonetic Alphabet Display - Added at the bottom of the GUI with:
 		- Radio buttons: Callsign (default), CQ, QRZ
 		- Shows appropriate phonetic response format
 		- Uses GOTA call for gotanode, FD call for others
 		
-
 2026_beta 4.0.1 19Jan2026 Claude Code updates
 
 	103 Added Worked All Sections map and log report
-
 	+ Consolidated font functions
-     - Replaced 10 separate font functions (fntcourier10, fntcourier11, etc.)
-       with single set_font(face, size) function
-     - Updated menu commands to use lambda: set_font("Courier", 12)
-     - Font changes no longer print "-Call-Class-Sect-" repeatedly
-
+     	- Replaced 10 separate font functions (fntcourier10, fntcourier11, etc.)
+       		with single set_font(face, size) function
+     	- Updated menu commands to use lambda: set_font("Courier", 12)
+     	- Font changes no longer print "-Call-Class-Sect-" repeatedly
 	+ Fixed WAS Map crash
-     - Fixed get_have_states() ValueError when parsing report
-     - Map now displays correctly with contacted states colored
-
+	     - Fixed get_have_states() ValueError when parsing report
+    	 - Map now displays correctly with contacted states colored
 	102 Added command-line arguments
-     - --node, -n : Station node name (e.g., station1, gota)
-     - --auth, -a : Authentication key (e.g., 24 for 2024)
-     - --help, -h : Show help
-     - Example: python FDLog_Enhanced.py --node station1 --auth 24
-
+	    - --node, -n : Station node name (e.g., station1, gota)
+    	- --auth, -a : Authentication key (e.g., 24 for 2024)
+     	- --help, -h : Show help
+     	- Example: python FDLog_Enhanced.py --node station1 --auth 24
 	101 Added requirements.txt
-     - Lists dependencies: pandas, plotly
-     - Install with: pip install -r requirements.txt
-
+	     - Lists dependencies: pandas, plotly
+    	 - Install with: pip install -r requirements.txt
 	100 Added PyInstaller build system
-     - build.py : Build script
-     - FDLog_Enhanced.spec : PyInstaller configuration
-     - Creates standalone 43MB executable
-     - Users don't need Python installed
-
-		Fixed fingerprint() for standalone builds
+    	 - build.py : Build script
+     	- FDLog_Enhanced.spec : PyInstaller configuration
+     	- Creates standalone 43MB executable
+     	- Users don't need Python installed
+	+	Fixed fingerprint() for standalone builds
 		- Handles FileNotFoundError when running as bundled exe
 		- Displays "(standalone build)" instead of hash
-
-		NEW FILES CREATED:
+	+	NEW FILES CREATED:
 		- requirements.txt
 		- build.py
 		- FDLog_Enhanced.spec
 		- FDLog_Enhanced.exe (43MB standalone executable)
-
-		TO DISTRIBUTE:
+	+	TO DISTRIBUTE:
 			1. Zip the entire FDLog_Enhanced folder
 			2. Users extract and double-click FDLog_Enhanced.exe
 			3. No Python installation required
