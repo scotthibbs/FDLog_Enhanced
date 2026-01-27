@@ -295,17 +295,33 @@ def initialize():
             qdb.globalshare('class', kinp)  # global to db
             renew_title()
             print(kinp, "will be the class.")
-        # Section
-        print("What will be your section? (like IN-Indiana)")
-        kinp = str.strip(sys.stdin.readline())
-        while kinp == "":
-            print("Please type the section (like KY-Kentucky).")
-            kinp = str.strip(sys.stdin.readline())
-        else:
-            globDb.put('sect', kinp)
-            qdb.globalshare('sect', kinp)  # global to db
-            renew_title()
-            print(kinp, "will be the section.")
+        # Section - validate against Arrl_sections_ref.txt
+        valid_sections = {}
+        sect_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Arrl_sections_ref.txt")
+        try:
+            with open(sect_file, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        parts = line.split()
+                        if parts:
+                            valid_sections[parts[0].upper()] = line
+        except FileNotFoundError:
+            print("Warning: Arrl_sections_ref.txt not found, skipping validation.")
+        print("What will be your section abbreviation? (e.g. IN, EMA, STX)")
+        kinp = str.strip(sys.stdin.readline()).upper()
+        while kinp == "" or (valid_sections and kinp not in valid_sections):
+            if kinp == "":
+                print("Please type your section abbreviation.")
+            else:
+                print(f"'{kinp}' is not a valid section. Examples: CO, EMA, NLI, STX, TER")
+            kinp = str.strip(sys.stdin.readline()).upper()
+        if kinp in valid_sections:
+            print(f"  {valid_sections[kinp]}")
+        globDb.put('sect', kinp)
+        qdb.globalshare('sect', kinp)  # global to db
+        renew_title()
+        print(kinp, "will be the section.")
         if kfd == 0:
             # grid square
             print("What will be your grid square? (if none type none)")
@@ -547,6 +563,41 @@ def initialize():
             print("Time travels to you!")
         if kinp == "n":
             pass
+        # Deploy to other computers
+        anscount = ""
+        print("\nDo you need to deploy this program to other computers?")
+        print("This will create a zip and share it on the network.")
+        print("Y = yes, N = no")
+        while anscount != "1":
+            kinp = str.lower(str.strip(sys.stdin.readline())[:1])
+            if kinp == "y":
+                anscount = "1"
+            if kinp == "n":
+                anscount = '1'
+            if anscount == "":
+                print("Press Y or N please")
+        if kinp == "y":
+            import subprocess
+            # Check multiple locations: next to script, next to exe, and current working dir
+            candidates = [
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "share_fdlog.py"),
+                os.path.join(os.path.dirname(os.path.abspath(sys.executable)), "share_fdlog.py"),
+                os.path.join(os.getcwd(), "share_fdlog.py"),
+            ]
+            share_script = next((p for p in candidates if os.path.isfile(p)), None)
+            if share_script:
+                print(f"Launching: {share_script}")
+                # Find Python interpreter (sys.executable may be the PyInstaller exe)
+                import shutil
+                python_exe = shutil.which("python") or shutil.which("python3") or sys.executable
+                subprocess.Popen(
+                    [python_exe, share_script],
+                    creationflags=subprocess.CREATE_NEW_CONSOLE
+                )
+                print("Deployment server is running in a separate window.")
+                print("Close that window when all computers have downloaded.\n")
+            else:
+                print("Error: share_fdlog.py not found. Skipping deployment.\n")
     return
 
 
@@ -2767,6 +2818,7 @@ class NewParticipantDialog:
         s.t = Toplevel(root)
         s.t.transient(root)
         s.t.title('Add New Participant')
+        s.t.bind('<Escape>', lambda e: s.t.destroy())
         # Frame 1
         fr1 = Frame(s.t)
         fr1.grid(row=0, column=0)
@@ -4967,12 +5019,12 @@ class InfoTableWindow:
                                  foreground='white', background='#1a1a2e')
         self.call_label.pack(side='left', expand=True)
 
-        # GOTA Call (only if set)
-        if gota_call:
-            self.gota_label = Label(header_frame, text=f"GOTA Call: {gota_call}",
-                                     font=('Helvetica', 14, 'bold'),
-                                     foreground='white', background='#1a1a2e')
-            self.gota_label.pack(side='left', expand=True)
+        # GOTA Call
+        gota_text = f"GOTA Call: {gota_call}" if gota_call else "GOTA Call: Not Set"
+        self.gota_label = Label(header_frame, text=gota_text,
+                                 font=('Helvetica', 14, 'bold'),
+                                 foreground='white', background='#1a1a2e')
+        self.gota_label.pack(side='left', expand=True)
 
         # Current time (on the right)
         self.time_label = Label(header_frame, text="",
@@ -5080,13 +5132,41 @@ class InfoTableWindow:
 
     def update_display(self):
         """Refresh all data on the display."""
+        self.update_header()
         self.update_time()
         self.update_score()
         self.update_leaderboards()
         self.update_progress()
 
+        # Keep the network alive so other nodes see us
+        self.net.bcast_now()
+
         # Schedule next update in 10 seconds
         self.update_job = self.root.after(10000, self.update_display)
+
+    def update_header(self):
+        """Update header fields from synced global data."""
+        org_name = self.gd.getv('grpnam')
+        if org_name.startswith('get error'):
+            org_name = ''
+        fd_call = self.gd.getv('fdcall')
+        if fd_call.startswith('get error'):
+            fd_call = ''
+        else:
+            fd_call = fd_call.upper()
+        gota_call = self.gd.getv('gcall')
+        if gota_call.startswith('get error'):
+            gota_call = ''
+        else:
+            gota_call = gota_call.upper()
+
+        title_text = f"FIELD DAY - {org_name}" if org_name else "FIELD DAY"
+        self.title_label.config(text=title_text)
+        fd_call_text = f"FD Call: {fd_call}" if fd_call else "FD Call: Not Set"
+        self.call_label.config(text=fd_call_text)
+        if self.gota_label:
+            gota_text = f"GOTA: {gota_call}" if gota_call else "GOTA: Not Set"
+            self.gota_label.config(text=gota_text)
 
     def update_time(self):
         """Update the current time display."""
@@ -5103,6 +5183,23 @@ class InfoTableWindow:
         self.qso_label.config(text=f"Total QSOs: {total_qsos}")
         self.mode_label.config(text=f"CW: {cwq}  |  Digital: {digq}  |  Phone: {fonq}")
 
+    def _participant_display(self, ini):
+        """Get display name for a participant from initials.
+        Returns 'Name (CALL)' if available, otherwise just the initials."""
+        entry = participants.get(ini.lower(), '')
+        if entry:
+            parts = entry.split(', ')
+            if len(parts) >= 3:
+                name = parts[1].strip()
+                call = parts[2].strip().upper()
+                if name and call:
+                    return f"{name} ({call})"
+                elif name:
+                    return name
+                elif call:
+                    return call
+        return ini.upper()
+
     def update_leaderboards(self):
         """Update the top operators and loggers lists."""
         top_ops = self.get_top_operators(5)
@@ -5112,7 +5209,8 @@ class InfoTableWindow:
         for idx, lbl in enumerate(self.contestant_labels):
             if idx < len(top_ops):
                 ini, count = top_ops[idx]
-                lbl.config(text=f"{idx+1}. {ini.upper()} - {count} QSOs")
+                display = self._participant_display(ini)
+                lbl.config(text=f"{idx+1}. {display} - {count} QSOs")
             else:
                 lbl.config(text=f"{idx+1}. ---")
 
@@ -5120,7 +5218,8 @@ class InfoTableWindow:
         for idx, lbl in enumerate(self.logger_labels):
             if idx < len(top_loggers):
                 ini, count = top_loggers[idx]
-                lbl.config(text=f"{idx+1}. {ini.upper()} - {count} QSOs")
+                display = self._participant_display(ini)
+                lbl.config(text=f"{idx+1}. {display} - {count} QSOs")
             else:
                 lbl.config(text=f"{idx+1}. ---")
 
@@ -5251,7 +5350,7 @@ for name, desc, default, okre, maxlen in (
         ('contst', '<text>         Contest (FD,WFD,VHF)', 'FD', r'fd|FD|wfd|WFD|vhf|VHF$', 3),
         ('fdcall', '<CALL>         FD call', '', r'[a-zA-Z\d]{3,6}$', 6),
         ('gcall', '<CALL>         GOTA call', '', r'[a-zA-Z\d]{3,6}$', 6),
-        ('sect', '<CC-Ccccc...>  ARRL section', '<section>', r'[a-zA-Z]{2,3}-[a-zA-Z ]{2,20}$', 24),
+        ('sect', '<XX>           ARRL section abbrev', '', r'[a-zA-Z]{2,3}$', 3),
         ('grid', '<grid>         VHF grid square', '', r'[A-Z]{2}\d{2}$', 4),
         ('grpnam', '<text>         group name', '', r'[A-Za-z\d #.:-]{4,35}$', 35),
         ('fmcall', '<CALL>         entry form call', '', r'[a-zA-Z\d]{3,6}$', 6),

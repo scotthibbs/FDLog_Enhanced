@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 112 enhancements to the original FDLog so far.
+We have added 113 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -8,8 +8,58 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 		(none currently)
+		
+  v2026_Beta 4.1.4 27Jan2026 - Easy Distribution and Infotable Changes
 
-  v2026_Beta 4.1.3 - Automated Testing
+	miniweb.py - Version 3.0
+		- Reliable LAN IP detection using UDP socket instead of gethostbyname()
+			which often returned 127.0.0.1
+		- Serves from a share/ subdirectory by default instead of exposing the
+			entire project directory
+		- Error handling for port-in-use with input() pause so the console window
+			stays open
+		- Graceful Ctrl+C shutdown using signal.SIGINT handler with server_close()
+		- Revision history moved from runtime variable to comments
+		- serve() function accepts directory argument, can be imported by other
+			scripts
+	113 share_fdlog.py - New file
+		- Creates a distribution zip of the full project source (Python scripts,
+			data files, docs, PDFs, tests, build config) into share/FDLog_Enhanced.zip
+		- Zips into a FDLog_Enhanced/ folder for clean extraction on any platform
+			(Windows, Mac, Linux - Just run build.py)
+		- Starts miniweb to serve the zip over the LAN
+		- Pause-on-error so the console window stays open for diagnostics
+	FDLog_Enhanced.py - initialize() changes
+		- Section input now accepts 2-3 letter ARRL abbreviation (e.g. IN, EMA,
+			STX) instead of old IN-Indiana format
+		- Validates input against Arrl_sections_ref.txt, rejects invalid entries
+			with examples
+		- Auto-uppercases section input
+		- Updated sect field definition: regex, max length, default value, and
+			description to match new format
+		- Added deploy question after time master: "Do you need to deploy this
+			program to other computers?" which launches share_fdlog.py in a new
+			console window
+		- Finds Python interpreter via shutil.which() to handle launching from
+			PyInstaller exe
+	FDLog_Enhanced.py - InfoTableWindow changes
+		- Header fields (FD Call, Group Name, GOTA Call) now refresh every 10
+			seconds via update_header() instead of only being read once at
+			construction
+		- GOTA Call label always displayed (was previously hidden when not set at
+			startup)
+		- Leaderboards show participant name and call (e.g. "Scott Hibbs
+			(KD4SIR)") instead of just initials
+		- InfoTable now broadcasts on the network every 10 seconds via
+			net.bcast_now() to prevent "Alone?" warnings on other nodes
+	FDLog_Enhanced.py - NewParticipantDialog
+		- Escape key closes the Add New Participant window
+	reset.py  (used only for testing/development)
+		- Data file deletion and exe rebuild are now independent yes/no questions
+		- User can skip data deletion and still rebuild the exe, or any
+			combination  
+
+  v2026_Beta 4.1.3 26Jan2026 - Automated Testing
 	112 Added automated test suite (pytest)
 		- Created tests/ directory with 80 automated tests across 5 modules
 		- test_utils.py — Tests for ival(), tmtofl(), and tmsub() utility functions
