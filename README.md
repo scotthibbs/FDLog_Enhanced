@@ -29,8 +29,9 @@ python FDLog_Enhanced.py
 # Command-line mode (no prompts - useful for scripting/automation)
 python FDLog_Enhanced.py --node station1 --auth 26
 
-# GOTA station
+# GOTA or INFO station
 python FDLog_Enhanced.py --node gota --auth 26
+python FDLog_Enhanced.py --node info --auth 26
 
 # Show help
 python FDLog_Enhanced.py --help
@@ -48,20 +49,21 @@ python FDLog_Enhanced.py --help
 - If `--node` is not provided and no saved node exists, you'll be prompted interactively
 - If `--auth` is not provided and no saved auth key exists, you'll be prompted interactively
 - All nodes on the same network must use the same `--auth` key to communicate
-- Node names are automatically padded to 8 characters with random letters for uniqueness
+- Node names are automatically padded or trunked to 8 characters with random letters for uniqueness
 
 ## Installation
 
 **Option 1: Download Standalone Executable (Easiest)**
 - Download `FDLog_Enhanced.exe` (Windows) or `FDLog_Enhanced` (Mac/Linux) from Releases
 - No Python installation needed - just run it!
-
+- You will need all the supporting files in the main folder.
+  
 **Option 2: Run from Source**
 ```bash
 # Install Python 3.8+ from python.org
 # Install dependencies:
 pip install -r requirements.txt
-
+- again you will need the supporting files in the main folder.
 # Run:
 python FDLog_Enhanced.py
 ```
@@ -81,7 +83,7 @@ python build.py
 pyinstaller FDLog_Enhanced.spec
 ```
 
-The executable will be created in the `dist/` folder. Distribute this single file to users.
+The executable will be created in the `dist/` folder. Move this to the main folder. 
 
 **Build outputs:**
 - Windows: `dist/FDLog_Enhanced.exe` and main folder
@@ -93,10 +95,3 @@ back to the beginning of FDLog in 1984.
 Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
 Scott Hibbs KD4SIR
-
-
-
-
-
-
-
