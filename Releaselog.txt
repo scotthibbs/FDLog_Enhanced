@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 110 enhancements to the original FDLog so far.
+We have added 111 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -8,6 +8,21 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 		(none currently)
+
+  v2026_Beta 4.1.3 - Automated Testing
+	111 Added automated test suite (pytest)
+		- Created tests/ directory with 80 automated tests across 5 modules
+		- test_utils.py — Tests for ival(), tmtofl(), and tmsub() utility functions
+		- test_parser.py — Tests for CallSignParser: callsign validation, prefix/separator/suffix parsing, country lookup via
+			cty.dat, and end-to-end parsing
+		- test_qparse.py — Tests for QSO line parser: full QSO entries, partial input states, slash callsigns, length limits,
+			and edge cases
+		- test_scoring.py — Tests for cleanlog() filtering (deletes, time window, zero power, special bands, GOTA separation)
+			and band_rpt() scoring (CW/digital 2x multiplier, GOTA 500 QSO cap, natural power, satellite tracking)
+		- test_dupes.py — Tests for duplicate detection: call-band matching, suffix lookup, mode/band separation, GOTA
+			separate dupe space, and network dupe logic
+		- Added pytest>=7.0.0 to requirements.txt
+		- Run with: pytest tests/ -v
 
 v2026_Beta 4.1.2 - CW Added, Power limits, and Audio update
 

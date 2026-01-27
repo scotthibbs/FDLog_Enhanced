@@ -49,7 +49,7 @@ COMMAND-LINE OPTIONS:
 
 SHORT HISTORY AND INTRODUCTION: 
 
-	This program is over 40 years old!! 
+	This program is 40 years old!! 
 
 	Alan K Biocca W6AKB (Formerly WB6ZQZ) Wrote this in 1984 using small c 
 	and it was titled "WB6ZQZ's Field Day Logging Program". In 2002, Mr Biocca 
@@ -86,6 +86,8 @@ WHY LOVE FDLOG_ENHANCED?:
 
 	Because it is Python 3, all you need is a PC - Linux, Mac, any Windoze, RaspberryPi - 
 	we don't care - doesn't matter. 
+	
+	Oh... Did you notice that it is HALF THE SIZE of a one page PDF file? (the ARRL Band Chart)?
 	
 	If I didn't HAVE you when I said, "free", "Zed is dead", and "I really don't care what 
 	kind you have", maybe this program isn't for you. :)

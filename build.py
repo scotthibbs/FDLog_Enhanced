@@ -34,11 +34,17 @@ def check_pyinstaller():
 def check_dependencies():
     """Check if required dependencies are installed."""
     missing = []
-    for pkg in ['pandas', 'plotly']:
+    # Map of import name to pip package name
+    packages = {
+        'pandas': 'pandas',
+        'plotly': 'plotly',
+        'serial': 'pyserial',  # CW keying support
+    }
+    for import_name, pip_name in packages.items():
         try:
-            __import__(pkg)
+            __import__(import_name)
         except ImportError:
-            missing.append(pkg)
+            missing.append(pip_name)
 
     if missing:
         print(f"Installing missing dependencies: {missing}")

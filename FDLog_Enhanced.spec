@@ -18,6 +18,8 @@ data_files = [
     ('Bands.pdf', '.'),
     ('Rules.pdf', '.'),
     ('W1AW.pdf', '.'),
+    ('parser.py', '.'),
+    ('cty.dat', '.'),
 ]
 
 a = Analysis(
@@ -30,6 +32,11 @@ a = Analysis(
         'plotly',
         'plotly.express',
         'plotly.graph_objects',
+        'serial',
+        'serial.tools',
+        'serial.tools.list_ports',
+        'cw_keying',
+        'parser',
     ],
     hookspath=[],
     hooksconfig={},
