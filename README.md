@@ -30,12 +30,14 @@ Download and extract the zip file in a folder.
 Run the build.py program which creates the executable for pc/mac/linux    
 named "FDlog_Enhanced". Run it (FDlog_Enhanced).    
 When asked:   
-&nbsp;&nbsp; "For the person in Charge of Logging:   
-&nbsp;&nbsp; *** ONLY ONE PERSON CAN DO THIS ***   
-&nbsp;&nbsp; Do you need to set up the event? Y or N"   
+&nbsp;&nbsp;&nbsp;&nbsp; "For the person in Charge of Logging:   
+&nbsp;&nbsp;&nbsp;&nbsp; *** ONLY ONE PERSON CAN DO THIS ***   
+&nbsp;&nbsp;&nbsp;&nbsp; Do you need to set up the event? Y or N"   
 THIS IS YOU, only you should say YES. 
 Just answer questions about the contest.   
 This computer should be the 'Time Master' (only one)   
+Your admin pin will allow only you to edit participants with log entries.   
+(ie: After working 2 hours, Scotty would like to be Scott in the log)   
 When asked "Do you need to deploy this program to other computers?"     
 This will create a zip file and start an http file server (miniweb.py)   
 Note the ip address and port. (example: 192.168.1.58:55555)   
@@ -60,4 +62,5 @@ back to the beginning of FDLog in 1984.
 Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
 Scott Hibbs KD4SIR
+
 
