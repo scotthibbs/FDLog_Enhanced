@@ -9,6 +9,25 @@ To Do and Ideas:
 
 		(none currently)
 
+  v2026_Beta 4.1.6 28Jan2026 Edit Participant and GUI Changes
+  
+	Admin PIN Protection for Editing Participants
+		- PIN setup in initialize() — Added a 4-digit admin PIN prompt during event setup (before the deploy question). PIN is
+			stored as an MD5 hash in the shared database.
+		- EditParticipantDialog class — New dialog (Properties > Edit Participant) that requires PIN verification. Shows a
+			listbox of participants, displays initials as read-only, and allows editing name, call, age, and visitor title with
+			the same validation as Add Participant.
+		- .set adminpin command — GUI dialog to change the PIN (verifies old PIN first if one exists).
+	Empty Contestant And Logger 
+		- added ability to empty the participant from the contestant or logger position. 
+		- clearoper() now calls bandset('off') immediately when the contestant is cleared, rather than leaving the band
+			visually on the previous selection.
+	GUI Updates: 
+		- Title Bar Date Format change and also show local time.
+		- Title label changed from "FIELD DAY - {name}" to "{grpnam} Field Day".
+		- Date/time display moved from the header row to above the "Sign In Here Please" button in different format.
+		- All labels on the infonode form bumped to 24pt Helvetica bold (leaderboard entries to 20pt Courier)
+  
   v2026_Beta 4.1.5 27Jan2026 New: Voice Keyer Integration (needs real world testing)
 
 	114 New file: voice_keying.py — complete voice keyer module mirroring cw_keying.py's pattern:

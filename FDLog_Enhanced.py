@@ -20,7 +20,7 @@ import pandas as pd
 import plotly.express as px
 from tkinter import END, Toplevel, Frame, Label, Entry, Button, \
     W, EW, E, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
-    Checkbutton, IntVar, Listbox
+    Checkbutton, IntVar, Listbox, SUNKEN
 
 # Callsign parser with country lookup support
 from parser import CallSignParser, InvalidCallSignError, CallSignParserError
@@ -53,7 +53,7 @@ except ImportError:
 
 #  Main program starts about line 5759
 
-prog = 'FDLog_Enhanced v2026_Beta 4.1.4 27Jan2026\n\n' \
+prog = 'FDLog_Enhanced v2026_Beta 4.1.6 28Jan2026\n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2026. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
@@ -571,6 +571,27 @@ def initialize():
             print("Time travels to you!")
         if kinp == "n":
             pass
+        # Admin PIN setup
+        print("\n--- ADMIN PIN SETUP ---")
+        print("Enter a 4-digit admin PIN for editing participants.")
+        print("(This PIN will be required to edit participant data)")
+        pin_set = False
+        while not pin_set:
+            print("Enter PIN: ", end="", flush=True)
+            pin1 = str.strip(sys.stdin.readline())
+            if not re.match(r'^\d{4}$', pin1):
+                print("PIN must be exactly 4 digits. Try again.")
+                continue
+            print("Confirm PIN: ", end="", flush=True)
+            pin2 = str.strip(sys.stdin.readline())
+            if pin1 != pin2:
+                print("PINs do not match. Try again.")
+                continue
+            hashed = hashlib.md5(pin1.encode()).hexdigest()
+            globDb.put('adminpin', hashed)
+            qdb.globalshare('adminpin', hashed)
+            print("Admin PIN set successfully.\n")
+            pin_set = True
         # Deploy to other computers
         anscount = ""
         print("\nDo you need to deploy this program to other computers?")
@@ -3004,6 +3025,184 @@ class NewParticipantDialog:
         self.t.destroy()
 
 
+def verify_admin_pin():
+    """Open a dialog to verify the admin PIN. Returns True if correct, False otherwise."""
+    stored_hash = globDb.get('adminpin', '')
+    if not stored_hash:
+        txtbillb.insert(END, "\nNo admin PIN set. Use initialize or .set adminpin\n")
+        txtbillb.see(END)
+        return False
+    result = [False]
+    dlg = Toplevel(root)
+    dlg.transient(root)
+    dlg.title('Enter Admin PIN')
+    dlg.grab_set()
+    Label(dlg, text='Enter admin PIN:', font=fdfont).grid(row=0, column=0, padx=5, pady=5)
+    pin_entry = Entry(dlg, width=6, font=fdfont, show='*')
+    pin_entry.grid(row=0, column=1, padx=5, pady=5)
+    pin_entry.focus()
+    msg_label = Label(dlg, text='', font=fdfont, fg='red')
+    msg_label.grid(row=1, column=0, columnspan=2)
+
+    def check_pin(event=None):
+        entered = pin_entry.get().strip()
+        hashed = hashlib.md5(entered.encode()).hexdigest()
+        if hashed == stored_hash:
+            result[0] = True
+            dlg.destroy()
+        else:
+            msg_label.config(text='Incorrect PIN')
+            pin_entry.delete(0, END)
+            pin_entry.focus()
+
+    def cancel(event=None):
+        dlg.destroy()
+
+    dlg.bind('<Return>', check_pin)
+    dlg.bind('<Escape>', cancel)
+    Button(dlg, text='OK', font=fdfont, command=check_pin).grid(row=2, column=0, pady=5)
+    Button(dlg, text='Cancel', font=fdfont, command=cancel).grid(row=2, column=1, pady=5)
+    root.wait_window(dlg)
+    return result[0]
+
+
+class EditParticipantDialog:
+    """Dialog to edit existing participants, protected by admin PIN."""
+
+    def __init__(self):
+        self.t = None
+        self.name = None
+        self.call = None
+        self.age = None
+        self.vist = None
+        self.initials_label = None
+        self.selected_initials = None
+
+    @staticmethod
+    def dialog():
+        if node == "":
+            txtbillb.insert(END, "err - no node\n")
+            return
+        if not verify_admin_pin():
+            return
+        s = EditParticipantDialog()
+        s.t = Toplevel(root)
+        s.t.transient(root)
+        s.t.title('Edit Participant')
+        s.t.bind('<Escape>', lambda e: s.t.destroy())
+        # Frame 1 - participant list
+        fr1 = Frame(s.t)
+        fr1.grid(row=0, column=0, sticky=NSEW)
+
+        def getpartsel(event):
+            selection = event.widget.curselection()
+            if not selection:
+                return
+            indx = selection[0]
+            value = event.widget.get(indx)
+            init, nomio, callio, ageio, vistio = value.split(", ")
+            s.selected_initials = init
+            s.initials_label.config(text=init)
+            s.name.delete(0, END)
+            s.name.insert(END, nomio)
+            s.call.delete(0, END)
+            s.call.insert(END, callio)
+            s.age.delete(0, END)
+            s.age.insert(END, ageio)
+            s.vist.delete(0, END)
+            s.vist.insert(END, vistio)
+
+        partlbox = Listbox(fr1, bg='light gray', height=0, width=0, selectmode="single", exportselection=False)
+        partlbox.grid(row=0, column=0, sticky=NSEW)
+        lpart1 = list(participants.values())
+        lpart1.sort()
+        partlboxind = -1
+        for player in lpart1:
+            partlboxind += 1
+            partlbox.insert(partlboxind, player)
+        partlbox.bind('<<ListboxSelect>>', getpartsel)
+        Label(fr1, text=" Select a participant to edit.", font=fdfont).grid(row=1, column=0, sticky=NSEW)
+        # Frame 2 - edit fields
+        fr2 = Frame(s.t)
+        fr2.grid(row=1, column=0)
+        Label(fr2, text='Initials', font=fdfont).grid(row=0, column=0, sticky=W)
+        s.initials_label = Label(fr2, text='--', font=fdfont, width=5, relief=SUNKEN, anchor=W)
+        s.initials_label.grid(row=0, column=1, sticky=W)
+        Label(fr2, text='Name', font=fdfont).grid(row=1, column=0, sticky=W)
+        s.name = Entry(fr2, width=20, font=fdfont)
+        s.name.grid(row=1, column=1, sticky=W)
+        Label(fr2, text='Call', font=fdfont).grid(row=2, column=0, sticky=W)
+        s.call = Entry(fr2, width=6, font=fdfont)
+        s.call.grid(row=2, column=1, sticky=W)
+        Label(fr2, text='Age', font=fdfont).grid(row=3, column=0, sticky=W)
+        s.age = Entry(fr2, width=2, font=fdfont)
+        s.age.grid(row=3, column=1, sticky=W)
+        Label(fr2, text='Visitor Title', font=fdfont).grid(row=4, column=0, sticky=W)
+        s.vist = Entry(fr2, width=20, font=fdfont)
+        s.vist.grid(row=4, column=1, sticky=W)
+        # Frame 3 - buttons
+        fr3 = Frame(s.t)
+        fr3.grid(row=2, column=0, sticky=EW, pady=3)
+        fr3.columnconfigure(0, weight=1)
+        Button(fr3, text='Save', font=fdfont, command=s.savebtn).grid(row=0, column=0, sticky=EW, padx=3)
+        Button(fr3, text='Dismiss', font=fdfont, command=s.quitbtn).grid(row=0, column=1, sticky=EW, padx=3)
+        s.t.bind('<Return>', lambda event: s.savebtn())
+
+    def savebtn(self):
+        global participants
+        initials = self.selected_initials
+        if not initials:
+            txtbillb.insert(END, "\nNo participant selected.\n")
+            txtbillb.see(END)
+            return
+        name11 = self.name.get()
+        call11 = str.lower(self.call.get())
+        age5 = str.lower(self.age.get())
+        vist2 = str.lower(self.vist.get())
+        self.name.config(bg='white')
+        self.call.config(bg='white')
+        self.age.config(bg='white')
+        self.vist.config(bg='white')
+        if not re.match(r'[A-Za-z ]{4,20}$', name11):
+            txtbillb.insert(END, "error in name\n")
+            txtbillb.see(END)
+            topper()
+            self.name.focus()
+            self.name.config(bg='gold')
+        elif not re.match(r'([a-zA-Z\d]{3,6})?$', call11):
+            txtbillb.insert(END, "error in call\n")
+            txtbillb.see(END)
+            topper()
+            self.call.focus()
+            self.call.config(bg='gold')
+        elif not re.match(r'(\d{1,2})?$', age5):
+            txtbillb.insert(END, "error in age\n")
+            txtbillb.see(END)
+            topper()
+            self.age.focus()
+            self.age.config(bg='gold')
+        elif not re.match(r'([a-zA-Z\d]{4,20})?$', vist2):
+            txtbillb.insert(END, "error in title\n")
+            txtbillb.see(END)
+            topper()
+            self.vist.focus()
+            self.vist.config(bg='gold')
+        else:
+            nam = "p:%s" % initials
+            v = "%s, %s, %s, %s, %s" % (initials, name11, call11, age5, vist2)
+            participants[initials] = v
+            _dummy = qdb.globalshare(nam, v)
+            txtbillb.insert(END, "\a Participant Updated.")
+            print("\a")
+            txtbillb.see(END)
+            topper()
+            buildmenus()
+            self.quitbtn()
+
+    def quitbtn(self):
+        self.t.destroy()
+
+
 def renew_title():
     """renew title and various, called at 10 second rate"""
     if node == 'gotanode':
@@ -3017,12 +3216,16 @@ def renew_title():
     mob = sob / 60
     h = mob / 60
     m9 = mob % 60
+    # Get local time for display
+    local_time = time.localtime(time.time() + mclock.offset)
+    local_hm = time.strftime("%H:%M", local_time)
     # Added port to the heading - Scott Hibbs KD4SIR Jan/27/2017
     # Port now moved to node label and clean up title - Scott Hibbs KD4SIR 06Aug2022
     # root.title('  FDLog_Enhanced %s %s %s (Node: %s Time on Band: %d:%02d) %s:%s UTC %s/%s Port:%s' %
     #            (call12, clas, sec, node, h, m9, t[-6:-4], t[-4:-2], t[2:4], t[4:6], port_base))
-    root.title('  FDLog_Enhanced      %s %s %s      Current Time %s:%s UTC %s/%s' %
-               (call12, clas, sec, t[-6:-4], t[-4:-2], t[2:4], t[4:6]))
+    mon_abbr = time.strftime("%b", time.strptime(t[2:4], "%m"))
+    root.title('  FDLog_Enhanced      %s %s %s      %s%s20%s  UTC: %s:%s  Local: %s' %
+               (call12, clas, sec, t[4:6], mon_abbr, t[0:2], t[-6:-4], t[-4:-2], local_hm))
     # Adding a lbltimeonband that needs updated with the title. - Scott Hibbs KD4SIR 06Aug2022
     # lbltimeonband.config(text= " Time on Band: %d:%02d " % (h, m9), font=fdfont, foreground='blue',
     #                      background='light gray')
@@ -3494,6 +3697,29 @@ def setlog(logr):
     saveglob()
 
 
+def clearoper():
+    """Clear the current contestant selection."""
+    global operator, operatorsonline, node
+    if operator:
+        operatorsonline.pop(node, None)
+    operator = ""
+    bandset('off')
+    net.bc_user(node, operator, logger, band)
+    opds.config(text="<Select Contestant>", background='red')
+    opmb.config(text='Contestant', background='red')
+    saveglob()
+    buildmenus()
+
+
+def clearlog():
+    """Clear the current logger selection."""
+    global logger
+    logger = ""
+    logds.config(text="<Select Logger>", background='red')
+    logmb.config(text='Logger', background='red')
+    saveglob()
+
+
 def buildmenus():
     global operator, operatorsonline
     opdsu.delete(0, END)
@@ -3502,7 +3728,9 @@ def buildmenus():
     lparticipants.sort()
     # moved to top and added color. - Scott Hibbs KD4SIR 23Aug2022
     opdsu.add_command(label="Add New Contestant", background='green', command=newpart.dialog)
+    opdsu.add_command(label="Empty Contestant", background='yellow', command=clearoper)
     logdsu.add_command(label="Add New Logger",  background='green', command=newpart.dialog)
+    logdsu.add_command(label="Empty Logger", background='yellow', command=clearlog)
     for i30 in lparticipants:
         # Removed the $ which looks for the end of value - Scott Hibbs KD4SIR 2/12/2017
         '''
@@ -3779,6 +4007,61 @@ def proc_key(ch):
             testqgen(testq)
         saveglob()
         renew_title()
+        if kbuf.strip() == '.set adminpin':
+            kbuf = ""
+            topper()
+            _adminpin_dlg = Toplevel(root)
+            _adminpin_dlg.transient(root)
+            _adminpin_dlg.title('Set Admin PIN')
+            _adminpin_dlg.grab_set()
+            _ap_row = 0
+            _existing_hash = globDb.get('adminpin', '')
+            if _existing_hash:
+                Label(_adminpin_dlg, text='Current PIN:', font=fdfont).grid(row=_ap_row, column=0, padx=5, pady=2)
+                _old_pin_e = Entry(_adminpin_dlg, width=6, font=fdfont, show='*')
+                _old_pin_e.grid(row=_ap_row, column=1, padx=5, pady=2)
+                _old_pin_e.focus()
+                _ap_row += 1
+            else:
+                _old_pin_e = None
+            Label(_adminpin_dlg, text='New PIN:', font=fdfont).grid(row=_ap_row, column=0, padx=5, pady=2)
+            _new_pin_e = Entry(_adminpin_dlg, width=6, font=fdfont, show='*')
+            _new_pin_e.grid(row=_ap_row, column=1, padx=5, pady=2)
+            if not _old_pin_e:
+                _new_pin_e.focus()
+            _ap_row += 1
+            Label(_adminpin_dlg, text='Confirm PIN:', font=fdfont).grid(row=_ap_row, column=0, padx=5, pady=2)
+            _conf_pin_e = Entry(_adminpin_dlg, width=6, font=fdfont, show='*')
+            _conf_pin_e.grid(row=_ap_row, column=1, padx=5, pady=2)
+            _ap_row += 1
+            _ap_msg = Label(_adminpin_dlg, text='', font=fdfont, fg='red')
+            _ap_msg.grid(row=_ap_row, column=0, columnspan=2)
+            _ap_row += 1
+
+            def _ap_save():
+                if _old_pin_e:
+                    old_hash = hashlib.md5(_old_pin_e.get().strip().encode()).hexdigest()
+                    if old_hash != _existing_hash:
+                        _ap_msg.config(text='Current PIN incorrect')
+                        return
+                np = _new_pin_e.get().strip()
+                cp = _conf_pin_e.get().strip()
+                if not re.match(r'^\d{4}$', np):
+                    _ap_msg.config(text='PIN must be exactly 4 digits')
+                    return
+                if np != cp:
+                    _ap_msg.config(text='PINs do not match')
+                    return
+                hashed = hashlib.md5(np.encode()).hexdigest()
+                globDb.put('adminpin', hashed)
+                qdb.globalshare('adminpin', hashed)
+                txtbillb.insert(END, "\nAdmin PIN updated.\n")
+                txtbillb.see(END)
+                _adminpin_dlg.destroy()
+
+            Button(_adminpin_dlg, text='Save', font=fdfont, command=_ap_save).grid(row=_ap_row, column=0, pady=5)
+            Button(_adminpin_dlg, text='Cancel', font=fdfont, command=_adminpin_dlg.destroy).grid(row=_ap_row, column=1, pady=5)
+            return
         m12 = re.match(r"[.]set ([a-z\d]{3,6}) (.*)$", kbuf)
         if m12:
             name12, val = m12.group(1, 2)  # command and number
@@ -5020,8 +5303,8 @@ class InfoTableWindow:
         else:
             gota_call = gota_call.upper()
 
-        # Horizontal layout: Title | FD Call | GOTA Call | Time (justified across width)
-        title_text = f"FIELD DAY - {org_name}" if org_name else "FIELD DAY"
+        # Horizontal layout: Title | FD Call | GOTA Call (justified across width)
+        title_text = f"{org_name} Field Day" if org_name else "Field Day"
         self.title_label = Label(header_frame, text=title_text,
                                   font=('Helvetica', 24, 'bold'),
                                   foreground='white', background='#1a1a2e')
@@ -5030,22 +5313,16 @@ class InfoTableWindow:
         # FD Call
         fd_call_text = f"FD Call: {fd_call}" if fd_call else "FD Call: Not Set"
         self.call_label = Label(header_frame, text=fd_call_text,
-                                 font=('Helvetica', 14, 'bold'),
+                                 font=('Helvetica', 24, 'bold'),
                                  foreground='white', background='#1a1a2e')
         self.call_label.pack(side='left', expand=True)
 
         # GOTA Call
         gota_text = f"GOTA Call: {gota_call}" if gota_call else "GOTA Call: Not Set"
         self.gota_label = Label(header_frame, text=gota_text,
-                                 font=('Helvetica', 14, 'bold'),
+                                 font=('Helvetica', 24, 'bold'),
                                  foreground='white', background='#1a1a2e')
         self.gota_label.pack(side='left', expand=True)
-
-        # Current time (on the right)
-        self.time_label = Label(header_frame, text="",
-                                 font=('Helvetica', 14, 'bold'),
-                                 foreground='white', background='#1a1a2e')
-        self.time_label.pack(side='left', expand=True)
 
     def create_score_panel(self, parent):
         """Create the score display panel."""
@@ -5060,13 +5337,13 @@ class InfoTableWindow:
 
         # QSO counts
         self.qso_label = Label(score_frame, text="Total QSOs: 0",
-                                font=('Helvetica', 16, 'bold'),
+                                font=('Helvetica', 24, 'bold'),
                                 foreground='white', background='#1a1a2e')
         self.qso_label.pack(side='left', expand=True)
 
         # Mode breakdown
         self.mode_label = Label(score_frame, text="CW: 0  |  Digital: 0  |  Phone: 0",
-                                 font=('Helvetica', 14, 'bold'),
+                                 font=('Helvetica', 24, 'bold'),
                                  foreground='white', background='#1a1a2e')
         self.mode_label.pack(side='left', expand=True)
 
@@ -5077,7 +5354,7 @@ class InfoTableWindow:
 
         # Title
         Label(contestants_frame, text="TOP 5 CONTESTANTS",
-              font=('Helvetica', 14, 'bold'),
+              font=('Helvetica', 24, 'bold'),
               foreground='white', background='#1a1a2e').pack(pady=(0, 10))
 
         # Leaderboard entries
@@ -5086,7 +5363,7 @@ class InfoTableWindow:
             entry_frame = Frame(contestants_frame, background='#16213e', padx=10, pady=5)
             entry_frame.pack(fill='x', pady=2)
             lbl = Label(entry_frame, text=f"{idx+1}. ---",
-                        font=('Courier', 12),
+                        font=('Courier', 20),
                         foreground='white', background='#16213e', anchor='w')
             lbl.pack(fill='x')
             self.contestant_labels.append(lbl)
@@ -5098,7 +5375,7 @@ class InfoTableWindow:
 
         # Title
         Label(loggers_frame, text="TOP 5 LOGGERS",
-              font=('Helvetica', 14, 'bold'),
+              font=('Helvetica', 24, 'bold'),
               foreground='white', background='#1a1a2e').pack(pady=(0, 10))
 
         # Leaderboard entries
@@ -5107,7 +5384,7 @@ class InfoTableWindow:
             entry_frame = Frame(loggers_frame, background='#16213e', padx=10, pady=5)
             entry_frame.pack(fill='x', pady=2)
             lbl = Label(entry_frame, text=f"{idx+1}. ---",
-                        font=('Courier', 12),
+                        font=('Courier', 20),
                         foreground='white', background='#16213e', anchor='w')
             lbl.pack(fill='x')
             self.logger_labels.append(lbl)
@@ -5119,20 +5396,26 @@ class InfoTableWindow:
 
         # WAS progress (justified across width)
         self.was_label = Label(progress_frame, text="WORKED ALL STATES: 0/50",
-                                font=('Helvetica', 16, 'bold'),
+                                font=('Helvetica', 24, 'bold'),
                                 foreground='white', background='#1a1a2e')
         self.was_label.pack(side='left', expand=True)
 
         # Sections progress
         self.sections_label = Label(progress_frame, text="SECTIONS: 0/84",
-                                     font=('Helvetica', 16, 'bold'),
+                                     font=('Helvetica', 24, 'bold'),
                                      foreground='white', background='#1a1a2e')
         self.sections_label.pack(side='left', expand=True)
 
     def create_register_button(self, parent):
-        """Create the visitor registration button."""
+        """Create the visitor registration button with date/time above it."""
         button_frame = Frame(parent, background='#1a1a2e', pady=20)
         button_frame.pack(fill='x')
+
+        # Date and time display above the button
+        self.time_label = Label(button_frame, text="",
+                                 font=('Helvetica', 24, 'bold'),
+                                 foreground='white', background='#1a1a2e')
+        self.time_label.pack(pady=(0, 10))
 
         # Use a more visible style for Windows compatibility
         register_btn = Button(button_frame, text=">>> Sign In Here Please <<<",
@@ -5175,7 +5458,7 @@ class InfoTableWindow:
         else:
             gota_call = gota_call.upper()
 
-        title_text = f"FIELD DAY - {org_name}" if org_name else "FIELD DAY"
+        title_text = f"{org_name} Field Day" if org_name else "Field Day"
         self.title_label.config(text=title_text)
         fd_call_text = f"FD Call: {fd_call}" if fd_call else "FD Call: Not Set"
         self.call_label.config(text=fd_call_text)
@@ -5186,8 +5469,10 @@ class InfoTableWindow:
     def update_time(self):
         """Update the current time display."""
         import time
-        t = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
-        self.time_label.config(text=t)
+        date_str = time.strftime("%d%b%Y", time.gmtime())
+        utc_str = time.strftime("%H:%M:%S", time.gmtime())
+        local_str = time.strftime("%H:%M:%S", time.localtime())
+        self.time_label.config(text=f"{date_str}    UTC: {utc_str}    Local: {local_str}")
 
     def update_score(self):
         """Update the score display."""
@@ -5354,6 +5639,7 @@ bands = ('160', '80', '40', '20', '15', '10', '6', '2', '220', '440', '900', '12
 modes = ('c', 'd', 'p')
 bandb = {}  # band button names
 newpart = NewParticipantDialog()
+editpart = EditParticipantDialog()
 cf = {}
 participants = {}
 operatorsonline = {}
@@ -5453,6 +5739,23 @@ def update_phonetic_display():
         phonetic_label.config(text=response)
     except (NameError, tkinter.TclError, AttributeError):
         pass  # Silently ignore if widgets not ready
+
+
+def toggle_phonetic_display():
+    """Toggle visibility of the phonetic display frame."""
+    global phonetic_visible
+    try:
+        if phonetic_visible:
+            phonetic_frame.grid_remove()
+            phonetic_toggle_btn.config(text="Show Phonetic")
+            phonetic_visible = False
+        else:
+            phonetic_frame.grid(row=5, column=0, columnspan=2, sticky=NSEW)
+            phonetic_toggle_btn.config(text="Hide Phonetic")
+            phonetic_visible = True
+    except (NameError, tkinter.TclError, AttributeError):
+        pass  # Silently ignore if widgets not ready
+
 
 # setup persistent globals before GUI
 suffix = ""
@@ -5934,6 +6237,7 @@ propmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Properties", menu=propmenu)
 propmenu.add_command(label="Set Node ID", command=noddiag)
 propmenu.add_command(label="Add Participants", command=newpart.dialog)
+propmenu.add_command(label="Edit Participant", command=editpart.dialog)
 logmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Logs", menu=logmenu)
 logmenu.add_command(label='Full Log', command=lambda: viewlogf(""))
@@ -6161,6 +6465,9 @@ mapbutton = Button(f1b, text="WAS Map", font=fdfont, relief='raised', foreground
                    command=generate_map, background='light gray')
 sectionmapbutton = Button(f1b, text="Section Map", font=fdfont, relief='raised', foreground='blue',
                           command=generate_section_map, background='light gray')
+phonetic_visible = False  # Track phonetic display visibility (hidden by default)
+phonetic_toggle_btn = Button(f1b, text="Show Phonetic", font=fdfont, relief='raised', foreground='blue',
+                             command=toggle_phonetic_display, background='light gray')
 
 # Who's on First Window to display operators on bands
 # lblwof = Label(f1b, text="", font=fdfont, foreground='blue', background='light gray')
@@ -6316,6 +6623,7 @@ redrawbutton.grid(row=3, column=0, sticky=NSEW)
 opsonlinebutton.grid(row=3, column=1, sticky=NSEW)
 mapbutton.grid(row=3, column=2, sticky=NSEW)
 sectionmapbutton.grid(row=3, column=3, sticky=NSEW)
+phonetic_toggle_btn.grid(row=3, column=4, sticky=NSEW)
 # Grid for log window
 root.grid_rowconfigure(2, weight=1)
 logw.grid(row=3, column=0, sticky=NSEW)
@@ -6324,8 +6632,8 @@ root.grid_columnconfigure(0, weight=1)
 root.grid_rowconfigure(3, weight=1)
 txtbillb.grid(row=4, column=0, sticky=NSEW)
 scrollt.grid(row=4, column=1, sticky=NSEW)
-# Grid for phonetic alphabet display
-phonetic_frame.grid(row=5, column=0, columnspan=2, sticky=NSEW)
+# Grid for phonetic alphabet display (hidden by default, toggle with button)
+# phonetic_frame.grid(row=5, column=0, columnspan=2, sticky=NSEW)
 phonetic_mode_label.grid(row=0, column=0, padx=5, sticky=NSEW)
 phonetic_rb_answer.grid(row=0, column=1, padx=5, sticky=NSEW)
 phonetic_rb_cq.grid(row=0, column=2, padx=5, sticky=NSEW)
