@@ -8,7 +8,25 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 		(none currently)
-		
+
+  v2026_Beta 4.1.5 27Jan2026 New: Voice Keyer Integration (needs real world testing)
+
+	114 New file: voice_keying.py — complete voice keyer module mirroring cw_keying.py's pattern:
+		- VoiceConfig — settings for TTS speed, volume, voice selection, and PTT control
+		- VoiceKeyer — TTS engine (pyttsx3) and recorded WAV playback (sounddevice/soundfile), with PTT keying before/after
+			audio
+		- VoiceMacroManager — F1-F12 voice message management with variable substitution and per-slot TTS/recording mode
+		- VoiceSettingsDialog — speed, volume, voice selection, and full PTT config (own port or reuse CW port, RTS/DTR,
+			lead/tail delays)
+		- VoiceMacroEditorDialog — edit F1-F12 text messages, TTS/Rec mode toggle, record button with duration display
+		- Voice keyer import with graceful fallback (like CW)
+		- Voice helper functions: load/save config, load/save macros/modes, status updates, settings/macro dialogs
+		- Voice keyer initialized after root, wired to reuse CW port PTT callbacks
+		- F-key routing by band mode: Phone bands (p) → voice keyer, CW/Digital bands (c/d) → CW keyer
+		- ESC stops both CW and voice playback
+		- "Voice" menu with Settings and Macro Editor
+		- F1-F12 + ESC button bar below the phonetics row for mouse operation (uniform fixed-width buttons)
+  	
   v2026_Beta 4.1.4 27Jan2026 - Easy Distribution and Infotable Changes
 
 	miniweb.py - Version 3.0

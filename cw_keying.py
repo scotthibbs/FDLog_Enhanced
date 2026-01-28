@@ -1171,8 +1171,16 @@ try:
             frame = Frame(self.dialog, padx=10, pady=10)
             frame.pack(fill='both', expand=True)
 
-            # Instructions
-            Label(frame, text="Available variables: {MYCALL}, {CALL}, {RST}, {CLASS}, {SECT}, {NAME}").grid(
+            # Instructions - show variables with current values
+            var_names = ['MYCALL', 'CALL', 'RST', 'CLASS', 'SECT', 'NAME']
+            var_lines = []
+            for vn in var_names:
+                val = self.macro_manager.get_variable(vn)
+                if val and val != f'{{{vn}}}':
+                    var_lines.append(f"{{{vn}}} = {val}")
+                else:
+                    var_lines.append(f"{{{vn}}}")
+            Label(frame, text="Variables:  " + "    ".join(var_lines), anchor=W).grid(
                 row=0, column=0, columnspan=2, sticky=W, pady=(0, 10))
 
             # Macro entries

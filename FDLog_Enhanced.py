@@ -37,6 +37,18 @@ except ImportError:
     CWConfig = None
     CWController = None
 
+# Voice Keying support - graceful fallback if pyttsx3 not installed
+try:
+    from voice_keying import (
+        PYTTSX3_AVAILABLE, VoiceConfig, VoiceKeyer, VoiceMacroManager,
+        VoiceSettingsDialog, VoiceMacroEditorDialog
+    )
+    VOICE_AVAILABLE = PYTTSX3_AVAILABLE
+except ImportError:
+    VOICE_AVAILABLE = False
+    VoiceConfig = None
+    VoiceKeyer = None
+
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
 #  Main program starts about line 5759
@@ -4129,12 +4141,19 @@ def kevent(event):
         # Also abort CW transmission on ESC
         if CW_AVAILABLE:
             cw_abort()
+        if VOICE_AVAILABLE:
+            voice_stop()
     elif k2 == 65293:  # return
         proc_key('\r')
-    # CW F-key macros (F1-F12: 65470-65481)
+    # F-key macros (F1-F12: 65470-65481) - route to Voice or CW based on band mode
     elif 65470 <= k2 <= 65481:
         fkey = f'F{k2 - 65469}'  # F1=65470 -> F1, F12=65481 -> F12
-        if CW_AVAILABLE:
+        current_mode = band[-1:] if band != 'off' else ''
+        if current_mode == 'p' and VOICE_AVAILABLE:
+            voice_send_macro(fkey)
+        elif current_mode in ('c', 'd') and CW_AVAILABLE:
+            cw_send_macro(fkey)
+        elif CW_AVAILABLE:
             cw_send_macro(fkey)
     # CW Speed control (PgUp/PgDn)
     elif k2 == 65365:  # Page Up - speed up
@@ -5585,6 +5604,32 @@ if operator != "":
     operatorsonline.update({node: ini3})
 print("Time Difference Window (tdwin):", tdwin, "seconds")
 
+# Macro variable getter - shared by CW and Voice keyers
+def get_macro_variable(name):
+    """Get variable value for macro substitution (CW and Voice)."""
+    name = name.upper()
+    if name == 'MYCALL':
+        # Use GOTA call when on GOTA node, otherwise FD call
+        if node == 'gotanode':
+            return str.upper(gd.getv('gcall'))
+        return str.upper(gd.getv('fdcall'))
+    elif name == 'CALL':
+        global kbuf
+        parts = kbuf.strip().split()
+        if parts:
+            return parts[0]
+        return ''
+    elif name == 'RST':
+        return '59'
+    elif name == 'CLASS':
+        return str.upper(gd.getv('class'))
+    elif name == 'SECT':
+        return gd.getv('sect')
+    elif name == 'NAME':
+        return operator.split(':')[0] if operator else ''
+    else:
+        return f'{{{name}}}'
+
 # CW Keying initialization
 cw_controller = None
 cw_status_label = None
@@ -5635,29 +5680,6 @@ if CW_AVAILABLE:
             default = CWMacroManager.DEFAULT_MACROS.get(key, '')
             macros[key] = globDb.get(f'cw_macro_{key}', default)
         return macros
-
-    def cw_get_variable(name):
-        """Get variable value for macro substitution."""
-        name = name.upper()
-        if name == 'MYCALL':
-            return gd.getv('call')
-        elif name == 'CALL':
-            # Get call from current input buffer
-            global kbuf
-            parts = kbuf.strip().split()
-            if parts:
-                return parts[0]
-            return ''
-        elif name == 'RST':
-            return '599'  # Default CW report
-        elif name == 'CLASS':
-            return gd.getv('class')
-        elif name == 'SECT':
-            return gd.getv('sect')
-        elif name == 'NAME':
-            return operator.split(':')[0] if operator else ''
-        else:
-            return f'{{{name}}}'
 
     def cw_status_update(status):
         """Update CW status display."""
@@ -5750,6 +5772,117 @@ else:
     def cw_abort():
         pass
 
+# Voice Keying initialization
+voice_keyer = None
+voice_status_label = None
+
+if VOICE_AVAILABLE:
+    print("Voice Keying support available (pyttsx3 found)")
+
+    def voice_load_config():
+        """Load voice configuration from globDb."""
+        config = VoiceConfig()
+        config.speed = int(globDb.get('voice_speed', '150'))
+        config.volume = float(globDb.get('voice_volume', '1.0'))
+        config.voice_id = globDb.get('voice_id', '')
+        config.ptt_enabled = globDb.get('voice_ptt_enabled', '0') == '1'
+        config.ptt_port = globDb.get('voice_ptt_port', '')
+        config.ptt_line = globDb.get('voice_ptt_line', 'RTS')
+        config.ptt_lead = int(globDb.get('voice_ptt_lead', '100'))
+        config.ptt_tail = int(globDb.get('voice_ptt_tail', '100'))
+        config.use_cw_port = globDb.get('voice_use_cw_port', '1') == '1'
+        return config
+
+    def voice_save_config(config):
+        """Save voice configuration to globDb."""
+        globDb.put('voice_speed', str(config.speed))
+        globDb.put('voice_volume', str(config.volume))
+        globDb.put('voice_id', config.voice_id)
+        globDb.put('voice_ptt_enabled', '1' if config.ptt_enabled else '0')
+        globDb.put('voice_ptt_port', config.ptt_port)
+        globDb.put('voice_ptt_line', config.ptt_line)
+        globDb.put('voice_ptt_lead', str(config.ptt_lead))
+        globDb.put('voice_ptt_tail', str(config.ptt_tail))
+        globDb.put('voice_use_cw_port', '1' if config.use_cw_port else '0')
+
+    def voice_save_macros(macros, modes=None):
+        """Save voice macros to globDb."""
+        for key, value in macros.items():
+            globDb.put(f'voice_macro_{key}', value)
+        if modes:
+            for key, value in modes.items():
+                globDb.put(f'voice_mode_{key}', value)
+
+    def voice_load_macros():
+        """Load voice macros from globDb."""
+        macros = {}
+        for i in range(1, 13):
+            key = f'F{i}'
+            default = VoiceMacroManager.DEFAULT_MACROS.get(key, '')
+            macros[key] = globDb.get(f'voice_macro_{key}', default)
+        return macros
+
+    def voice_load_modes():
+        """Load voice macro modes from globDb."""
+        modes = {}
+        for i in range(1, 13):
+            key = f'F{i}'
+            modes[key] = globDb.get(f'voice_mode_{key}', 'tts')
+        return modes
+
+    def voice_status_update(status):
+        """Update voice status display."""
+        global voice_status_label
+        if voice_status_label:
+            voice_status_label.config(text=f"Voice: {status}")
+
+    def voice_settings_dialog():
+        """Open voice settings dialog."""
+        global voice_keyer
+        if voice_keyer:
+            def on_save(config):
+                voice_save_config(config)
+                voice_keyer.config = config
+                print(f"Voice: Settings saved - Speed: {config.speed}, Volume: {config.volume}")
+            VoiceSettingsDialog(root, voice_keyer.config, voice_keyer, on_save)
+
+    def voice_macro_editor_dialog():
+        """Open voice macro editor dialog."""
+        global voice_keyer
+        if voice_keyer:
+            def on_save(macros, modes):
+                voice_save_macros(macros, modes)
+                print("Voice: Macros saved")
+            VoiceMacroEditorDialog(root, voice_keyer.macro_manager, on_save)
+
+    def voice_send_macro(key):
+        """Send a voice macro."""
+        global voice_keyer
+        if voice_keyer:
+            voice_keyer.play_macro(key)
+
+    def voice_stop():
+        """Stop voice playback."""
+        global voice_keyer
+        if voice_keyer:
+            voice_keyer.stop()
+
+else:
+    print("Voice Keying support NOT available (pyttsx3 not found)")
+    print("  Install with: pip install pyttsx3")
+
+    def voice_settings_dialog():
+        pass
+
+    def voice_macro_editor_dialog():
+        pass
+
+    def voice_send_macro(key):
+        pass
+
+    def voice_stop():
+        pass
+
 print("Starting GUI setup")
 
 #     ****************** GUI START **************************
@@ -5760,11 +5893,32 @@ root = Tk()  # setup Tk GUI
 if CW_AVAILABLE:
     cw_config = cw_load_config()
     cw_controller = CWController(cw_config, root, cw_status_update)
-    cw_controller.set_variable_getter(cw_get_variable)
+    cw_controller.set_variable_getter(get_macro_variable)
     # Load saved macros
     saved_macros = cw_load_macros()
     cw_controller.macro_manager.load_from_dict(saved_macros)
     print(f"CW: Initialized - Port: {cw_config.port}, Method: {cw_config.method}, WPM: {cw_config.wpm}")
+
+# Initialize Voice Keyer after root is created
+if VOICE_AVAILABLE:
+    voice_config = voice_load_config()
+    voice_keyer = VoiceKeyer(voice_config, root, voice_status_update)
+    voice_keyer.set_variable_getter(get_macro_variable)
+    # Load saved macros and modes
+    saved_voice_macros = voice_load_macros()
+    voice_keyer.macro_manager.load_from_dict(saved_voice_macros)
+    saved_voice_modes = voice_load_modes()
+    voice_keyer.macro_manager.load_modes_from_dict(saved_voice_modes)
+    # Wire up CW PTT reuse if both are available
+    if CW_AVAILABLE and cw_controller:
+        def _voice_cw_ptt_on():
+            if cw_controller.keyer and hasattr(cw_controller.keyer, 'ptt_on'):
+                cw_controller.keyer.ptt_on()
+        def _voice_cw_ptt_off():
+            if cw_controller.keyer and hasattr(cw_controller.keyer, 'ptt_off'):
+                cw_controller.keyer.ptt_off()
+        voice_keyer.set_cw_ptt(_voice_cw_ptt_on, _voice_cw_ptt_off)
+    print(f"Voice: Initialized - Speed: {voice_config.speed}, Volume: {voice_config.volume}")
 
 menu = Menu(root)
 root.config(menu=menu)
@@ -5898,6 +6052,13 @@ if CW_AVAILABLE:
     cwmenu.add_command(label="Speed Up (PgUp)", command=lambda: cw_adjust_speed(2))
     cwmenu.add_command(label="Speed Down (PgDn)", command=lambda: cw_adjust_speed(-2))
 
+# Voice Keying menu - only shown if pyttsx3 is available
+if VOICE_AVAILABLE:
+    voicemenu = Menu(menu, tearoff=0)
+    menu.add_cascade(label="Voice", menu=voicemenu)
+    voicemenu.add_command(label="Settings...", command=voice_settings_dialog)
+    voicemenu.add_command(label="Macro Editor...", command=voice_macro_editor_dialog)
+
 # Network bar moved to the top - Scott Hibbs KD4SIR 05Aug2022
 frn1 = Frame(root, bd=1)
 # Network label
@@ -5911,9 +6072,18 @@ lblnode = Label(frn1, text=" Node: %s Port: %s " % (node, port_base), font=fdfon
 # CW Status label
 if CW_AVAILABLE:
     cw_status_label = Label(frn1, text="CW: Ready", font=fdfont, relief='raised',
-                            foreground='dark green', background='light gray')
+                            foreground='dark green', background='light gray',
+                            width=20, anchor='w')
 else:
     cw_status_label = None
+
+# Voice Status label
+if VOICE_AVAILABLE:
+    voice_status_label = Label(frn1, text="Voice: Ready", font=fdfont, relief='raised',
+                               foreground='dark blue', background='light gray',
+                               width=20, anchor='w')
+else:
+    voice_status_label = None
 
 # Band Buttons
 f1 = Frame(root, bd=1)
@@ -6122,6 +6292,9 @@ lblnode.grid(row=0, column=9, columnspan=1, sticky=NSEW)
 # CW Status label grid
 if CW_AVAILABLE and cw_status_label:
     cw_status_label.grid(row=0, column=10, columnspan=1, sticky=NSEW)
+# Voice Status label grid
+if VOICE_AVAILABLE and voice_status_label:
+    voice_status_label.grid(row=0, column=11, columnspan=1, sticky=NSEW)
 # Grid for band buttons
 f1.grid(row=1, columnspan=2, sticky=NSEW)
 # Grid for Contestant, Logger and Power buttons
@@ -6159,6 +6332,40 @@ phonetic_rb_cq.grid(row=0, column=2, padx=5, sticky=NSEW)
 phonetic_rb_qrz.grid(row=0, column=3, padx=5, sticky=NSEW)
 phonetic_label.grid(row=0, column=4, padx=10, sticky=NSEW)
 phonetic_frame.grid_columnconfigure(4, weight=1)
+
+# F-key button bar
+def fkey_button_press(fkey):
+    """Dispatch F-key press from button click (same routing as kevent)."""
+    current_mode = band[-1:] if band != 'off' else ''
+    if current_mode == 'p' and VOICE_AVAILABLE:
+        voice_send_macro(fkey)
+    elif current_mode in ('c', 'd') and CW_AVAILABLE:
+        cw_send_macro(fkey)
+    elif CW_AVAILABLE:
+        cw_send_macro(fkey)
+
+fkey_frame = Frame(root, bd=1, background='light gray')
+fkey_btn_width = 6  # fixed width so GUI doesn't resize
+for i in range(1, 13):
+    btn = Button(fkey_frame, text=f"F{i}", font=fdfont, width=fkey_btn_width, relief='raised',
+                 foreground='black', background='light gray',
+                 command=lambda k=f'F{i}': fkey_button_press(k))
+    btn.grid(row=0, column=i-1, padx=1, pady=2)
+    fkey_frame.grid_columnconfigure(i-1, weight=1, uniform='fkey')
+
+# ESC / Stop button
+def fkey_stop_all():
+    """Stop all CW and Voice playback."""
+    cw_abort()
+    voice_stop()
+
+esc_btn = Button(fkey_frame, text="ESC", font=fdfont, width=fkey_btn_width, relief='raised',
+                 foreground='white', background='#c00000',
+                 command=fkey_stop_all)
+esc_btn.grid(row=0, column=12, padx=1, pady=2)
+fkey_frame.grid_columnconfigure(12, weight=1, uniform='fkey')
+
+fkey_frame.grid(row=6, column=0, columnspan=2, sticky=NSEW)
 
 #  Bindings
 root.bind('<ButtonRelease-1>', focevent)
