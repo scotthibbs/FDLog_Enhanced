@@ -37,15 +37,11 @@ except ImportError:
     CWConfig = None
     CWController = None
 
-#  Current version 2026_Beta 4.0.2 23Jan2026 (Claude Code updates)
-
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
-#  Main program starts about line 4323
+#  Main program starts about line 5759
 
-#  all history moved to release.txt file
-
-prog = 'FDLog_Enhanced v2026_Beta 4.1.2 23Jan2026\n\n' \
+prog = 'FDLog_Enhanced v2026_Beta 4.1.4 27Jan2026\n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2026. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
