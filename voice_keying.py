@@ -372,6 +372,8 @@ class VoiceKeyer:
             except Exception:
                 pass
         self._update_status("Stopped")
+        if self.root:
+            self.root.after(2000, lambda: self._update_status("Ready"))
 
     def get_available_voices(self):
         """Return list of (id, name) tuples for available TTS voices."""

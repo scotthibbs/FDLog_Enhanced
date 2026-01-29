@@ -29,7 +29,7 @@ from parser import CallSignParser, InvalidCallSignError, CallSignParserError
 try:
     from cw_keying import (
         PYSERIAL_AVAILABLE, CWConfig, CWController, CWMacroManager,
-        CWSettingsDialog, CWMacroEditorDialog, list_serial_ports
+        CWSettingsDialog, CWMacroEditorDialog, list_serial_ports, MORSE_CODE
     )
     CW_AVAILABLE = PYSERIAL_AVAILABLE
 except ImportError:
@@ -1317,6 +1317,20 @@ class QsoDb:
     def sfx2call(self, suffix1, band1):
         """return calls w suffix on this band"""
         return self.bysfx.get(suffix1 + '.' + band1, [])
+
+    def pfx2call(self, prefix1):
+        """return dict of {band: [calls]} matching prefix across all bands"""
+        results = {}
+        for key, calls in self.bysfx.items():
+            # key format is "suffix.band"
+            dot = key.rfind('.')
+            if dot < 0:
+                continue
+            bnd = key[dot + 1:]
+            for c in calls:
+                if c.startswith(prefix1):
+                    results.setdefault(bnd, []).append(c)
+        return results
 
     @staticmethod
     def qparse(line):
@@ -2815,6 +2829,28 @@ def bandset(b):
         tmob = now()  # reset time on band
     band = b
     bandb[b].select()
+    # Update CW/Voice status label appearance based on mode
+    mode_char = b[-1:] if b != 'off' else ''
+    if CW_AVAILABLE and cw_status_label:
+        if mode_char == 'c':
+            hint = " [Hide]" if fkey_bar_visible else " [Show]"
+            cw_status_label.config(foreground='dark green', state='normal',
+                                   text=f"CW: Ready{hint}")
+        else:
+            cw_status_label.config(foreground='gray', state='disabled',
+                                   text="CW: Ready")
+            if fkey_bar_visible and mode_char != 'p':
+                toggle_fkey_bar()
+    if VOICE_AVAILABLE and voice_status_label:
+        if mode_char == 'p':
+            hint = " [Hide]" if fkey_bar_visible else " [Show]"
+            voice_status_label.config(foreground='dark blue', state='normal',
+                                      text=f"Voice: Ready{hint}")
+        else:
+            voice_status_label.config(foreground='gray', state='disabled',
+                                      text="Voice: Ready")
+            if fkey_bar_visible and mode_char != 'c':
+                toggle_fkey_bar()
     if operator != "":
         ini2 = operator.split(':', 1)[0]
         operatorsonline.update({node: ini2})
@@ -2997,8 +3033,8 @@ class NewParticipantDialog:
             v = "%s, %s, %s, %s, %s" % (initials, name11, call11, age5, vist2)
             participants[initials] = v
             _dummy = qdb.globalshare(nam, v)  # store + bcast #
-            txtbillb.insert(END, "\a New Participant Entered.")
-            print("\a")
+            txtbillb.insert(END, " New Participant Entered.")
+            if sound_enabled.get(): root.bell()
             txtbillb.see(END)
             topper()
             self.initials.delete(0, END)
@@ -3192,8 +3228,8 @@ class EditParticipantDialog:
             v = "%s, %s, %s, %s, %s" % (initials, name11, call11, age5, vist2)
             participants[initials] = v
             _dummy = qdb.globalshare(nam, v)
-            txtbillb.insert(END, "\a Participant Updated.")
-            print("\a")
+            txtbillb.insert(END, " Participant Updated.")
+            if sound_enabled.get(): root.bell()
             txtbillb.see(END)
             topper()
             buildmenus()
@@ -3562,15 +3598,40 @@ def bandbuttons(w):
     w.grid_columnconfigure(a, weight=1)
 
 
+_band_tooltip = None  # current tooltip window
+
+def _band_tooltip_show(widget, text):
+    """Show a tooltip popup near the given widget."""
+    global _band_tooltip
+    _band_tooltip_hide()
+    tw = Toplevel(widget)
+    tw.wm_overrideredirect(True)
+    # Position below and to the right of the mouse cursor
+    x = widget.winfo_rootx() + widget.winfo_width()
+    y = widget.winfo_rooty() + widget.winfo_height()
+    tw.wm_geometry(f"+{x}+{y}")
+    label = Label(tw, text=text, font=fdfont, justify='left',
+                  background='lightyellow', foreground='black',
+                  relief='solid', borderwidth=1, padx=4, pady=2)
+    label.pack()
+    _band_tooltip = tw
+
+def _band_tooltip_hide(event=None):
+    """Destroy the current tooltip if any."""
+    global _band_tooltip
+    if _band_tooltip:
+        _band_tooltip.destroy()
+        _band_tooltip = None
+
+
 def buttonbinder(bmz):
     """ This adds the individual bindings for the band/mode buttons."""
     # Added by Scott Hibbs KD4SIR 13Aug2022
-    bandb[bmz].bind("<Enter>", lambda event: whosonfirstyes(bmz), add='+')
-    bandb[bmz].bind("<Leave>", None, add='+')
-    # print("bmz is: ", bmz)
+    bandb[bmz].bind("<Enter>", lambda event: whosonfirstyes(bmz, event), add='+')
+    bandb[bmz].bind("<Leave>", _band_tooltip_hide, add='+')
 
 
-def whosonfirstyes(naturally):
+def whosonfirstyes(naturally, event=None):
     """ This displays the information for who is on which band/mode."""
     # Added by Scott Hibbs KD4SIR 13Aug2022
     # naturally is the label button the mouse is over.
@@ -3578,29 +3639,25 @@ def whosonfirstyes(naturally):
     woflist = []
     for t in list(net.si.nodinfo.values()):
         dummy1, dummy1, age6 = d.get(t.nod, ('', '', 9999))
-        # print("age6 is " + str(age6))
-        # print("t.age is " + str(t.age))
         if age6 > t.age:
             if t.age < 25:
                 d[t.nod] = (t.bnd, t.msc, t.age)
-    for t in d:  # t is nodes: d is dictionary key: node (op log pwr), time.
-        # print("t is : ", t)
-        # print("d is : ", str(d))
+    for t in d:
         ballgame = str(d)
         ballgame = re.sub(r"[\[\]]", '', ballgame)
         ballgame = ballgame.replace("'", "")
-        # print("ballgame is : ", ballgame)
         if "off" in ballgame:
             continue
         else:
             if naturally in ballgame:
                 woflist.append(t)
     if woflist:
-        txtbillb.insert(END, "\n--node-- band opr lgr pwr  ----- last\n")
+        lines = ["Node     Band Opr/Lgr/Pwr        Last"]
         for what in woflist:
-            txtbillb.insert(END, "%8s %4s %-18s %4s\n" % (what, d[what][0], d[what][1], d[what][2]))
-        topper()
-    txtbillb.see(END)
+            lines.append("%8s %4s %-18s %4s" % (what, d[what][0], d[what][1], d[what][2]))
+        widget = event.widget if event else bandb.get(naturally)
+        if widget:
+            _band_tooltip_show(widget, "\n".join(lines))
 
 
 def rndlet():
@@ -3908,12 +3965,33 @@ def showthiscall2(call16a):
 
 
 def showoperatorsonline():
+    # Build node-to-band lookup from net status info
+    node_bands = {}
+    try:
+        for t in list(net.si.nodinfo.values()):
+            prev_age = node_bands.get(t.nod, ('', 9999))[1]
+            if prev_age > t.age:
+                node_bands[t.nod] = (t.bnd, t.age)
+    except Exception:
+        pass
+    # Local node always has current band
+    node_bands[node] = (band, 0)
 
     for node_name, op_init in operatorsonline.items():
+        # Look up full name from participants
+        pinfo = participants.get(op_init, '')
+        if pinfo:
+            parts = pinfo.split(', ')
+            # Format: "INI, Name, Call, Age, Vist"
+            name_str = parts[1] if len(parts) > 1 else op_init
+        else:
+            name_str = op_init
+        # Get band for this node
+        node_band = node_bands.get(node_name, ('', 9999))[0]
+        band_str = f" on {node_band}" if node_band and node_band != 'off' else ""
         txtbillb.insert(END, "\n")
-        txtbillb.insert(END, f"{node_name}: {op_init}\n")
+        txtbillb.insert(END, f"{node_name}: {op_init}, {name_str}{band_str}\n")
     topper()
-    #  print("operatorsonline:\n", operatorsonline, "\n")
 
 
 def mhelp():
@@ -4327,6 +4405,7 @@ def proc_key(ch):
         txtbillb.insert(END, " ESC -aborted line-\n")
         topper()
         kbuf = ""
+        suffix = ""
         return
     if ch == '\b':  # backspace erases char
         if kbuf != "":
@@ -4353,11 +4432,27 @@ def proc_key(ch):
                 r = 'None'
             txtbillb.insert(END, ": %s on band '%s'\n" % (r, band))
             return
-        if stat == 3:  # prefix, combine w suffix
-            stat, tm, dummy, sfx, call17, xcall, rept = qdb.qparse(kbuf + suffix)
-            if stat == 4:  # whole call
-                kbuf += suffix
-                txtbillb.insert(END, sfx)  # fall into call dup ck
+        if stat == 3:  # prefix, search logged calls by prefix
+            pfx_results = qdb.pfx2call(kbuf)
+            if pfx_results:
+                txtbillb.insert(END, "\n")
+                for bnd, calls in sorted(pfx_results.items()):
+                    unique = sorted(set(calls))
+                    txtbillb.insert(END, "  %s: %s\n" % (bnd, ', '.join(unique)))
+                topper()
+                txtbillb.insert(END, kbuf)  # re-echo prefix so user can continue typing
+            else:
+                txtbillb.insert(END, ": no calls matching '%s'\n" % kbuf)
+                topper()
+                txtbillb.insert(END, kbuf)
+            # Also try combine with previously stored suffix
+            if suffix:
+                stat, tm, dummy, sfx, call17, xcall, rept = qdb.qparse(kbuf + suffix)
+                if stat == 4:  # whole call
+                    kbuf += suffix
+                    txtbillb.insert(END, sfx)  # fall into call dup ck
+            else:
+                return
         if stat == 4:  # whole call, dup chk
             if qdb.dupck(xcall, band):
                 showthiscall(call17)
@@ -4421,11 +4516,12 @@ def kevent(event):
         proc_key('\b')
     elif k2 == 65307:  # ESC
         proc_key('\x1b')
-        # Also abort CW transmission on ESC
-        if CW_AVAILABLE:
-            cw_abort()
-        if VOICE_AVAILABLE:
+        # Abort based on current band mode
+        current_mode = band[-1:] if band != 'off' else ''
+        if current_mode == 'p' and VOICE_AVAILABLE:
             voice_stop()
+        elif current_mode in ('c', 'd') and CW_AVAILABLE:
+            cw_abort()
     elif k2 == 65293:  # return
         proc_key('\r')
     # F-key macros (F1-F12: 65470-65481) - route to Voice or CW based on band mode
@@ -5936,6 +6032,7 @@ def get_macro_variable(name):
 # CW Keying initialization
 cw_controller = None
 cw_status_label = None
+fkey_bar_visible = False
 
 if CW_AVAILABLE:
     print("CW Keying support available (pyserial found)")
@@ -5988,7 +6085,10 @@ if CW_AVAILABLE:
         """Update CW status display."""
         global cw_status_label
         if cw_status_label:
-            cw_status_label.config(text=f"CW: {status}")
+            hint = " [Hide]" if fkey_bar_visible else " [Show]"
+            if str(cw_status_label.cget('state')) == 'disabled':
+                hint = ""
+            cw_status_label.config(text=f"CW: {status}{hint}")
 
     def cw_settings_dialog():
         """Open CW settings dialog."""
@@ -6038,15 +6138,139 @@ if CW_AVAILABLE:
             cw_save_config(cw_controller.config)
             print(f"CW: Speed set to {cw_controller.config.wpm} WPM")
 
+    _cw_sidetone_abort = False
+    _cw_sidetone_proc = None  # subprocess.Popen handle for Linux/macOS
+
+    def _cw_sidetone_stop():
+        """Stop any currently playing sidetone."""
+        global _cw_sidetone_abort, _cw_sidetone_proc
+        _cw_sidetone_abort = True
+        if sys.platform == 'win32':
+            try:
+                import winsound
+                winsound.PlaySound(None, winsound.SND_PURGE)
+            except Exception:
+                pass
+        elif _cw_sidetone_proc and _cw_sidetone_proc.poll() is None:
+            _cw_sidetone_proc.terminate()
+            _cw_sidetone_proc = None
+
+    def _cw_sidetone_build_wav(text, wpm, freq=600):
+        """Build a complete WAV file (as bytes) for the given CW text.
+
+        Timing (in dit-units):
+          dit  = 1, dah = 3, inter-element gap = 1,
+          inter-character gap = 3, word gap = 7.
+        """
+        import struct, math, wave, io
+        sample_rate = 22050
+        dit_samples = int(sample_rate * 1.2 / wpm)  # samples per dit-unit
+
+        audio = []
+
+        def add_tone(units):
+            n = dit_samples * units
+            audio.extend(
+                int(16000 * math.sin(2 * math.pi * freq * t / sample_rate))
+                for t in range(n)
+            )
+
+        def add_silence(units):
+            audio.extend([0] * (dit_samples * units))
+
+        for ci, char in enumerate(text.upper()):
+            if char == ' ':
+                # Word gap is 7 units; previous char already added 3,
+                # so add 4 more
+                add_silence(4)
+                continue
+            code = MORSE_CODE.get(char)
+            if not code:
+                continue
+            for ei, element in enumerate(code):
+                if element == '.':
+                    add_tone(1)
+                elif element == '-':
+                    add_tone(3)
+                # Inter-element gap (1 unit) except after last element
+                if ei < len(code) - 1:
+                    add_silence(1)
+            # Inter-character gap (3 units)
+            add_silence(3)
+
+        buf = io.BytesIO()
+        with wave.open(buf, 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sample_rate)
+            wf.writeframes(struct.pack('<%dh' % len(audio), *audio))
+        return buf.getvalue()
+
+    _cw_sidetone_tmpfile = None  # temp WAV path for cleanup
+
+    def _cw_sidetone_play_wav(wav_bytes):
+        """Play WAV bytes cross-platform (blocking, but abortable)."""
+        global _cw_sidetone_proc, _cw_sidetone_tmpfile
+        import subprocess, tempfile
+        # Write to temp file on all platforms
+        tmp = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
+        tmp.write(wav_bytes)
+        tmp.close()
+        _cw_sidetone_tmpfile = tmp.name
+        try:
+            if sys.platform == 'win32':
+                import winsound
+                # SND_ASYNC returns immediately; _cw_sidetone_stop() calls SND_PURGE to cancel
+                winsound.PlaySound(tmp.name, winsound.SND_FILENAME | winsound.SND_ASYNC)
+                # Poll until playback finishes or is aborted
+                duration = max(0, (len(wav_bytes) - 44)) / (22050 * 2)
+                elapsed = 0.0
+                while elapsed < duration and not _cw_sidetone_abort:
+                    time.sleep(0.05)
+                    elapsed += 0.05
+            else:
+                cmd = ['afplay', tmp.name] if sys.platform == 'darwin' else ['aplay', '-q', tmp.name]
+                _cw_sidetone_proc = subprocess.Popen(cmd,
+                                                     stdout=subprocess.DEVNULL,
+                                                     stderr=subprocess.DEVNULL)
+                _cw_sidetone_proc.wait()
+                _cw_sidetone_proc = None
+        finally:
+            try:
+                os.unlink(tmp.name)
+            except OSError:
+                pass
+
+    def _cw_sidetone_play(text, wpm):
+        """Play CW sidetone through PC audio (no keyer needed)."""
+        global _cw_sidetone_abort
+        _cw_sidetone_abort = False
+        wav_bytes = _cw_sidetone_build_wav(text, wpm)
+
+        def play():
+            global _cw_sidetone_abort
+            root.after(0, lambda: cw_status_update(f"Sending: {text}"))
+            _cw_sidetone_play_wav(wav_bytes)
+            _cw_sidetone_abort = False
+            root.after(0, lambda: cw_status_update("Ready"))
+
+        threading.Thread(target=play, daemon=True).start()
+
     def cw_send_macro(key):
         """Send a CW macro."""
         global cw_controller
         if cw_controller and cw_controller.is_connected():
             cw_controller.send_macro(key)
+        elif cw_controller:
+            # No keyer connected — play sidetone simulation
+            macro_text = cw_controller.macro_manager.expand_macro(key) if cw_controller.macro_manager else key
+            if macro_text:
+                _cw_sidetone_play(macro_text, cw_controller.config.wpm)
 
     def cw_abort():
         """Abort CW transmission."""
-        global cw_controller
+        global cw_controller, _cw_sidetone_abort
+        _cw_sidetone_stop()
         if cw_controller:
             cw_controller.abort()
 
@@ -6137,7 +6361,10 @@ if VOICE_AVAILABLE:
         """Update voice status display."""
         global voice_status_label
         if voice_status_label:
-            voice_status_label.config(text=f"Voice: {status}")
+            hint = " [Hide]" if fkey_bar_visible else " [Show]"
+            if str(voice_status_label.cget('state')) == 'disabled':
+                hint = ""
+            voice_status_label.config(text=f"Voice: {status}{hint}")
 
     def voice_settings_dialog():
         """Open voice settings dialog."""
@@ -6191,6 +6418,17 @@ print("Starting GUI setup")
 #     ****************** GUI START **************************
 
 root = Tk()  # setup Tk GUI
+
+# Set application icon (cross-platform)
+try:
+    _icon_dir = os.path.dirname(os.path.abspath(__file__))
+    if sys.platform == 'win32':
+        root.iconbitmap(os.path.join(_icon_dir, 'FDLog Icon.ico'))
+    else:
+        _icon_img = PhotoImage(file=os.path.join(_icon_dir, 'FDLog Icon.png'))
+        root.iconphoto(True, _icon_img)
+except Exception:
+    pass  # icon not found, use default
 
 # Initialize CW Controller after root is created
 if CW_AVAILABLE:
@@ -6376,16 +6614,16 @@ lblnode = Label(frn1, text=" Node: %s Port: %s " % (node, port_base), font=fdfon
 # CW Status label
 if CW_AVAILABLE:
     cw_status_label = Label(frn1, text="CW: Ready", font=fdfont, relief='raised',
-                            foreground='dark green', background='light gray',
-                            width=20, anchor='w')
+                            foreground='gray', background='light gray',
+                            width=20, anchor='w', state='disabled')
 else:
     cw_status_label = None
 
 # Voice Status label
 if VOICE_AVAILABLE:
     voice_status_label = Label(frn1, text="Voice: Ready", font=fdfont, relief='raised',
-                               foreground='dark blue', background='light gray',
-                               width=20, anchor='w')
+                               foreground='gray', background='light gray',
+                               width=20, anchor='w', state='disabled')
 else:
     voice_status_label = None
 
@@ -6599,9 +6837,13 @@ lblnode.grid(row=0, column=9, columnspan=1, sticky=NSEW)
 # CW Status label grid
 if CW_AVAILABLE and cw_status_label:
     cw_status_label.grid(row=0, column=10, columnspan=1, sticky=NSEW)
+    cw_status_label.config(cursor='hand2')
+    cw_status_label.bind('<Button-1>', lambda e: toggle_fkey_bar() if str(cw_status_label.cget('state')) != 'disabled' else None)
 # Voice Status label grid
 if VOICE_AVAILABLE and voice_status_label:
     voice_status_label.grid(row=0, column=11, columnspan=1, sticky=NSEW)
+    voice_status_label.config(cursor='hand2')
+    voice_status_label.bind('<Button-1>', lambda e: toggle_fkey_bar() if str(voice_status_label.cget('state')) != 'disabled' else None)
 # Grid for band buttons
 f1.grid(row=1, columnspan=2, sticky=NSEW)
 # Grid for Contestant, Logger and Power buttons
@@ -6642,6 +6884,35 @@ phonetic_label.grid(row=0, column=4, padx=10, sticky=NSEW)
 phonetic_frame.grid_columnconfigure(4, weight=1)
 
 # F-key button bar
+def toggle_fkey_bar():
+    global fkey_bar_visible
+    if fkey_bar_visible:
+        fkey_frame.grid_remove()
+        fkey_bar_visible = False
+    else:
+        fkey_frame.grid(row=6, column=0, columnspan=2, sticky=NSEW)
+        fkey_bar_visible = True
+    _update_fkey_label_hints()
+
+def _update_fkey_label_hints():
+    """Refresh the [Show]/[Hide] hint on CW and Voice status labels."""
+    hint = " [Hide]" if fkey_bar_visible else " [Show]"
+    if CW_AVAILABLE and cw_status_label and str(cw_status_label.cget('state')) != 'disabled':
+        txt = cw_status_label.cget('text')
+        # Strip existing hint and re-add
+        for suffix in (' [Show]', ' [Hide]'):
+            if txt.endswith(suffix):
+                txt = txt[:-len(suffix)]
+                break
+        cw_status_label.config(text=f"{txt}{hint}")
+    if VOICE_AVAILABLE and voice_status_label and str(voice_status_label.cget('state')) != 'disabled':
+        txt = voice_status_label.cget('text')
+        for suffix in (' [Show]', ' [Hide]'):
+            if txt.endswith(suffix):
+                txt = txt[:-len(suffix)]
+                break
+        voice_status_label.config(text=f"{txt}{hint}")
+
 def fkey_button_press(fkey):
     """Dispatch F-key press from button click (same routing as kevent)."""
     current_mode = band[-1:] if band != 'off' else ''
@@ -6653,27 +6924,102 @@ def fkey_button_press(fkey):
         cw_send_macro(fkey)
 
 fkey_frame = Frame(root, bd=1, background='light gray')
-fkey_btn_width = 6  # fixed width so GUI doesn't resize
+fkey_btn_width = 8  # wider to fit two-line labels
+fkey_buttons = {}  # dict to access buttons for label updates
+
+# Default F-key labels (N1MM-style for Field Day)
+FKEY_DEFAULT_LABELS = {
+    'F1': 'CQ',
+    'F2': 'Exch',
+    'F3': 'Exch Only',
+    'F4': 'QSL TU',
+    'F5': 'His Call',
+    'F6': 'QSL Exch',
+    'F7': 'Class',
+    'F8': 'Section',
+    'F9': '73',
+    'F10': 'QRZ?',
+    'F11': 'Again?',
+    'F12': 'TU QRZ?',
+}
+
+def fkey_get_labels():
+    """Load F-key labels from globDb, falling back to defaults."""
+    labels = {}
+    for i in range(1, 13):
+        key = f'F{i}'
+        labels[key] = globDb.get(f'fkey_label_{key}', FKEY_DEFAULT_LABELS.get(key, ''))
+    return labels
+
+def fkey_save_labels(labels):
+    """Save F-key labels to globDb."""
+    for key, lbl in labels.items():
+        qdb.globalshare(f'fkey_label_{key}', lbl)
+
+def fkey_edit_labels():
+    """Open dialog to edit F-key button labels."""
+    dlg = Toplevel(root)
+    dlg.title("Edit F-Key Labels")
+    dlg.transient(root)
+    dlg.grab_set()
+    labels = fkey_get_labels()
+    entries = {}
+    for i in range(1, 13):
+        key = f'F{i}'
+        Label(dlg, text=f"{key}:", font=fdfont).grid(row=i-1, column=0, padx=5, pady=2, sticky='e')
+        e = Entry(dlg, font=fdfont, width=20)
+        e.insert(0, labels[key])
+        e.grid(row=i-1, column=1, padx=5, pady=2)
+        entries[key] = e
+
+    def save_and_close():
+        new_labels = {k: e.get() for k, e in entries.items()}
+        fkey_save_labels(new_labels)
+        for k, btn in fkey_buttons.items():
+            lbl = new_labels.get(k, '')
+            btn.config(text=f"{k}\n{lbl}")
+        dlg.destroy()
+
+    def reset_defaults():
+        for k, e in entries.items():
+            e.delete(0, END)
+            e.insert(0, FKEY_DEFAULT_LABELS.get(k, ''))
+
+    btn_frame = Frame(dlg)
+    btn_frame.grid(row=12, column=0, columnspan=2, pady=5)
+    Button(btn_frame, text="Defaults", font=fdfont, command=reset_defaults).pack(side='left', padx=5)
+    Button(btn_frame, text="Save", font=fdfont, command=save_and_close).pack(side='left', padx=5)
+    Button(btn_frame, text="Cancel", font=fdfont, command=dlg.destroy).pack(side='left', padx=5)
+
+fkey_labels = fkey_get_labels()
 for i in range(1, 13):
-    btn = Button(fkey_frame, text=f"F{i}", font=fdfont, width=fkey_btn_width, relief='raised',
+    key = f'F{i}'
+    lbl = fkey_labels[key]
+    btn = Button(fkey_frame, text=f"{key}\n{lbl}", font=fdfont, width=fkey_btn_width, relief='raised',
                  foreground='black', background='light gray',
-                 command=lambda k=f'F{i}': fkey_button_press(k))
+                 command=lambda k=key: fkey_button_press(k))
     btn.grid(row=0, column=i-1, padx=1, pady=2)
+    btn.bind('<Button-3>', lambda e: fkey_edit_labels())
     fkey_frame.grid_columnconfigure(i-1, weight=1, uniform='fkey')
+    fkey_buttons[key] = btn
 
 # ESC / Stop button
 def fkey_stop_all():
-    """Stop all CW and Voice playback."""
-    cw_abort()
-    voice_stop()
+    """Stop CW or Voice playback based on current band mode."""
+    current_mode = band[-1:] if band != 'off' else ''
+    if current_mode == 'p' and VOICE_AVAILABLE:
+        voice_stop()
+    elif current_mode in ('c', 'd') and CW_AVAILABLE:
+        cw_abort()
 
-esc_btn = Button(fkey_frame, text="ESC", font=fdfont, width=fkey_btn_width, relief='raised',
+esc_btn = Button(fkey_frame, text="ESC\nStop", font=fdfont, width=fkey_btn_width, relief='raised',
                  foreground='white', background='#c00000',
                  command=fkey_stop_all)
 esc_btn.grid(row=0, column=12, padx=1, pady=2)
 fkey_frame.grid_columnconfigure(12, weight=1, uniform='fkey')
 
 fkey_frame.grid(row=6, column=0, columnspan=2, sticky=NSEW)
+fkey_frame.grid_remove()  # Hidden by default; toggle via CW/Voice status labels
 
 #  Bindings
 root.bind('<ButtonRelease-1>', focevent)

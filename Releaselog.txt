@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 113 enhancements to the original FDLog so far.
+We have added 115 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -8,6 +8,42 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 		(none currently)
+
+  v2026_Beta 4.1.7 28Jan2026 F-Key Bar, CW Sidetone, Prefix Search, and UI Improvements
+
+	F-Key Bar
+		- F-key bar hidden by default, toggled by clicking CW/Voice status labels.
+		- CW/Voice status labels show [Show]/[Hide] hint when active.
+		- CW/Voice status labels greyed out until a CW (c) or Phone (p) band is selected.
+		- F-key buttons now display two lines: F-key number on top, configurable label below
+			(N1MM-style defaults: CQ, Exch, Exch Only, QSL TU, His Call, QSL Exch, etc.).
+		- Right-click any F-key button to edit labels; labels persist across sessions.
+		- ESC/Stop button now only stops the active mode (CW or Voice), not both.
+	CW Sidetone Simulation
+		- When no CW keyer is connected, F-key presses play a simulated sidetone through PC audio.
+		- Cross-platform support: winsound on Windows, aplay on Linux, afplay on macOS.
+		- Full Morse timing (dit=1 unit, dah=3, inter-character gap=3, word gap=7).
+		- ESC aborts sidetone playback immediately.
+		- Status label shows "Sending: ..." during sidetone playback.
+	Voice Keyer
+		- "Stopped" status now resets to "Ready" after 2 seconds.
+	115 Prefix Search
+		- Typing a prefix (e.g., wa2) + space shows all logged calls matching that prefix across
+			all bands.
+		- Prefix remains in the input buffer so the user can continue typing the suffix.
+		- ESC now clears both the input buffer and the stored suffix.
+	Band Button Tooltips
+		- Hovering over band buttons now shows a popup tooltip near the cursor instead of printing
+			to the text widget.
+	Contestants Working
+		- Now shows initials, full name, and current band (e.g., node1: SAH, Scott Hibbs on 40c).
+	Application Icon
+		- Wagon wheel FD Log icon on window title bar and executable.
+		- Cross-platform: .ico for Windows, .png for Linux/macOS.
+		- Icon embedded in PyInstaller build.
+	Bug Fixes
+		- Participant add/update beep now respects the Sound Enabled setting.
+		- Fixed syntax error in sidetone temp file cleanup.
 
   v2026_Beta 4.1.6 28Jan2026 Edit Participant and GUI Changes
   

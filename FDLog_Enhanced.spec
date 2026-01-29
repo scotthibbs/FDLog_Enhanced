@@ -20,6 +20,8 @@ data_files = [
     ('W1AW.pdf', '.'),
     ('parser.py', '.'),
     ('cty.dat', '.'),
+    ('FDLog Icon.ico', '.'),
+    ('FDLog Icon.png', '.'),
 ]
 
 a = Analysis(
@@ -70,5 +72,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,  # Add icon path here if you have one: icon='fdlog.ico'
+    icon='FDLog Icon.ico',
 )
