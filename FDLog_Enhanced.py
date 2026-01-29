@@ -58,11 +58,20 @@ try:
 except ImportError:
     WSJTX_AVAILABLE = False
 
+# JS8Call Integration support
+try:
+    from wsjtx_integration import (
+        JS8CallConfig, JS8CallListener, JS8CallSettingsDialog
+    )
+    JS8CALL_AVAILABLE = True
+except ImportError:
+    JS8CALL_AVAILABLE = False
+
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
 #  Main program starts about line 5759
 
-prog = 'FDLog_Enhanced v2026_Beta 4.1.8 29Jan2026\n\n' \
+prog = 'FDLog_Enhanced v2026_Beta 4.1.9 29Jan2026\n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2026. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
@@ -5730,7 +5739,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v2026_Beta 4.1.8"  # Changed 29Jan2026
+version = "v2026_Beta 4.1.9"  # Changed 29Jan2026
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
@@ -6316,6 +6325,10 @@ voice_status_label = None
 wsjtx_listener = None
 wsjtx_status_label = None
 
+# JS8Call Integration initialization
+js8call_listener = None
+js8call_status_label = None
+
 if VOICE_AVAILABLE:
     print("Voice Keying support available (pyttsx3 found)")
 
@@ -6518,6 +6531,98 @@ else:
     def wsjtx_disconnect():
         pass
 
+# JS8Call Integration functions
+if JS8CALL_AVAILABLE:
+    print("JS8Call Integration support available")
+
+    def js8call_load_config():
+        """Load JS8Call configuration from globDb."""
+        config = JS8CallConfig()
+        config.enabled = globDb.get('js8call_enabled', '0') == '1'
+        config.udp_port = int(globDb.get('js8call_udp_port', '2442'))
+        config.udp_ip = globDb.get('js8call_udp_ip', '127.0.0.1')
+        config.auto_log = globDb.get('js8call_auto_log', '1') == '1'
+        config.auto_band = globDb.get('js8call_auto_band', '1') == '1'
+        return config
+
+    def js8call_save_config(config):
+        """Save JS8Call configuration to globDb."""
+        globDb.put('js8call_enabled', '1' if config.enabled else '0')
+        globDb.put('js8call_udp_port', str(config.udp_port))
+        globDb.put('js8call_udp_ip', config.udp_ip)
+        globDb.put('js8call_auto_log', '1' if config.auto_log else '0')
+        globDb.put('js8call_auto_band', '1' if config.auto_band else '0')
+
+    def js8call_status_update(status):
+        """Update JS8Call status display."""
+        global js8call_status_label
+        if js8call_status_label:
+            if "Connected" in status and "Disconnected" not in status:
+                js8call_status_label.config(text=f"JS8Call: {status}",
+                                            foreground='green')
+            else:
+                js8call_status_label.config(text=f"JS8Call: {status}",
+                                            foreground='gray')
+
+    def js8call_on_qso_logged(call, band_mode, report, timestamp):
+        """Called by JS8CallListener when JS8Call logs a QSO. Runs on listener thread."""
+        def _do_log():
+            global band
+            # Validate operator and logger are set
+            if not gd.getv('ession'):
+                print("JS8Call: Cannot log QSO - no operator set")
+                return
+            # Dupe check
+            if qdb.dupck(call, band_mode):
+                print(f"JS8Call: Dupe - {call} on {band_mode}")
+                return
+            # Auto-switch band if configured
+            if js8call_listener and js8call_listener.config.auto_band:
+                if band != band_mode:
+                    bandset(band_mode)
+            # Log the QSO
+            qdb.qsl(timestamp, call, band_mode, report)
+            print(f"JS8Call: Logged {call} on {band_mode} - {report}")
+        # Marshal to UI thread
+        try:
+            root.after(0, _do_log)
+        except Exception:
+            pass
+
+    def js8call_settings_dialog():
+        """Open JS8Call settings dialog."""
+        global js8call_listener
+        if js8call_listener:
+            def on_save(config):
+                js8call_save_config(config)
+                js8call_listener.config = config
+                print(f"JS8Call: Settings saved - Port: {config.udp_port}, Auto-log: {config.auto_log}")
+            JS8CallSettingsDialog(root, js8call_listener.config, js8call_listener, on_save)
+
+    def js8call_connect():
+        """Start JS8Call listener."""
+        global js8call_listener
+        if js8call_listener and not js8call_listener._running:
+            js8call_listener.start()
+
+    def js8call_disconnect():
+        """Stop JS8Call listener."""
+        global js8call_listener
+        if js8call_listener and js8call_listener._running:
+            js8call_listener.stop()
+
+else:
+    print("JS8Call Integration support NOT available")
+
+    def js8call_settings_dialog():
+        pass
+
+    def js8call_connect():
+        pass
+
+    def js8call_disconnect():
+        pass
+
 print("Starting GUI setup")
 
 #     ****************** GUI START **************************
@@ -6573,6 +6678,14 @@ if WSJTX_AVAILABLE:
     if wsjtx_config.enabled:
         wsjtx_listener.start()
     print(f"WSJT-X: Initialized - Port: {wsjtx_config.udp_port}, Enabled: {wsjtx_config.enabled}")
+
+# Initialize JS8Call Integration after root is created
+if JS8CALL_AVAILABLE:
+    js8call_config = js8call_load_config()
+    js8call_listener = JS8CallListener(js8call_config, js8call_on_qso_logged, js8call_status_update)
+    if js8call_config.enabled:
+        js8call_listener.start()
+    print(f"JS8Call: Initialized - Port: {js8call_config.udp_port}, Enabled: {js8call_config.enabled}")
 
 menu = Menu(root)
 root.config(menu=menu)
@@ -6723,6 +6836,15 @@ if WSJTX_AVAILABLE:
     wsjtxmenu.add_command(label="Connect", command=wsjtx_connect)
     wsjtxmenu.add_command(label="Disconnect", command=wsjtx_disconnect)
 
+# JS8Call Integration menu
+if JS8CALL_AVAILABLE:
+    js8callmenu = Menu(menu, tearoff=0)
+    menu.add_cascade(label="JS8Call", menu=js8callmenu)
+    js8callmenu.add_command(label="Settings...", command=js8call_settings_dialog)
+    js8callmenu.add_separator()
+    js8callmenu.add_command(label="Connect", command=js8call_connect)
+    js8callmenu.add_command(label="Disconnect", command=js8call_disconnect)
+
 # Network bar moved to the top - Scott Hibbs KD4SIR 05Aug2022
 frn1 = Frame(root, bd=1)
 # Network label
@@ -6756,6 +6878,14 @@ if WSJTX_AVAILABLE:
                                width=22, anchor='w')
 else:
     wsjtx_status_label = None
+
+# JS8Call Status label
+if JS8CALL_AVAILABLE:
+    js8call_status_label = Label(frn1, text="JS8Call: Off", font=fdfont, relief='raised',
+                                 foreground='gray', background='light gray',
+                                 width=22, anchor='w')
+else:
+    js8call_status_label = None
 
 # Band Buttons
 f1 = Frame(root, bd=1)
@@ -6977,6 +7107,9 @@ if VOICE_AVAILABLE and voice_status_label:
 # WSJT-X Status label grid
 if WSJTX_AVAILABLE and wsjtx_status_label:
     wsjtx_status_label.grid(row=0, column=12, columnspan=1, sticky=NSEW)
+# JS8Call Status label grid
+if JS8CALL_AVAILABLE and js8call_status_label:
+    js8call_status_label.grid(row=0, column=13, columnspan=1, sticky=NSEW)
 # Grid for band buttons
 f1.grid(row=1, columnspan=2, sticky=NSEW)
 # Grid for Contestant, Logger and Power buttons
@@ -7172,6 +7305,10 @@ print("\nShutting down")
 if WSJTX_AVAILABLE and wsjtx_listener:
     wsjtx_listener.stop()
     print("  WSJT-X listener stopped")
+# Stop JS8Call listener
+if JS8CALL_AVAILABLE and js8call_listener:
+    js8call_listener.stop()
+    print("  JS8Call listener stopped")
 # the end was updated from 152i
 band = 'off'  # gui down, xmt band off, preparing to quit
 net.bcast_now()  # push band out

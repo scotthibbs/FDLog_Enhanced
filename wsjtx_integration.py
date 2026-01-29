@@ -1,7 +1,8 @@
 """
-WSJT-X Integration for FDLog Enhanced
-One-way integration: QSOs logged in WSJT-X automatically appear in FDLog.
+WSJT-X / JS8Call Integration for FDLog Enhanced
+One-way integration: QSOs logged in WSJT-X or JS8Call automatically appear in FDLog.
 Implements Qt QDataStream binary protocol parsing with no external dependencies.
+JS8Call uses the identical QDataStream UDP protocol as WSJT-X (default port 2442).
 """
 
 import struct
@@ -342,6 +343,11 @@ class WSJTXListener:
 
     HEARTBEAT_TIMEOUT = 15.0  # seconds without heartbeat = disconnected
 
+    @property
+    def _log_prefix(self):
+        """Log prefix for print/status messages. Override in subclasses."""
+        return "WSJT-X"
+
     def __init__(self, config: WSJTXConfig, on_qso_logged: Callable, on_status_update: Callable):
         self.config = config
         self.on_qso_logged = on_qso_logged
@@ -366,12 +372,12 @@ class WSJTXListener:
             self._sock.bind((self.config.udp_ip, self.config.udp_port))
             self._sock.settimeout(2.0)
         except OSError as e:
-            print(f"WSJT-X: Failed to bind UDP {self.config.udp_ip}:{self.config.udp_port} - {e}")
+            print(f"{self._log_prefix}: Failed to bind UDP {self.config.udp_ip}:{self.config.udp_port} - {e}")
             self._running = False
             return
         self._thread = threading.Thread(target=self._listen_loop, daemon=True)
         self._thread.start()
-        print(f"WSJT-X: Listening on {self.config.udp_ip}:{self.config.udp_port}")
+        print(f"{self._log_prefix}: Listening on {self.config.udp_ip}:{self.config.udp_port}")
 
     def stop(self):
         """Stop the UDP listener."""
@@ -387,7 +393,7 @@ class WSJTXListener:
             self._thread = None
         self._connected = False
         self.on_status_update("Disconnected")
-        print("WSJT-X: Listener stopped")
+        print(f"{self._log_prefix}: Listener stopped")
 
     def is_connected(self) -> bool:
         return self._connected
@@ -407,7 +413,7 @@ class WSJTXListener:
             if self._connected and (time.time() - self._last_heartbeat > self.HEARTBEAT_TIMEOUT):
                 self._connected = False
                 self.on_status_update("Disconnected")
-                print("WSJT-X: Connection lost (heartbeat timeout)")
+                print(f"{self._log_prefix}: Connection lost (heartbeat timeout)")
 
             try:
                 data, addr = self._sock.recvfrom(4096)
@@ -415,7 +421,7 @@ class WSJTXListener:
                 continue
             except OSError:
                 if self._running:
-                    print("WSJT-X: Socket error in listener")
+                    print(f"{self._log_prefix}: Socket error in listener")
                 break
 
             msg = WSJTXMessage.parse(data)
@@ -432,7 +438,7 @@ class WSJTXListener:
             self._client_id = msg.client_id
             if not was_connected:
                 self.on_status_update("Connected")
-                print(f"WSJT-X: Connected - {msg.version} ({msg.client_id})")
+                print(f"{self._log_prefix}: Connected - {msg.version} ({msg.client_id})")
 
         elif isinstance(msg, StatusMessage):
             self._current_freq = msg.dial_freq
@@ -448,19 +454,19 @@ class WSJTXListener:
         elif isinstance(msg, CloseMessage):
             self._connected = False
             self.on_status_update("Disconnected")
-            print(f"WSJT-X: Client closed ({msg.client_id})")
+            print(f"{self._log_prefix}: Client closed ({msg.client_id})")
 
     def _process_qso(self, msg: QSOLoggedMessage):
-        """Process a logged QSO from WSJT-X."""
+        """Process a logged QSO."""
         call = msg.dx_call.strip().upper()
         if not call:
-            print("WSJT-X: Ignoring QSO with empty callsign")
+            print(f"{self._log_prefix}: Ignoring QSO with empty callsign")
             return
 
         # Determine band
         band_mode = freq_to_band(msg.tx_freq)
         if not band_mode:
-            print(f"WSJT-X: Unknown frequency {msg.tx_freq} Hz, cannot determine band")
+            print(f"{self._log_prefix}: Unknown frequency {msg.tx_freq} Hz, cannot determine band")
             return
 
         # Parse exchange
@@ -476,7 +482,7 @@ class WSJTXListener:
         else:
             # Use raw exchange if we can't parse it
             report = exchange.lower() if exchange else ""
-            print(f"WSJT-X: Could not parse exchange '{exchange}' for {call}")
+            print(f"{self._log_prefix}: Could not parse exchange '{exchange}' for {call}")
 
         # Determine timestamp
         if msg.date_time_off:
@@ -484,7 +490,7 @@ class WSJTXListener:
         else:
             timestamp = datetime.now(timezone.utc).strftime("%H%M")
 
-        print(f"WSJT-X: QSO logged - {call} on {band_mode}, exchange: {report}")
+        print(f"{self._log_prefix}: QSO logged - {call} on {band_mode}, exchange: {report}")
         self.on_qso_logged(call, band_mode, report, timestamp)
 
 
@@ -501,6 +507,10 @@ except ImportError:
 class WSJTXSettingsDialog:
     """Tkinter dialog for WSJT-X integration settings."""
 
+    _dialog_title = "WSJT-X Integration Settings"
+    _app_name = "WSJT-X"
+    _default_port = 2237
+
     def __init__(self, parent, config: WSJTXConfig, listener: Optional[WSJTXListener], on_save: Callable):
         if not _TK_AVAILABLE:
             return
@@ -509,7 +519,7 @@ class WSJTXSettingsDialog:
         self.on_save = on_save
 
         self.win = tk.Toplevel(parent)
-        self.win.title("WSJT-X Integration Settings")
+        self.win.title(self._dialog_title)
         self.win.geometry("400x320")
         self.win.resizable(False, False)
         self.win.transient(parent)
@@ -520,7 +530,7 @@ class WSJTXSettingsDialog:
 
         # Enable/disable
         self.enabled_var = tk.BooleanVar(value=config.enabled)
-        ttk.Checkbutton(frame, text="Enable WSJT-X Integration", variable=self.enabled_var).grid(
+        ttk.Checkbutton(frame, text=f"Enable {self._app_name} Integration", variable=self.enabled_var).grid(
             row=0, column=0, columnspan=2, sticky=tk.W, pady=5)
 
         # UDP IP
@@ -535,12 +545,12 @@ class WSJTXSettingsDialog:
 
         # Auto-log
         self.auto_log_var = tk.BooleanVar(value=config.auto_log)
-        ttk.Checkbutton(frame, text="Auto-log QSOs from WSJT-X", variable=self.auto_log_var).grid(
+        ttk.Checkbutton(frame, text=f"Auto-log QSOs from {self._app_name}", variable=self.auto_log_var).grid(
             row=3, column=0, columnspan=2, sticky=tk.W, pady=5)
 
         # Auto-band
         self.auto_band_var = tk.BooleanVar(value=config.auto_band)
-        ttk.Checkbutton(frame, text="Auto-switch band to match WSJT-X", variable=self.auto_band_var).grid(
+        ttk.Checkbutton(frame, text=f"Auto-switch band to match {self._app_name}", variable=self.auto_band_var).grid(
             row=4, column=0, columnspan=2, sticky=tk.W, pady=5)
 
         # Connection status
@@ -566,7 +576,7 @@ class WSJTXSettingsDialog:
         try:
             port = int(self.port_var.get())
         except ValueError:
-            port = 2237
+            port = self._default_port
         self.config.enabled = self.enabled_var.get()
         self.config.udp_ip = self.ip_var.get().strip() or "127.0.0.1"
         self.config.udp_port = port
@@ -574,3 +584,31 @@ class WSJTXSettingsDialog:
         self.config.auto_band = self.auto_band_var.get()
         self.on_save(self.config)
         self.win.destroy()
+
+
+# --- JS8Call Integration (uses identical QDataStream protocol) ---
+
+@dataclass
+class JS8CallConfig:
+    """Configuration for JS8Call integration."""
+    enabled: bool = False
+    udp_port: int = 2442
+    udp_ip: str = "127.0.0.1"
+    auto_log: bool = True
+    auto_band: bool = True
+
+
+class JS8CallListener(WSJTXListener):
+    """JS8Call integration controller. Identical protocol to WSJT-X, different default port."""
+
+    @property
+    def _log_prefix(self):
+        return "JS8Call"
+
+
+class JS8CallSettingsDialog(WSJTXSettingsDialog):
+    """Tkinter dialog for JS8Call integration settings."""
+
+    _dialog_title = "JS8Call Integration Settings"
+    _app_name = "JS8Call"
+    _default_port = 2442

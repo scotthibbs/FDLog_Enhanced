@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 116 enhancements to the original FDLog so far.
+We have added 117 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -8,6 +8,17 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 		(none currently)
+
+  v2026_Beta 4.1.9 29Jan2026 JS8Call Integration
+
+	117 JS8Call Integration
+		- JS8Call uses the identical QDataStream UDP protocol as WSJT-X (default port 2442).
+		- JS8CallListener subclasses WSJTXListener — inherits all protocol parsing,
+			heartbeat tracking, and QSO processing logic.
+		- JS8Call menu with Settings dialog, Connect, and Disconnect commands.
+		- Connection status label in info bar (green=connected, gray=disconnected).
+		- Settings persist across sessions (enable/disable, UDP port/IP, auto-log, auto-band).
+		- Refactored WSJTXListener to use _log_prefix property for clean subclassing.
 
   v2026_Beta 4.1.8 29Jan2026 WSJT-X Integration
 

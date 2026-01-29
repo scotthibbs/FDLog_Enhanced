@@ -1,4 +1,4 @@
-"""Tests for WSJT-X integration module."""
+"""Tests for WSJT-X and JS8Call integration module."""
 
 import struct
 import unittest
@@ -8,6 +8,7 @@ from wsjtx_integration import (
     HeartbeatMessage, StatusMessage, DecodeMessage,
     QSOLoggedMessage, CloseMessage, LoggedADIFMessage,
     freq_to_band, parse_exchange,
+    JS8CallConfig,
 )
 
 
@@ -228,6 +229,17 @@ class TestWSJTXConfig(unittest.TestCase):
         c = WSJTXConfig()
         self.assertFalse(c.enabled)
         self.assertEqual(c.udp_port, 2237)
+        self.assertEqual(c.udp_ip, "127.0.0.1")
+        self.assertTrue(c.auto_log)
+        self.assertTrue(c.auto_band)
+
+
+class TestJS8CallConfig(unittest.TestCase):
+
+    def test_defaults(self):
+        c = JS8CallConfig()
+        self.assertFalse(c.enabled)
+        self.assertEqual(c.udp_port, 2442)
         self.assertEqual(c.udp_ip, "127.0.0.1")
         self.assertTrue(c.auto_log)
         self.assertTrue(c.auto_band)
