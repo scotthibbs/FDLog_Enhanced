@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 115 enhancements to the original FDLog so far.
+We have added 116 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -8,6 +8,22 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 		(none currently)
+
+  v2026_Beta 4.1.8 29Jan2026 WSJT-X Integration
+
+	116 WSJT-X Integration
+		- One-way integration: QSOs logged in WSJT-X automatically appear in FDLog.
+		- Listens for WSJT-X UDP packets (default port 2237) using native Qt QDataStream
+			binary protocol parser — no external dependencies required.
+		- Parses Field Day FT8 exchanges (class + section) from logged QSO data.
+		- Automatic frequency-to-band mapping for all HF/VHF bands (160m–2m).
+		- Dupe checking applied before logging.
+		- Auto-band-switch option: FDLog band follows WSJT-X frequency.
+		- Connection status label in info bar (green=connected, gray=disconnected),
+			detected via heartbeat timeout (15s).
+		- WSJT-X menu with Settings dialog, Connect, and Disconnect commands.
+		- Settings persist across sessions (enable/disable, UDP port/IP, auto-log, auto-band).
+		- Graceful fallback: menu and label hidden if integration module not present.
 
   v2026_Beta 4.1.7 28Jan2026 F-Key Bar, CW Sidetone, Prefix Search, and UI Improvements
 

@@ -49,11 +49,20 @@ except ImportError:
     VoiceConfig = None
     VoiceKeyer = None
 
+# WSJT-X Integration support
+try:
+    from wsjtx_integration import (
+        WSJTXConfig, WSJTXListener, WSJTXSettingsDialog
+    )
+    WSJTX_AVAILABLE = True
+except ImportError:
+    WSJTX_AVAILABLE = False
+
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
 #  Main program starts about line 5759
 
-prog = 'FDLog_Enhanced v2026_Beta 4.1.6 28Jan2026\n\n' \
+prog = 'FDLog_Enhanced v2026_Beta 4.1.8 29Jan2026\n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2026. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
@@ -5721,7 +5730,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v23b4"  # Changed 30Nov2023
+version = "v2026_Beta 4.1.8"  # Changed 29Jan2026
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
@@ -6303,6 +6312,10 @@ else:
 voice_keyer = None
 voice_status_label = None
 
+# WSJT-X Integration initialization
+wsjtx_listener = None
+wsjtx_status_label = None
+
 if VOICE_AVAILABLE:
     print("Voice Keying support available (pyttsx3 found)")
 
@@ -6413,6 +6426,98 @@ else:
     def voice_stop():
         pass
 
+# WSJT-X Integration functions
+if WSJTX_AVAILABLE:
+    print("WSJT-X Integration support available")
+
+    def wsjtx_load_config():
+        """Load WSJT-X configuration from globDb."""
+        config = WSJTXConfig()
+        config.enabled = globDb.get('wsjtx_enabled', '0') == '1'
+        config.udp_port = int(globDb.get('wsjtx_udp_port', '2237'))
+        config.udp_ip = globDb.get('wsjtx_udp_ip', '127.0.0.1')
+        config.auto_log = globDb.get('wsjtx_auto_log', '1') == '1'
+        config.auto_band = globDb.get('wsjtx_auto_band', '1') == '1'
+        return config
+
+    def wsjtx_save_config(config):
+        """Save WSJT-X configuration to globDb."""
+        globDb.put('wsjtx_enabled', '1' if config.enabled else '0')
+        globDb.put('wsjtx_udp_port', str(config.udp_port))
+        globDb.put('wsjtx_udp_ip', config.udp_ip)
+        globDb.put('wsjtx_auto_log', '1' if config.auto_log else '0')
+        globDb.put('wsjtx_auto_band', '1' if config.auto_band else '0')
+
+    def wsjtx_status_update(status):
+        """Update WSJT-X status display."""
+        global wsjtx_status_label
+        if wsjtx_status_label:
+            if "Connected" in status and "Disconnected" not in status:
+                wsjtx_status_label.config(text=f"WSJT-X: {status}",
+                                          foreground='green')
+            else:
+                wsjtx_status_label.config(text=f"WSJT-X: {status}",
+                                          foreground='gray')
+
+    def wsjtx_on_qso_logged(call, band_mode, report, timestamp):
+        """Called by WSJTXListener when WSJT-X logs a QSO. Runs on listener thread."""
+        def _do_log():
+            global band
+            # Validate operator and logger are set
+            if not gd.getv('ession'):
+                print("WSJT-X: Cannot log QSO - no operator set")
+                return
+            # Dupe check
+            if qdb.dupck(call, band_mode):
+                print(f"WSJT-X: Dupe - {call} on {band_mode}")
+                return
+            # Auto-switch band if configured
+            if wsjtx_listener and wsjtx_listener.config.auto_band:
+                if band != band_mode:
+                    bandset(band_mode)
+            # Log the QSO
+            qdb.qsl(timestamp, call, band_mode, report)
+            print(f"WSJT-X: Logged {call} on {band_mode} - {report}")
+        # Marshal to UI thread
+        try:
+            root.after(0, _do_log)
+        except Exception:
+            pass
+
+    def wsjtx_settings_dialog():
+        """Open WSJT-X settings dialog."""
+        global wsjtx_listener
+        if wsjtx_listener:
+            def on_save(config):
+                wsjtx_save_config(config)
+                wsjtx_listener.config = config
+                print(f"WSJT-X: Settings saved - Port: {config.udp_port}, Auto-log: {config.auto_log}")
+            WSJTXSettingsDialog(root, wsjtx_listener.config, wsjtx_listener, on_save)
+
+    def wsjtx_connect():
+        """Start WSJT-X listener."""
+        global wsjtx_listener
+        if wsjtx_listener and not wsjtx_listener._running:
+            wsjtx_listener.start()
+
+    def wsjtx_disconnect():
+        """Stop WSJT-X listener."""
+        global wsjtx_listener
+        if wsjtx_listener and wsjtx_listener._running:
+            wsjtx_listener.stop()
+
+else:
+    print("WSJT-X Integration support NOT available")
+
+    def wsjtx_settings_dialog():
+        pass
+
+    def wsjtx_connect():
+        pass
+
+    def wsjtx_disconnect():
+        pass
+
 print("Starting GUI setup")
 
 #     ****************** GUI START **************************
@@ -6460,6 +6565,14 @@ if VOICE_AVAILABLE:
                 cw_controller.keyer.ptt_off()
         voice_keyer.set_cw_ptt(_voice_cw_ptt_on, _voice_cw_ptt_off)
     print(f"Voice: Initialized - Speed: {voice_config.speed}, Volume: {voice_config.volume}")
+
+# Initialize WSJT-X Integration after root is created
+if WSJTX_AVAILABLE:
+    wsjtx_config = wsjtx_load_config()
+    wsjtx_listener = WSJTXListener(wsjtx_config, wsjtx_on_qso_logged, wsjtx_status_update)
+    if wsjtx_config.enabled:
+        wsjtx_listener.start()
+    print(f"WSJT-X: Initialized - Port: {wsjtx_config.udp_port}, Enabled: {wsjtx_config.enabled}")
 
 menu = Menu(root)
 root.config(menu=menu)
@@ -6601,6 +6714,15 @@ if VOICE_AVAILABLE:
     voicemenu.add_command(label="Settings...", command=voice_settings_dialog)
     voicemenu.add_command(label="Macro Editor...", command=voice_macro_editor_dialog)
 
+# WSJT-X Integration menu
+if WSJTX_AVAILABLE:
+    wsjtxmenu = Menu(menu, tearoff=0)
+    menu.add_cascade(label="WSJT-X", menu=wsjtxmenu)
+    wsjtxmenu.add_command(label="Settings...", command=wsjtx_settings_dialog)
+    wsjtxmenu.add_separator()
+    wsjtxmenu.add_command(label="Connect", command=wsjtx_connect)
+    wsjtxmenu.add_command(label="Disconnect", command=wsjtx_disconnect)
+
 # Network bar moved to the top - Scott Hibbs KD4SIR 05Aug2022
 frn1 = Frame(root, bd=1)
 # Network label
@@ -6626,6 +6748,14 @@ if VOICE_AVAILABLE:
                                width=20, anchor='w', state='disabled')
 else:
     voice_status_label = None
+
+# WSJT-X Status label
+if WSJTX_AVAILABLE:
+    wsjtx_status_label = Label(frn1, text="WSJT-X: Off", font=fdfont, relief='raised',
+                               foreground='gray', background='light gray',
+                               width=22, anchor='w')
+else:
+    wsjtx_status_label = None
 
 # Band Buttons
 f1 = Frame(root, bd=1)
@@ -6844,6 +6974,9 @@ if VOICE_AVAILABLE and voice_status_label:
     voice_status_label.grid(row=0, column=11, columnspan=1, sticky=NSEW)
     voice_status_label.config(cursor='hand2')
     voice_status_label.bind('<Button-1>', lambda e: toggle_fkey_bar() if str(voice_status_label.cget('state')) != 'disabled' else None)
+# WSJT-X Status label grid
+if WSJTX_AVAILABLE and wsjtx_status_label:
+    wsjtx_status_label.grid(row=0, column=12, columnspan=1, sticky=NSEW)
 # Grid for band buttons
 f1.grid(row=1, columnspan=2, sticky=NSEW)
 # Grid for Contestant, Logger and Power buttons
@@ -7035,6 +7168,10 @@ update_phonetic_display()  # initial phonetic display update
 root.after(1000, update)  # type: ignore  # 1 hz activity
 root.mainloop()  # gui up
 print("\nShutting down")
+# Stop WSJT-X listener
+if WSJTX_AVAILABLE and wsjtx_listener:
+    wsjtx_listener.stop()
+    print("  WSJT-X listener stopped")
 # the end was updated from 152i
 band = 'off'  # gui down, xmt band off, preparing to quit
 net.bcast_now()  # push band out
