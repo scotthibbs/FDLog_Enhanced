@@ -16,7 +16,8 @@ Displays number of contacts and how many log entries made for each person.
 Has an inactivity timer and can auto log off a band to make it available for others.    
 (So when KD4SIR falls asleep on 20p, you can take the band!)      
 QST messages can be sent to all nodes (even GOTA) or one node.    
-Full CW interface and many many extras.   
+Full CW interface and many many extras.
+WSJT-X integration - QSOs logged in WSJT-X (FT8/FT4) automatically appear in FDLog with no extra software needed.
 
 Log entry is just three simple things : KD4SIR 1D IN
 
