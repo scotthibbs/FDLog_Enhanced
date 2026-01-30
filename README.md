@@ -19,7 +19,8 @@ QST messages can be sent to all nodes (even GOTA) or one node.
 Full CW interface, and even a voice keyer (text to speech or recorded)    
 WSJT-X integration - QSOs logged in WSJT-X (FT8/FT4) automatically appear in FDLog.   
 JS8Call with WSJT-X supported.    
-Fldigi Two-Way Integration.    
+Fldigi Two-Way Integration.
+N3FJP API Integration - TCP client pulls QSOs from N3FJP, TCP server lets N3FJP-compatible programs send QSOs to FDLog.
 
 
 Log entry is just three simple things : KD4SIR 1D IN
