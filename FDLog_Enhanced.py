@@ -67,11 +67,20 @@ try:
 except ImportError:
     JS8CALL_AVAILABLE = False
 
+# fldigi Integration support
+try:
+    from fldigi_integration import (
+        FldigiConfig, FldigiPoller, FldigiSettingsDialog, BAND_FREQ_MAP
+    )
+    FLDIGI_AVAILABLE = True
+except ImportError:
+    FLDIGI_AVAILABLE = False
+
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
 #  Main program starts about line 5759
 
-prog = 'FDLog_Enhanced v2026_Beta 4.1.9 29Jan2026\n\n' \
+prog = 'FDLog_Enhanced v2026_Beta 4.2.0 29Jan2026\n\n' \
        'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2026. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
@@ -2873,6 +2882,10 @@ def bandset(b):
         ini2 = operator.split(':', 1)[0]
         operatorsonline.update({node: ini2})
     renew_title()
+    # Push frequency to fldigi if connected and push_frequency enabled
+    if FLDIGI_AVAILABLE and fldigi_poller and fldigi_poller.is_connected():
+        if fldigi_poller.config.push_frequency and b != 'off' and b in BAND_FREQ_MAP:
+            fldigi_poller.set_frequency(BAND_FREQ_MAP[b])
 
 
 def bandoff():
@@ -5739,7 +5752,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v2026_Beta 4.1.9"  # Changed 29Jan2026
+version = "v2026_Beta 4.2.0"  # Changed 29Jan2026
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
@@ -5939,44 +5952,44 @@ elif node == "":
     print("  (7 characters}")
     k = str.lower(str.strip(sys.stdin.readline())[:8])
     if len(k) == 8:
-        print("That's too many.. (Marc? is that you?)")  # Thanks to Marc Fountain K9MAF for the correction. Mar/23/2017
-        k = k[:7]
-    z = len(k)
-    if k == 'info':
-        print("Starting Information Table display...")
-        node = 'infotable'
-        print()
-    elif k != 'gota':
-        while z != 7:
-            if k == 'gota':
-                print("please restart the program.")
-                sys.exit()
-            elif k == 'info':
-                print("Starting Information Table display...")
-                node = 'infotable'
-                break
-            else:
-                if z < 4:
-                    print("um yeah.. 7 characters....    (restart if your gota or info)")
-                    k = str.lower(str.strip(sys.stdin.readline())[:8])
-                    z = len(k)
-                else:
-                    for z in range(z, 7):
-                        print("close enough (Ken? is that you?)")
-                        k = k + random.choice('abcdefghijklmnopqrstuvwxyz')
-                        print(k)
-                        # noinspection PyRedeclaration
-                        z = len(k)  # Redeclared 'z' defined above without usage- but needed keeps program from looping
-                        # 1. if there is more than four characters
-                        # 2. add the rest with randoms
-        else:
-            print("Thank You!!")
-            node = k + random.choice('abcdefghijklmnopqrstuvwxyz')
+            print("That's too many.. (Marc? is that you?)")  # Thanks to Marc Fountain K9MAF for the correction. Mar/23/2017
+            k = k[:7]
+        z = len(k)
+        if k == 'info':
+            print("Starting Information Table display...")
+            node = 'infotable'
             print()
-    else:
-        print("Thank You for being gota!!")
-        node = 'gotanode'
-        print()
+        elif k != 'gota':
+            while z != 7:
+                if k == 'gota':
+                    print("please restart the program.")
+                    sys.exit()
+                elif k == 'info':
+                    print("Starting Information Table display...")
+                    node = 'infotable'
+                    break
+                else:
+                    if z < 4:
+                        print("um yeah.. 7 characters....    (restart if your gota or info)")
+                        k = str.lower(str.strip(sys.stdin.readline())[:8])
+                        z = len(k)
+                    else:
+                        for z in range(z, 7):
+                            print("close enough (Ken? is that you?)")
+                            k = k + random.choice('abcdefghijklmnopqrstuvwxyz')
+                            print(k)
+                            # noinspection PyRedeclaration
+                            z = len(k)  # Redeclared 'z' defined above without usage- but needed keeps program from looping
+                            # 1. if there is more than four characters
+                            # 2. add the rest with randoms
+            else:
+                print("Thank You!!")
+                node = k + random.choice('abcdefghijklmnopqrstuvwxyz')
+                print()
+        else:
+            print("Thank You for being gota!!")
+            node = 'gotanode'
+            print()
 print("Using Node ID: '%s' " % node)
 print()
 
@@ -6329,6 +6342,10 @@ wsjtx_status_label = None
 js8call_listener = None
 js8call_status_label = None
 
+# fldigi Integration initialization
+fldigi_poller = None
+fldigi_status_label = None
+
 if VOICE_AVAILABLE:
     print("Voice Keying support available (pyttsx3 found)")
 
@@ -6623,6 +6640,115 @@ else:
     def js8call_disconnect():
         pass
 
+# fldigi Integration functions
+if FLDIGI_AVAILABLE:
+    print("fldigi Integration support available")
+
+    def fldigi_load_config():
+        """Load fldigi configuration from globDb."""
+        config = FldigiConfig()
+        config.enabled = globDb.get('fldigi_enabled', '0') == '1'
+        config.xmlrpc_host = globDb.get('fldigi_xmlrpc_host', '127.0.0.1')
+        config.xmlrpc_port = int(globDb.get('fldigi_xmlrpc_port', '7362'))
+        config.poll_interval = float(globDb.get('fldigi_poll_interval', '1.5'))
+        config.auto_log = globDb.get('fldigi_auto_log', '1') == '1'
+        config.auto_band = globDb.get('fldigi_auto_band', '1') == '1'
+        config.push_frequency = globDb.get('fldigi_push_frequency', '1') == '1'
+        config.push_callsign = globDb.get('fldigi_push_callsign', '0') == '1'
+        return config
+
+    def fldigi_save_config(config):
+        """Save fldigi configuration to globDb."""
+        globDb.put('fldigi_enabled', '1' if config.enabled else '0')
+        globDb.put('fldigi_xmlrpc_host', config.xmlrpc_host)
+        globDb.put('fldigi_xmlrpc_port', str(config.xmlrpc_port))
+        globDb.put('fldigi_poll_interval', str(config.poll_interval))
+        globDb.put('fldigi_auto_log', '1' if config.auto_log else '0')
+        globDb.put('fldigi_auto_band', '1' if config.auto_band else '0')
+        globDb.put('fldigi_push_frequency', '1' if config.push_frequency else '0')
+        globDb.put('fldigi_push_callsign', '1' if config.push_callsign else '0')
+
+    def fldigi_status_update(status):
+        """Update fldigi status display."""
+        global fldigi_status_label
+        if fldigi_status_label:
+            if "Connected" in status and "Disconnected" not in status:
+                fldigi_status_label.config(text=f"fldigi: {status}",
+                                           foreground='green')
+            else:
+                fldigi_status_label.config(text=f"fldigi: {status}",
+                                           foreground='gray')
+
+    def fldigi_on_qso_logged(call, band_mode, report, timestamp):
+        """Called by FldigiPoller when fldigi logs a QSO. Runs on poller thread."""
+        def _do_log():
+            global band
+            # Validate operator and logger are set
+            if not gd.getv('ession'):
+                print("fldigi: Cannot log QSO - no operator set")
+                return
+            # Dupe check
+            if qdb.dupck(call, band_mode):
+                print(f"fldigi: Dupe - {call} on {band_mode}")
+                return
+            # Auto-switch band if configured
+            if fldigi_poller and fldigi_poller.config.auto_band:
+                if band != band_mode:
+                    bandset(band_mode)
+            # Log the QSO
+            qdb.qsl(timestamp, call, band_mode, report)
+            print(f"fldigi: Logged {call} on {band_mode} - {report}")
+        # Marshal to UI thread
+        try:
+            root.after(0, _do_log)
+        except Exception:
+            pass
+
+    def fldigi_on_band_change(new_band):
+        """Called by FldigiPoller when fldigi frequency changes band."""
+        def _do_band():
+            global band
+            if band != new_band:
+                bandset(new_band)
+        try:
+            root.after(0, _do_band)
+        except Exception:
+            pass
+
+    def fldigi_settings_dialog():
+        """Open fldigi settings dialog."""
+        global fldigi_poller
+        if fldigi_poller:
+            def on_save(config):
+                fldigi_save_config(config)
+                fldigi_poller.config = config
+                print(f"fldigi: Settings saved - Port: {config.xmlrpc_port}, Auto-log: {config.auto_log}")
+            FldigiSettingsDialog(root, fldigi_poller.config, fldigi_poller, on_save)
+
+    def fldigi_connect():
+        """Start fldigi poller."""
+        global fldigi_poller
+        if fldigi_poller and not fldigi_poller._running:
+            fldigi_poller.start()
+
+    def fldigi_disconnect():
+        """Stop fldigi poller."""
+        global fldigi_poller
+        if fldigi_poller and fldigi_poller._running:
+            fldigi_poller.stop()
+
+else:
+    print("fldigi Integration support NOT available")
+
+    def fldigi_settings_dialog():
+        pass
+
+    def fldigi_connect():
+        pass
+
+    def fldigi_disconnect():
+        pass
+
 print("Starting GUI setup")
 
 #     ****************** GUI START **************************
@@ -6686,6 +6812,14 @@ if JS8CALL_AVAILABLE:
     if js8call_config.enabled:
         js8call_listener.start()
     print(f"JS8Call: Initialized - Port: {js8call_config.udp_port}, Enabled: {js8call_config.enabled}")
+
+# Initialize fldigi Integration after root is created
+if FLDIGI_AVAILABLE:
+    fldigi_config = fldigi_load_config()
+    fldigi_poller = FldigiPoller(fldigi_config, fldigi_on_qso_logged, fldigi_status_update, fldigi_on_band_change)
+    if fldigi_config.enabled:
+        fldigi_poller.start()
+    print(f"fldigi: Initialized - Port: {fldigi_config.xmlrpc_port}, Enabled: {fldigi_config.enabled}")
 
 menu = Menu(root)
 root.config(menu=menu)
@@ -6845,35 +6979,44 @@ if JS8CALL_AVAILABLE:
     js8callmenu.add_command(label="Connect", command=js8call_connect)
     js8callmenu.add_command(label="Disconnect", command=js8call_disconnect)
 
+# fldigi Integration menu
+if FLDIGI_AVAILABLE:
+    fldigimenu = Menu(menu, tearoff=0)
+    menu.add_cascade(label="fldigi", menu=fldigimenu)
+    fldigimenu.add_command(label="Settings...", command=fldigi_settings_dialog)
+    fldigimenu.add_separator()
+    fldigimenu.add_command(label="Connect", command=fldigi_connect)
+    fldigimenu.add_command(label="Disconnect", command=fldigi_disconnect)
+
 # Network bar moved to the top - Scott Hibbs KD4SIR 05Aug2022
 frn1 = Frame(root, bd=1)
+# Row 0 sub-frame: Network, Time on Band, Node
+_frn1_row0 = Frame(frn1)
+_frn1_row0.pack(fill='x')
+# Row 1 sub-frame: CW, Voice, WSJT-X, JS8Call, fldigi status labels
+_frn1_row1 = Frame(frn1)
+_frn1_row1.pack(fill='x')
 # Network label
-lblnet = Label(frn1, text="Waiting for Network", font=fdfont, relief='raised', foreground='blue', background='gold')
+lblnet = Label(_frn1_row0, text="Waiting for Network", font=fdfont, relief='raised', foreground='blue', background='gold')
 # Time on Band label
-lbltimeonband = Label(frn1, text=" ", font=fdfont, relief='raised', foreground='blue', background='light gray')
+lbltimeonband = Label(_frn1_row0, text=" ", font=fdfont, relief='raised', foreground='blue', background='light gray')
 # Node label
-lblnode = Label(frn1, text=" Node: %s Port: %s " % (node, port_base), font=fdfont, relief='raised',
+lblnode = Label(_frn1_row0, text=" Node: %s Port: %s " % (node, port_base), font=fdfont, relief='raised',
                 foreground='black', background='light gray')
 
-# CW Status label
-if CW_AVAILABLE:
-    cw_status_label = Label(frn1, text="CW: Ready", font=fdfont, relief='raised',
-                            foreground='gray', background='light gray',
-                            width=20, anchor='w', state='disabled')
-else:
-    cw_status_label = None
+# CW Status label (always visible, greyed out if CW module unavailable)
+cw_status_label = Label(_frn1_row1, text="CW: Ready", font=fdfont, relief='raised',
+                        foreground='gray', background='light gray',
+                        width=20, anchor='w', state='disabled')
 
-# Voice Status label
-if VOICE_AVAILABLE:
-    voice_status_label = Label(frn1, text="Voice: Ready", font=fdfont, relief='raised',
-                               foreground='gray', background='light gray',
-                               width=20, anchor='w', state='disabled')
-else:
-    voice_status_label = None
+# Voice Status label (always visible, greyed out if voice module unavailable)
+voice_status_label = Label(_frn1_row1, text="Voice: Ready", font=fdfont, relief='raised',
+                           foreground='gray', background='light gray',
+                           width=20, anchor='w', state='disabled')
 
 # WSJT-X Status label
 if WSJTX_AVAILABLE:
-    wsjtx_status_label = Label(frn1, text="WSJT-X: Off", font=fdfont, relief='raised',
+    wsjtx_status_label = Label(_frn1_row1, text="WSJT-X: Off", font=fdfont, relief='raised',
                                foreground='gray', background='light gray',
                                width=22, anchor='w')
 else:
@@ -6881,11 +7024,19 @@ else:
 
 # JS8Call Status label
 if JS8CALL_AVAILABLE:
-    js8call_status_label = Label(frn1, text="JS8Call: Off", font=fdfont, relief='raised',
+    js8call_status_label = Label(_frn1_row1, text="JS8Call: Off", font=fdfont, relief='raised',
                                  foreground='gray', background='light gray',
                                  width=22, anchor='w')
 else:
     js8call_status_label = None
+
+# fldigi Status label
+if FLDIGI_AVAILABLE:
+    fldigi_status_label = Label(_frn1_row1, text="fldigi: Off", font=fdfont, relief='raised',
+                                foreground='gray', background='light gray',
+                                width=22, anchor='w')
+else:
+    fldigi_status_label = None
 
 # Band Buttons
 f1 = Frame(root, bd=1)
@@ -7088,50 +7239,49 @@ readsections()
 updatect = 0
 
 #  #### GUI GRIDS #####
-# Grid for Network Row - network timeonband and node
-frn1.grid(row=0, columnspan=2, sticky=NSEW)
-frn1.grid_columnconfigure(1, weight=1)
-lblnet.grid(row=0, column=0, columnspan=6, sticky=NSEW)
-lbltimeonband.grid(row=0, column=7, columnspan=1, sticky=NSEW)
-lblnode.grid(row=0, column=9, columnspan=1, sticky=NSEW)
-# CW Status label grid
-if CW_AVAILABLE and cw_status_label:
-    cw_status_label.grid(row=0, column=10, columnspan=1, sticky=NSEW)
+# Grid for Network Row
+frn1.grid(row=0, column=0, columnspan=2, sticky=NSEW)
+# Row 0: Node (right), Time on Band (right), Network (fills remaining space)
+lblnode.pack(in_=_frn1_row0, side='right')
+lbltimeonband.pack(in_=_frn1_row0, side='right')
+lblnet.pack(in_=_frn1_row0, side='left', fill='x', expand=True)
+# Row 1: Integration status labels packed left
+cw_status_label.pack(in_=_frn1_row1, side='left')
+if CW_AVAILABLE:
     cw_status_label.config(cursor='hand2')
     cw_status_label.bind('<Button-1>', lambda e: toggle_fkey_bar() if str(cw_status_label.cget('state')) != 'disabled' else None)
-# Voice Status label grid
-if VOICE_AVAILABLE and voice_status_label:
-    voice_status_label.grid(row=0, column=11, columnspan=1, sticky=NSEW)
+voice_status_label.pack(in_=_frn1_row1, side='left')
+if VOICE_AVAILABLE:
     voice_status_label.config(cursor='hand2')
     voice_status_label.bind('<Button-1>', lambda e: toggle_fkey_bar() if str(voice_status_label.cget('state')) != 'disabled' else None)
-# WSJT-X Status label grid
 if WSJTX_AVAILABLE and wsjtx_status_label:
-    wsjtx_status_label.grid(row=0, column=12, columnspan=1, sticky=NSEW)
-# JS8Call Status label grid
+    wsjtx_status_label.pack(in_=_frn1_row1, side='left')
 if JS8CALL_AVAILABLE and js8call_status_label:
-    js8call_status_label.grid(row=0, column=13, columnspan=1, sticky=NSEW)
+    js8call_status_label.pack(in_=_frn1_row1, side='left')
+if FLDIGI_AVAILABLE and fldigi_status_label:
+    fldigi_status_label.pack(in_=_frn1_row1, side='left')
 # Grid for band buttons
-f1.grid(row=1, columnspan=2, sticky=NSEW)
+f1.grid(row=1, column=0, columnspan=2, sticky=NSEW)
 # Grid for Contestant, Logger and Power buttons
-f1b.grid(row=2, columnspan=2, sticky=NSEW)
-opds.grid(row=2, column=0, sticky=NSEW)
-opmb.grid(row=2, column=1, sticky=NSEW)
-f1b.grid_columnconfigure(0, weight=1)
-logds.grid(row=2, column=2, sticky=NSEW)
-logmb.grid(row=2, column=3, sticky=NSEW)
-f1b.grid_columnconfigure(3, weight=1)
-pwrmb.grid(row=2, column=4, sticky=NSEW)
-pwrnt.grid(row=2, column=5, sticky=NSEW)
-powlbl.grid(row=2, column=6, sticky=NSEW)
-powcb.grid(row=2, column=7, sticky=NSEW)
-natpwr_countdown.grid(row=2, column=8, sticky=NSEW)
-sound_cb.grid(row=2, column=9, sticky=NSEW)
+f1b.grid(row=2, column=0, columnspan=2, sticky=NSEW)
+opds.grid(row=0, column=0, sticky=NSEW)
+opmb.grid(row=0, column=1, sticky=NSEW)
+f1b.grid_columnconfigure(0, weight=1, minsize=150)
+logds.grid(row=0, column=2, sticky=NSEW)
+logmb.grid(row=0, column=3, sticky=NSEW)
+f1b.grid_columnconfigure(2, weight=1, minsize=150)
+pwrmb.grid(row=0, column=4, sticky=NSEW)
+pwrnt.grid(row=0, column=5, sticky=NSEW)
+powlbl.grid(row=0, column=6, sticky=NSEW)
+powcb.grid(row=0, column=7, sticky=NSEW)
+natpwr_countdown.grid(row=0, column=8, sticky=NSEW)
+sound_cb.grid(row=0, column=9, sticky=NSEW)
 # Grid for functionbuttons
-redrawbutton.grid(row=3, column=0, sticky=NSEW)
-opsonlinebutton.grid(row=3, column=1, sticky=NSEW)
-mapbutton.grid(row=3, column=2, sticky=NSEW)
-sectionmapbutton.grid(row=3, column=3, sticky=NSEW)
-phonetic_toggle_btn.grid(row=3, column=4, sticky=NSEW)
+redrawbutton.grid(row=1, column=0, sticky=NSEW)
+opsonlinebutton.grid(row=1, column=1, sticky=NSEW)
+mapbutton.grid(row=1, column=2, sticky=NSEW)
+sectionmapbutton.grid(row=1, column=3, sticky=NSEW)
+phonetic_toggle_btn.grid(row=1, column=4, sticky=NSEW)
 # Grid for log window
 root.grid_rowconfigure(2, weight=1)
 logw.grid(row=3, column=0, sticky=NSEW)
@@ -7309,6 +7459,10 @@ if WSJTX_AVAILABLE and wsjtx_listener:
 if JS8CALL_AVAILABLE and js8call_listener:
     js8call_listener.stop()
     print("  JS8Call listener stopped")
+# Stop fldigi poller
+if FLDIGI_AVAILABLE and fldigi_poller:
+    fldigi_poller.stop()
+    print("  fldigi poller stopped")
 # the end was updated from 152i
 band = 'off'  # gui down, xmt band off, preparing to quit
 net.bcast_now()  # push band out

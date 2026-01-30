@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 117 enhancements to the original FDLog so far.
+We have added 118 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -8,6 +8,32 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 		(none currently)
+
+  v2026_Beta 4.2.0 29Jan2026 fldigi Integration (Two-Way)
+
+	118 fldigi Integration (Two-Way)
+		- Two-way integration: QSOs logged in fldigi appear in FDLog, band changes
+			in FDLog push frequency to fldigi via XML-RPC.
+		- Polls fldigi XML-RPC interface (default port 7362) — no external dependencies,
+			uses Python's built-in xmlrpc.client.
+		- QSO detection via call-field transition: caches fields while call is populated,
+			processes QSO when call clears.
+		- Automatic frequency-to-band mapping reuses wsjtx_integration helpers.
+		- Push frequency: when FDLog band changes, sends default frequency to fldigi.
+		- Optional push callsign to fldigi log fields.
+		- fldigi menu with Settings dialog, Connect, and Disconnect commands.
+		- Connection status label in info bar (green=connected, gray=disconnected).
+		- Settings persist across sessions (enable/disable, host/port, poll interval,
+			auto-log, auto-band, push frequency, push callsign).
+		- BAND_FREQ_MAP: reverse mapping from FDLog band string to default frequency.
+	UI Layout Fixes
+		- CW and Voice status labels always visible (greyed out when module unavailable).
+		- CW, Voice, WSJT-X, JS8Call, fldigi labels moved to a second row under the
+			network bar.
+		- Network bar now uses pack layout: network label fills available width,
+			node/time labels fixed on the right.
+		- Select Contestant / Select Logger labels no longer clip — both get
+			weight=1, minsize=150.
 
   v2026_Beta 4.1.9 29Jan2026 JS8Call Integration
 
