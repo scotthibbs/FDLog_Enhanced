@@ -18,10 +18,11 @@ Has an inactivity timer and can auto log off a band to make it available for oth
 QST messages can be sent to all nodes (even GOTA) or one node.    
 Full CW interface, and even a voice keyer (text to speech or recorded)    
 WSJT-X integration - QSOs logged in WSJT-X (FT8/FT4) automatically appear in FDLog.   
-JS8Call with WSJT-X supported.    
-Fldigi Two-Way Integration.
-N3FJP API Integration - TCP client pulls QSOs from N3FJP, TCP server lets N3FJP-compatible programs send QSOs to FDLog.
-
+JS8Call with WSJT-X supported.       
+Fldigi Two-Way Integration.   
+N3FJP API Integration   
+&nbsp;&nbsp;&nbsp;&nbsp;- TCP client pulls QSOs from N3FJP      
+&nbsp;&nbsp;&nbsp;&nbsp;- TCP server lets N3FJP-compatible programs send QSOs to FDLog.    
 
 Log entry is just three simple things : KD4SIR 1D IN
 
@@ -67,6 +68,7 @@ back to the beginning of FDLog in 1984.
 Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
 Scott Hibbs KD4SIR
+
 
 
 
