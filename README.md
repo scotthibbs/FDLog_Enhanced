@@ -20,9 +20,10 @@ Full CW interface, and even a voice keyer (text to speech or recorded)
 WSJT-X integration - QSOs logged in WSJT-X (FT8/FT4) automatically appear in FDLog.   
 JS8Call with WSJT-X supported.       
 Fldigi Two-Way Integration.   
-N3FJP API Integration   
-&nbsp;&nbsp;&nbsp;&nbsp;- TCP client pulls QSOs from N3FJP      
-&nbsp;&nbsp;&nbsp;&nbsp;- TCP server lets N3FJP-compatible programs send QSOs to FDLog.    
+N3FJP API Integration
+&nbsp;&nbsp;&nbsp;&nbsp;- TCP client pulls QSOs from N3FJP
+&nbsp;&nbsp;&nbsp;&nbsp;- TCP server lets N3FJP-compatible programs send QSOs to FDLog.
+Hamlib rigctld Rig Control Integration for 200+ rigs support
 
 Log entry is just three simple things : KD4SIR 1D IN
 

@@ -86,6 +86,16 @@ try:
 except ImportError:
     N3FJP_AVAILABLE = False
 
+# rigctld (Hamlib) Integration support
+try:
+    from rigctld_integration import (
+        RigctldConfig, RigctldClient, RigctldSettingsDialog,
+        BAND_FREQ_MAP as RIGCTLD_BAND_FREQ_MAP
+    )
+    RIGCTLD_AVAILABLE = True
+except ImportError:
+    RIGCTLD_AVAILABLE = False
+
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
 #  Main program starts about line 5759
@@ -2900,6 +2910,10 @@ def bandset(b):
     if N3FJP_AVAILABLE and n3fjp_client and n3fjp_client.is_connected():
         if b != 'off' and b in N3FJP_BAND_FREQ_MAP:
             n3fjp_client.set_frequency(N3FJP_BAND_FREQ_MAP[b])
+    # Push frequency to rigctld if connected and push_frequency enabled
+    if RIGCTLD_AVAILABLE and rigctld_client and rigctld_client.is_connected():
+        if rigctld_client.config.push_frequency and b != 'off' and b in RIGCTLD_BAND_FREQ_MAP:
+            rigctld_client.set_frequency(RIGCTLD_BAND_FREQ_MAP[b])
 
 
 def bandoff():
@@ -6365,6 +6379,10 @@ n3fjp_client = None
 n3fjp_server = None
 n3fjp_status_label = None
 
+# rigctld Integration initialization
+rigctld_client = None
+rigctld_status_label = None
+
 if VOICE_AVAILABLE:
     print("Voice Keying support available (pyttsx3 found)")
 
@@ -6910,6 +6928,86 @@ else:
     def n3fjp_stop_server():
         pass
 
+# rigctld Integration functions
+if RIGCTLD_AVAILABLE:
+    print("rigctld Integration support available")
+
+    def rigctld_load_config():
+        """Load rigctld configuration from globDb."""
+        config = RigctldConfig()
+        config.enabled = globDb.get('rigctld_enabled', '0') == '1'
+        config.host = globDb.get('rigctld_host', '127.0.0.1')
+        config.port = int(globDb.get('rigctld_port', '4532'))
+        config.poll_interval = float(globDb.get('rigctld_poll_interval', '2.0'))
+        config.auto_band = globDb.get('rigctld_auto_band', '1') == '1'
+        config.push_frequency = globDb.get('rigctld_push_frequency', '1') == '1'
+        return config
+
+    def rigctld_save_config(config):
+        """Save rigctld configuration to globDb."""
+        globDb.put('rigctld_enabled', '1' if config.enabled else '0')
+        globDb.put('rigctld_host', config.host)
+        globDb.put('rigctld_port', str(config.port))
+        globDb.put('rigctld_poll_interval', str(config.poll_interval))
+        globDb.put('rigctld_auto_band', '1' if config.auto_band else '0')
+        globDb.put('rigctld_push_frequency', '1' if config.push_frequency else '0')
+
+    def rigctld_status_update(status):
+        """Update rigctld status display."""
+        global rigctld_status_label
+        if rigctld_status_label:
+            if "Connected" in status and "Disconnected" not in status:
+                rigctld_status_label.config(text=f"Rig: {status}",
+                                            foreground='green')
+            else:
+                rigctld_status_label.config(text=f"Rig: {status}",
+                                            foreground='gray')
+
+    def rigctld_on_band_change(new_band):
+        """Called by RigctldClient when rig frequency changes band."""
+        def _do_band():
+            global band
+            if band != new_band:
+                bandset(new_band)
+        try:
+            root.after(0, _do_band)
+        except Exception:
+            pass
+
+    def rigctld_settings_dialog():
+        """Open rigctld settings dialog."""
+        global rigctld_client
+        if rigctld_client:
+            def on_save(config):
+                rigctld_save_config(config)
+                rigctld_client.config = config
+                print(f"rigctld: Settings saved - Host: {config.host}:{config.port}")
+            RigctldSettingsDialog(root, rigctld_client.config, rigctld_client, on_save)
+
+    def rigctld_connect():
+        """Start rigctld client."""
+        global rigctld_client
+        if rigctld_client and not rigctld_client._running:
+            rigctld_client.start()
+
+    def rigctld_disconnect():
+        """Stop rigctld client."""
+        global rigctld_client
+        if rigctld_client and rigctld_client._running:
+            rigctld_client.stop()
+
+else:
+    print("rigctld Integration support NOT available")
+
+    def rigctld_settings_dialog():
+        pass
+
+    def rigctld_connect():
+        pass
+
+    def rigctld_disconnect():
+        pass
+
 print("Starting GUI setup")
 
 #     ****************** GUI START **************************
@@ -6995,6 +7093,14 @@ if N3FJP_AVAILABLE:
     if n3fjp_config.server_enabled:
         n3fjp_server.start()
     print(f"N3FJP: Initialized - Client port: {n3fjp_config.client_port}, Server port: {n3fjp_config.server_port}")
+
+# Initialize rigctld Integration after root is created
+if RIGCTLD_AVAILABLE:
+    rigctld_config = rigctld_load_config()
+    rigctld_client = RigctldClient(rigctld_config, rigctld_status_update, rigctld_on_band_change)
+    if rigctld_config.enabled:
+        rigctld_client.start()
+    print(f"rigctld: Initialized - Host: {rigctld_config.host}:{rigctld_config.port}, Enabled: {rigctld_config.enabled}")
 
 menu = Menu(root)
 root.config(menu=menu)
@@ -7175,14 +7281,26 @@ if N3FJP_AVAILABLE:
     n3fjpmenu.add_command(label="Start Server", command=n3fjp_start_server)
     n3fjpmenu.add_command(label="Stop Server", command=n3fjp_stop_server)
 
+# rigctld Integration menu
+if RIGCTLD_AVAILABLE:
+    rigmenu = Menu(menu, tearoff=0)
+    menu.add_cascade(label="Rig", menu=rigmenu)
+    rigmenu.add_command(label="Settings...", command=rigctld_settings_dialog)
+    rigmenu.add_separator()
+    rigmenu.add_command(label="Connect", command=rigctld_connect)
+    rigmenu.add_command(label="Disconnect", command=rigctld_disconnect)
+
 # Network bar moved to the top - Scott Hibbs KD4SIR 05Aug2022
 frn1 = Frame(root, bd=1)
 # Row 0 sub-frame: Network, Time on Band, Node
 _frn1_row0 = Frame(frn1)
 _frn1_row0.pack(fill='x')
-# Row 1 sub-frame: CW, Voice, WSJT-X, JS8Call, fldigi status labels
+# Row 1 sub-frame: CW, Voice, WSJT-X, JS8Call status labels
 _frn1_row1 = Frame(frn1)
 _frn1_row1.pack(fill='x')
+# Row 2 sub-frame: fldigi, N3FJP, rigctld status labels
+_frn1_row2 = Frame(frn1)
+_frn1_row2.pack(fill='x')
 # Network label
 lblnet = Label(_frn1_row0, text="Waiting for Network", font=fdfont, relief='raised', foreground='blue', background='gold')
 # Time on Band label
@@ -7219,7 +7337,7 @@ else:
 
 # fldigi Status label
 if FLDIGI_AVAILABLE:
-    fldigi_status_label = Label(_frn1_row1, text="fldigi: Off", font=fdfont, relief='raised',
+    fldigi_status_label = Label(_frn1_row2, text="fldigi: Off", font=fdfont, relief='raised',
                                 foreground='gray', background='light gray',
                                 width=22, anchor='w')
 else:
@@ -7227,11 +7345,19 @@ else:
 
 # N3FJP Status label
 if N3FJP_AVAILABLE:
-    n3fjp_status_label = Label(_frn1_row1, text="N3FJP: Off", font=fdfont, relief='raised',
+    n3fjp_status_label = Label(_frn1_row2, text="N3FJP: Off", font=fdfont, relief='raised',
                                 foreground='gray', background='light gray',
                                 width=22, anchor='w')
 else:
     n3fjp_status_label = None
+
+# rigctld Status label
+if RIGCTLD_AVAILABLE:
+    rigctld_status_label = Label(_frn1_row2, text="Rig: Off", font=fdfont, relief='raised',
+                                foreground='gray', background='light gray',
+                                width=22, anchor='w')
+else:
+    rigctld_status_label = None
 
 # Band Buttons
 f1 = Frame(root, bd=1)
@@ -7441,22 +7567,24 @@ lblnode.pack(in_=_frn1_row0, side='right')
 lbltimeonband.pack(in_=_frn1_row0, side='right')
 lblnet.pack(in_=_frn1_row0, side='left', fill='x', expand=True)
 # Row 1: Integration status labels packed left
-cw_status_label.pack(in_=_frn1_row1, side='left')
+cw_status_label.pack(in_=_frn1_row1, side='left', fill='x', expand=True)
 if CW_AVAILABLE:
     cw_status_label.config(cursor='hand2')
     cw_status_label.bind('<Button-1>', lambda e: toggle_fkey_bar() if str(cw_status_label.cget('state')) != 'disabled' else None)
-voice_status_label.pack(in_=_frn1_row1, side='left')
+voice_status_label.pack(in_=_frn1_row1, side='left', fill='x', expand=True)
 if VOICE_AVAILABLE:
     voice_status_label.config(cursor='hand2')
     voice_status_label.bind('<Button-1>', lambda e: toggle_fkey_bar() if str(voice_status_label.cget('state')) != 'disabled' else None)
 if WSJTX_AVAILABLE and wsjtx_status_label:
-    wsjtx_status_label.pack(in_=_frn1_row1, side='left')
+    wsjtx_status_label.pack(in_=_frn1_row1, side='left', fill='x', expand=True)
 if JS8CALL_AVAILABLE and js8call_status_label:
-    js8call_status_label.pack(in_=_frn1_row1, side='left')
+    js8call_status_label.pack(in_=_frn1_row1, side='left', fill='x', expand=True)
 if FLDIGI_AVAILABLE and fldigi_status_label:
-    fldigi_status_label.pack(in_=_frn1_row1, side='left')
+    fldigi_status_label.pack(in_=_frn1_row2, side='left', fill='x', expand=True)
 if N3FJP_AVAILABLE and n3fjp_status_label:
-    n3fjp_status_label.pack(in_=_frn1_row1, side='left')
+    n3fjp_status_label.pack(in_=_frn1_row2, side='left', fill='x', expand=True)
+if RIGCTLD_AVAILABLE and rigctld_status_label:
+    rigctld_status_label.pack(in_=_frn1_row2, side='left', fill='x', expand=True)
 # Grid for band buttons
 f1.grid(row=1, column=0, columnspan=2, sticky=NSEW)
 # Grid for Contestant, Logger and Power buttons
@@ -7466,7 +7594,15 @@ opmb.grid(row=0, column=1, sticky=NSEW)
 f1b.grid_columnconfigure(0, weight=1, minsize=150)
 logds.grid(row=0, column=2, sticky=NSEW)
 logmb.grid(row=0, column=3, sticky=NSEW)
+f1b.grid_columnconfigure(1, weight=1)
 f1b.grid_columnconfigure(2, weight=1, minsize=150)
+f1b.grid_columnconfigure(3, weight=1)
+f1b.grid_columnconfigure(4, weight=1)
+f1b.grid_columnconfigure(5, weight=1)
+f1b.grid_columnconfigure(6, weight=1)
+f1b.grid_columnconfigure(7, weight=1)
+f1b.grid_columnconfigure(8, weight=1)
+f1b.grid_columnconfigure(9, weight=1)
 pwrmb.grid(row=0, column=4, sticky=NSEW)
 pwrnt.grid(row=0, column=5, sticky=NSEW)
 powlbl.grid(row=0, column=6, sticky=NSEW)
@@ -7474,11 +7610,11 @@ powcb.grid(row=0, column=7, sticky=NSEW)
 natpwr_countdown.grid(row=0, column=8, sticky=NSEW)
 sound_cb.grid(row=0, column=9, sticky=NSEW)
 # Grid for functionbuttons
-redrawbutton.grid(row=1, column=0, sticky=NSEW)
-opsonlinebutton.grid(row=1, column=1, sticky=NSEW)
-mapbutton.grid(row=1, column=2, sticky=NSEW)
-sectionmapbutton.grid(row=1, column=3, sticky=NSEW)
-phonetic_toggle_btn.grid(row=1, column=4, sticky=NSEW)
+redrawbutton.grid(row=1, column=0, columnspan=2, sticky=NSEW)
+opsonlinebutton.grid(row=1, column=2, columnspan=2, sticky=NSEW)
+mapbutton.grid(row=1, column=4, columnspan=2, sticky=NSEW)
+sectionmapbutton.grid(row=1, column=6, columnspan=2, sticky=NSEW)
+phonetic_toggle_btn.grid(row=1, column=8, columnspan=2, sticky=NSEW)
 # Grid for log window
 root.grid_rowconfigure(2, weight=1)
 logw.grid(row=3, column=0, sticky=NSEW)
@@ -7667,6 +7803,10 @@ if N3FJP_AVAILABLE and n3fjp_client:
 if N3FJP_AVAILABLE and n3fjp_server:
     n3fjp_server.stop()
     print("  N3FJP server stopped")
+# Stop rigctld client
+if RIGCTLD_AVAILABLE and rigctld_client:
+    rigctld_client.stop()
+    print("  rigctld client stopped")
 # the end was updated from 152i
 band = 'off'  # gui down, xmt band off, preparing to quit
 net.bcast_now()  # push band out

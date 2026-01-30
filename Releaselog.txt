@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 119 enhancements to the original FDLog so far.
+We have added 120 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -8,6 +8,25 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 		(none currently)
+
+  v2026_Beta 4.2.2 30Jan2026 Hamlib rigctld Integration
+
+	120 Hamlib rigctld Rig Control Integration
+		- TCP client connects to hamlib's rigctld daemon (default port 4532)
+			to poll rig frequency and mode.
+		- Polls frequency (f) and mode (m) commands on a configurable interval.
+		- Auto-switches FDLog band when rig frequency changes band.
+		- Pushes frequency to rig when FDLog band changes (configurable).
+		- Maps rigctld modes (USB, LSB, CW, RTTY, PKTUSB, etc.) to FDLog
+			mode suffixes (p/c/d).
+		- Auto-reconnect with exponential backoff on disconnect.
+		- Rig menu with Settings dialog, Connect, and Disconnect commands.
+		- Settings dialog with host, port, poll interval, auto-band, and
+			push frequency options, plus connection status display.
+		- Connection status label in info bar (green=connected, gray=off).
+		- Settings persist across sessions via globDb.
+		- Unit tests for protocol parsing, command building, mode mapping,
+			and config defaults (20 tests).
 
   v2026_Beta 4.2.1 30Jan2026 N3FJP API Integration (Client + Server)
 
