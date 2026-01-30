@@ -76,6 +76,16 @@ try:
 except ImportError:
     FLDIGI_AVAILABLE = False
 
+# N3FJP Integration support
+try:
+    from n3fjp_integration import (
+        N3FJPConfig, N3FJPClient, N3FJPServer, N3FJPSettingsDialog,
+        BAND_FREQ_MAP as N3FJP_BAND_FREQ_MAP
+    )
+    N3FJP_AVAILABLE = True
+except ImportError:
+    N3FJP_AVAILABLE = False
+
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
 #  Main program starts about line 5759
@@ -2886,6 +2896,10 @@ def bandset(b):
     if FLDIGI_AVAILABLE and fldigi_poller and fldigi_poller.is_connected():
         if fldigi_poller.config.push_frequency and b != 'off' and b in BAND_FREQ_MAP:
             fldigi_poller.set_frequency(BAND_FREQ_MAP[b])
+    # Push frequency to N3FJP client if connected
+    if N3FJP_AVAILABLE and n3fjp_client and n3fjp_client.is_connected():
+        if b != 'off' and b in N3FJP_BAND_FREQ_MAP:
+            n3fjp_client.set_frequency(N3FJP_BAND_FREQ_MAP[b])
 
 
 def bandoff():
@@ -5952,44 +5966,44 @@ elif node == "":
     print("  (7 characters}")
     k = str.lower(str.strip(sys.stdin.readline())[:8])
     if len(k) == 8:
-            print("That's too many.. (Marc? is that you?)")  # Thanks to Marc Fountain K9MAF for the correction. Mar/23/2017
-            k = k[:7]
-        z = len(k)
-        if k == 'info':
-            print("Starting Information Table display...")
-            node = 'infotable'
-            print()
-        elif k != 'gota':
-            while z != 7:
-                if k == 'gota':
-                    print("please restart the program.")
-                    sys.exit()
-                elif k == 'info':
-                    print("Starting Information Table display...")
-                    node = 'infotable'
-                    break
-                else:
-                    if z < 4:
-                        print("um yeah.. 7 characters....    (restart if your gota or info)")
-                        k = str.lower(str.strip(sys.stdin.readline())[:8])
-                        z = len(k)
-                    else:
-                        for z in range(z, 7):
-                            print("close enough (Ken? is that you?)")
-                            k = k + random.choice('abcdefghijklmnopqrstuvwxyz')
-                            print(k)
-                            # noinspection PyRedeclaration
-                            z = len(k)  # Redeclared 'z' defined above without usage- but needed keeps program from looping
-                            # 1. if there is more than four characters
-                            # 2. add the rest with randoms
+        print("That's too many.. (Marc? is that you?)")  # Thanks to Marc Fountain K9MAF for the correction. Mar/23/2017
+        k = k[:7]
+    z = len(k)
+    if k == 'info':
+        print("Starting Information Table display...")
+        node = 'infotable'
+        print()
+    elif k != 'gota':
+        while z != 7:
+            if k == 'gota':
+                print("please restart the program.")
+                sys.exit()
+            elif k == 'info':
+                print("Starting Information Table display...")
+                node = 'infotable'
+                break
             else:
-                print("Thank You!!")
-                node = k + random.choice('abcdefghijklmnopqrstuvwxyz')
-                print()
+                if z < 4:
+                    print("um yeah.. 7 characters....    (restart if your gota or info)")
+                    k = str.lower(str.strip(sys.stdin.readline())[:8])
+                    z = len(k)
+                else:
+                    for z in range(z, 7):
+                        print("close enough (Ken? is that you?)")
+                        k = k + random.choice('abcdefghijklmnopqrstuvwxyz')
+                        print(k)
+                        # noinspection PyRedeclaration
+                        z = len(k)  # Redeclared 'z' defined above without usage- but needed keeps program from looping
+                        # 1. if there is more than four characters
+                        # 2. add the rest with randoms
         else:
-            print("Thank You for being gota!!")
-            node = 'gotanode'
+            print("Thank You!!")
+            node = k + random.choice('abcdefghijklmnopqrstuvwxyz')
             print()
+    else:
+        print("Thank You for being gota!!")
+        node = 'gotanode'
+        print()
 print("Using Node ID: '%s' " % node)
 print()
 
@@ -6345,6 +6359,11 @@ js8call_status_label = None
 # fldigi Integration initialization
 fldigi_poller = None
 fldigi_status_label = None
+
+# N3FJP Integration initialization
+n3fjp_client = None
+n3fjp_server = None
+n3fjp_status_label = None
 
 if VOICE_AVAILABLE:
     print("Voice Keying support available (pyttsx3 found)")
@@ -6749,6 +6768,148 @@ else:
     def fldigi_disconnect():
         pass
 
+# N3FJP Integration functions
+if N3FJP_AVAILABLE:
+    print("N3FJP Integration support available")
+
+    def n3fjp_load_config():
+        """Load N3FJP configuration from globDb."""
+        config = N3FJPConfig()
+        config.client_enabled = globDb.get('n3fjp_client_enabled', '0') == '1'
+        config.server_enabled = globDb.get('n3fjp_server_enabled', '0') == '1'
+        config.host = globDb.get('n3fjp_host', '127.0.0.1')
+        config.client_port = int(globDb.get('n3fjp_client_port', '1100'))
+        config.server_port = int(globDb.get('n3fjp_server_port', '1100'))
+        config.auto_log = globDb.get('n3fjp_auto_log', '1') == '1'
+        config.auto_band = globDb.get('n3fjp_auto_band', '1') == '1'
+        return config
+
+    def n3fjp_save_config(config):
+        """Save N3FJP configuration to globDb."""
+        globDb.put('n3fjp_client_enabled', '1' if config.client_enabled else '0')
+        globDb.put('n3fjp_server_enabled', '1' if config.server_enabled else '0')
+        globDb.put('n3fjp_host', config.host)
+        globDb.put('n3fjp_client_port', str(config.client_port))
+        globDb.put('n3fjp_server_port', str(config.server_port))
+        globDb.put('n3fjp_auto_log', '1' if config.auto_log else '0')
+        globDb.put('n3fjp_auto_band', '1' if config.auto_band else '0')
+
+    def n3fjp_status_update(status):
+        """Update N3FJP status display."""
+        global n3fjp_status_label
+        if n3fjp_status_label:
+            if status in ("Disconnected", "Off", "Error"):
+                n3fjp_status_label.config(text=f"N3FJP: {status}", foreground='gray')
+            else:
+                n3fjp_status_label.config(text=f"N3FJP: {status}", foreground='green')
+
+    def n3fjp_on_qso_logged(call, band_mode, report, timestamp):
+        """Called when N3FJP logs a QSO. Runs on network thread."""
+        def _do_log():
+            global band
+            if not gd.getv('ession'):
+                print("N3FJP: Cannot log QSO - no operator set")
+                return
+            if qdb.dupck(call, band_mode):
+                print(f"N3FJP: Dupe - {call} on {band_mode}")
+                return
+            if (n3fjp_client and n3fjp_client.config.auto_band) or \
+               (n3fjp_server and n3fjp_server.config.auto_band):
+                if band != band_mode:
+                    bandset(band_mode)
+            qdb.qsl(timestamp, call, band_mode, report)
+            print(f"N3FJP: Logged {call} on {band_mode} - {report}")
+        try:
+            root.after(0, _do_log)
+        except Exception:
+            pass
+
+    def n3fjp_on_band_change(new_band):
+        """Called when N3FJP frequency changes band."""
+        def _do_band():
+            global band
+            if band != new_band:
+                bandset(new_band)
+        try:
+            root.after(0, _do_band)
+        except Exception:
+            pass
+
+    def n3fjp_get_current_info():
+        """Return current band/mode/freq for server responses."""
+        global band
+        freq = N3FJP_BAND_FREQ_MAP.get(band, 0)
+        mode = 'CW' if band.endswith('c') else ('DIG' if band.endswith('d') else 'SSB')
+        b = band[:-1] if band != 'off' else ''
+        return {'band': f"{b}m" if b else '', 'mode': mode, 'freq': str(freq)}
+
+    def n3fjp_get_qso_count():
+        """Return QSO count for server responses."""
+        try:
+            return qdb.qcount()
+        except Exception:
+            return 0
+
+    def n3fjp_check_dupe(call, band_mode):
+        """Dupe check for server responses."""
+        return qdb.dupck(call, band_mode)
+
+    def n3fjp_settings_dialog():
+        """Open N3FJP settings dialog."""
+        global n3fjp_client, n3fjp_server
+        config = n3fjp_client.config if n3fjp_client else (n3fjp_server.config if n3fjp_server else n3fjp_load_config())
+        def on_save(cfg):
+            global n3fjp_client, n3fjp_server
+            n3fjp_save_config(cfg)
+            if n3fjp_client:
+                n3fjp_client.config = cfg
+            if n3fjp_server:
+                n3fjp_server.config = cfg
+            print(f"N3FJP: Settings saved")
+        N3FJPSettingsDialog(root, config, n3fjp_client, n3fjp_server, on_save)
+
+    def n3fjp_connect_client():
+        """Start N3FJP client."""
+        global n3fjp_client
+        if n3fjp_client and not n3fjp_client._running:
+            n3fjp_client.start()
+
+    def n3fjp_disconnect_client():
+        """Stop N3FJP client."""
+        global n3fjp_client
+        if n3fjp_client and n3fjp_client._running:
+            n3fjp_client.stop()
+
+    def n3fjp_start_server():
+        """Start N3FJP server."""
+        global n3fjp_server
+        if n3fjp_server and not n3fjp_server._serving:
+            n3fjp_server.start()
+
+    def n3fjp_stop_server():
+        """Stop N3FJP server."""
+        global n3fjp_server
+        if n3fjp_server and n3fjp_server._serving:
+            n3fjp_server.stop()
+
+else:
+    print("N3FJP Integration support NOT available")
+
+    def n3fjp_settings_dialog():
+        pass
+
+    def n3fjp_connect_client():
+        pass
+
+    def n3fjp_disconnect_client():
+        pass
+
+    def n3fjp_start_server():
+        pass
+
+    def n3fjp_stop_server():
+        pass
+
 print("Starting GUI setup")
 
 #     ****************** GUI START **************************
@@ -6820,6 +6981,20 @@ if FLDIGI_AVAILABLE:
     if fldigi_config.enabled:
         fldigi_poller.start()
     print(f"fldigi: Initialized - Port: {fldigi_config.xmlrpc_port}, Enabled: {fldigi_config.enabled}")
+
+# Initialize N3FJP Integration after root is created
+if N3FJP_AVAILABLE:
+    n3fjp_config = n3fjp_load_config()
+    n3fjp_client = N3FJPClient(n3fjp_config, n3fjp_on_qso_logged, n3fjp_status_update, n3fjp_on_band_change)
+    n3fjp_server = N3FJPServer(n3fjp_config, n3fjp_on_qso_logged, n3fjp_status_update, n3fjp_on_band_change,
+                                get_current_info=n3fjp_get_current_info,
+                                get_qso_count=n3fjp_get_qso_count,
+                                check_dupe=n3fjp_check_dupe)
+    if n3fjp_config.client_enabled:
+        n3fjp_client.start()
+    if n3fjp_config.server_enabled:
+        n3fjp_server.start()
+    print(f"N3FJP: Initialized - Client port: {n3fjp_config.client_port}, Server port: {n3fjp_config.server_port}")
 
 menu = Menu(root)
 root.config(menu=menu)
@@ -6988,6 +7163,18 @@ if FLDIGI_AVAILABLE:
     fldigimenu.add_command(label="Connect", command=fldigi_connect)
     fldigimenu.add_command(label="Disconnect", command=fldigi_disconnect)
 
+# N3FJP Integration menu
+if N3FJP_AVAILABLE:
+    n3fjpmenu = Menu(menu, tearoff=0)
+    menu.add_cascade(label="N3FJP", menu=n3fjpmenu)
+    n3fjpmenu.add_command(label="Settings...", command=n3fjp_settings_dialog)
+    n3fjpmenu.add_separator()
+    n3fjpmenu.add_command(label="Connect Client", command=n3fjp_connect_client)
+    n3fjpmenu.add_command(label="Disconnect Client", command=n3fjp_disconnect_client)
+    n3fjpmenu.add_separator()
+    n3fjpmenu.add_command(label="Start Server", command=n3fjp_start_server)
+    n3fjpmenu.add_command(label="Stop Server", command=n3fjp_stop_server)
+
 # Network bar moved to the top - Scott Hibbs KD4SIR 05Aug2022
 frn1 = Frame(root, bd=1)
 # Row 0 sub-frame: Network, Time on Band, Node
@@ -7037,6 +7224,14 @@ if FLDIGI_AVAILABLE:
                                 width=22, anchor='w')
 else:
     fldigi_status_label = None
+
+# N3FJP Status label
+if N3FJP_AVAILABLE:
+    n3fjp_status_label = Label(_frn1_row1, text="N3FJP: Off", font=fdfont, relief='raised',
+                                foreground='gray', background='light gray',
+                                width=22, anchor='w')
+else:
+    n3fjp_status_label = None
 
 # Band Buttons
 f1 = Frame(root, bd=1)
@@ -7260,6 +7455,8 @@ if JS8CALL_AVAILABLE and js8call_status_label:
     js8call_status_label.pack(in_=_frn1_row1, side='left')
 if FLDIGI_AVAILABLE and fldigi_status_label:
     fldigi_status_label.pack(in_=_frn1_row1, side='left')
+if N3FJP_AVAILABLE and n3fjp_status_label:
+    n3fjp_status_label.pack(in_=_frn1_row1, side='left')
 # Grid for band buttons
 f1.grid(row=1, column=0, columnspan=2, sticky=NSEW)
 # Grid for Contestant, Logger and Power buttons
@@ -7463,6 +7660,13 @@ if JS8CALL_AVAILABLE and js8call_listener:
 if FLDIGI_AVAILABLE and fldigi_poller:
     fldigi_poller.stop()
     print("  fldigi poller stopped")
+# Stop N3FJP client and server
+if N3FJP_AVAILABLE and n3fjp_client:
+    n3fjp_client.stop()
+    print("  N3FJP client stopped")
+if N3FJP_AVAILABLE and n3fjp_server:
+    n3fjp_server.stop()
+    print("  N3FJP server stopped")
 # the end was updated from 152i
 band = 'off'  # gui down, xmt band off, preparing to quit
 net.bcast_now()  # push band out

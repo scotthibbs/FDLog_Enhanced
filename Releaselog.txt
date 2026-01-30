@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 118 enhancements to the original FDLog so far.
+We have added 119 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -8,6 +8,31 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 		(none currently)
+
+  v2026_Beta 4.2.1 30Jan2026 N3FJP API Integration (Client + Server)
+
+	119 N3FJP API Integration (Client + Server)
+		- TCP client connects to an N3FJP-compatible server (default port 1100)
+			to receive QSO notifications and band/frequency changes.
+		- TCP server accepts connections from N3FJP-compatible programs, allowing
+			them to log QSOs, query dupe status, and read band/mode/frequency.
+		- XML-style <CMD>...</CMD> protocol with \r\n terminator — no external
+			dependencies, uses Python's built-in socket and threading modules.
+		- Client features: auto-reconnect with exponential backoff, ENTEREVENT
+			QSO logging, READBMFRESPONSE band tracking, push frequency/callsign.
+		- Server features: multi-client support, handles UPDATE+ENTER sequences,
+			ADDADIFRECORD (ADIF parsing), CONTESTEX, READBMF, QSOCOUNT,
+			DUPECHECK queries.
+		- N3FJP menu with Settings dialog, Connect/Disconnect Client,
+			Start/Stop Server commands.
+		- Settings dialog with separate client and server sections, connection
+			status display for both, auto-log and auto-band options.
+		- Connection status label in info bar (green=active, gray=off).
+		- Settings persist across sessions via globDb (host, ports, enable flags,
+			auto-log, auto-band).
+		- Band change hook pushes frequency to N3FJP client when FDLog band changes.
+		- Unit tests for protocol parsing, command building, ADIF parsing,
+			and mode mapping (15 tests).
 
   v2026_Beta 4.2.0 29Jan2026 fldigi Integration (Two-Way)
 
