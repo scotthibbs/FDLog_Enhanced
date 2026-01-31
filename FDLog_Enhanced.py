@@ -5875,7 +5875,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v2026_Beta 4.2.0"  # Changed 29Jan2026
+version = "v2026_Beta 4.2.3"  # Changed 30Jan2026
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
