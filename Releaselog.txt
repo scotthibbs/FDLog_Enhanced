@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 120 enhancements to the original FDLog so far.
+We have added 121 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -8,6 +8,21 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 		(none currently)
+
+  v2026_Beta 4.2.3 30Jan2026 Enhanced Time Sync with NTP and Auto-Election
+
+	121 Enhanced Time Synchronization
+		- Three-tier time master priority: Designated GPS master > NTP > Auto-election.
+		- Opportunistic NTP sync using raw UDP (no external dependencies).
+		  Queries pool.ntp.org, time.nist.gov, time.google.com every 300 seconds
+		  in a background thread. Nodes with NTP auto-promote to level 0.
+		- Automatic time master election when designated master and NTP are both
+		  unavailable for >90 seconds. Lowest node name among active peers wins.
+		  Deterministic — all nodes agree on the same winner.
+		- Designated GPS master (set during Initialize) always takes priority
+		  and reclaims master role immediately when it returns.
+		- Auto-elected master yields when a designated master or NTP source appears.
+		- Startup message shows time sync priority chain on non-master nodes.
 
   v2026_Beta 4.2.2 30Jan2026 Hamlib rigctld Integration
 
