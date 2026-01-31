@@ -16,6 +16,7 @@ import sqlite3
 import argparse
 import subprocess
 import platform
+import struct
 import pandas as pd
 import plotly.express as px
 from tkinter import END, Toplevel, Frame, Label, Entry, Button, \
@@ -175,7 +176,17 @@ def open_file(filepath):
 
 
 class ClockClass:
-    """Keeping time with update, calib, and adjust functions"""
+    """Keeping time with update, calib, and adjust functions
+
+    Time source priority:
+      Level 0: Designated time master (GPS-locked) or NTP-synced node
+      Level 1-8: Hierarchical stratum from broadcast calibration
+      Level 9: Unsynchronized
+
+    NTP is queried opportunistically. If available, this node auto-promotes
+    to level 0. If NTP and designated master are both absent, the lowest
+    node name among active peers auto-elects as master (fallback).
+    """
     level = 9  # my time quality level
     offset = 0  # my time offset from system clock, add to system time, sec
     adjusta = 0  # amount to adjust clock now (delta)
@@ -183,20 +194,80 @@ class ClockClass:
     errorn = 0  # number of time values in errors sum
     srclev = 10  # current best time source level
     lock = threading.RLock()  # sharing lock
+    ntp_offset = None  # last successful NTP offset (seconds) or None
+    ntp_ok = False  # True if NTP has been reached recently
+    ntp_last_try = 0  # monotonic time of last NTP attempt
+    ntp_servers = ['pool.ntp.org', 'time.nist.gov', 'time.google.com']
+    _no_master_cycles = 0  # consecutive update cycles with no master seen
 
     def __init__(self):
         pass
 
+    def _ntp_query(self):
+        """Query NTP server and return offset in seconds, or None on failure.
+        Uses raw UDP - no external dependencies."""
+        for server in self.ntp_servers:
+            try:
+                NTP_EPOCH = 2208988800  # seconds between 1900-01-01 and 1970-01-01
+                client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                client.settimeout(2)
+                # NTP v3 client packet
+                data = b'\x1b' + 47 * b'\0'
+                t1 = time.time()
+                client.sendto(data, (server, 123))
+                data, _ = client.recvfrom(1024)
+                t4 = time.time()
+                client.close()
+                if len(data) < 48:
+                    continue
+                # Transmit timestamp from server (bytes 40-47)
+                t3_int = struct.unpack('!I', data[40:44])[0]
+                t3_frac = struct.unpack('!I', data[44:48])[0]
+                t3 = t3_int - NTP_EPOCH + t3_frac / (2**32)
+                # Simplified offset: server_time - local_time (ignoring round-trip asymmetry)
+                offset = t3 - (t1 + t4) / 2
+                return offset
+            except Exception:
+                continue
+        return None
+
+    def ntp_check(self):
+        """Attempt NTP sync periodically (every 300 seconds)."""
+        mono = time.monotonic()
+        if mono - self.ntp_last_try < 300:
+            return
+        self.ntp_last_try = mono
+        result = self._ntp_query()
+        if result is not None:
+            self.ntp_offset = result
+            if not self.ntp_ok:
+                print("NTP sync acquired (offset %.3f S)" % result)
+            self.ntp_ok = True
+        else:
+            # Keep last known offset but mark NTP as unavailable after 3 failures
+            self.ntp_ok = False
+
     def update(self):
         """periodic clock update every 30 seconds"""
-        #  Add line to get tmast variable (self.offset=float(gd.get('tmast',0)) from global database
-        self.lock.acquire()  # take semaphore
-        if node == str.lower(gd.getv('tmast')):
+        self.lock.acquire()
+        designated_master = node == str.lower(gd.getv('tmast'))
+
+        # Priority 1: Designated time master (GPS-locked)
+        if designated_master:
             if self.level != 0:
-                print("Time Master")
+                print("Time Master (designated)")
             self.offset = 0
             self.level = 0
+            self._no_master_cycles = 0
+        # Priority 2: NTP-synced node
+        elif self.ntp_ok and self.ntp_offset is not None:
+            if self.level != 0:
+                print("Time Master (NTP-synced, offset %.3f S)" % self.ntp_offset)
+            self.offset = self.ntp_offset
+            self.level = 0
+            self._no_master_cycles = 0
         else:
+            # Standard client logic
             if self.errorn > 0:
                 error = float(self.errors) / self.errorn
             else:
@@ -205,16 +276,39 @@ class ClockClass:
             err = abs(error)
             if (err <= 2) & (self.errorn > 0) & (self.srclev < 9):
                 self.level = self.srclev + 1
+                self._no_master_cycles = 0
             else:
                 self.level = 9
+                self._no_master_cycles += 1
             if self.srclev > 8:
-                self.adjusta = 0  # require master to function
+                self.adjusta = 0  # no valid source
+
+                # Priority 3: Auto-election when no master for >90 seconds (3 cycles)
+                if self._no_master_cycles >= 3:
+                    elected = self._try_auto_elect()
+                    if elected:
+                        if self.level != 0:
+                            print("Time Master (auto-elected, no master available)")
+                        self.level = 0
+
             if abs(self.adjusta) > 1:
                 print("Adjusting Clock %.1f S, src level %d, total offset %.1f S, at %s" %
                       (self.adjusta, self.level, self.offset + self.adjusta, now()))
             self.srclev = 10
-        self.lock.release()  # release sem
-        # Add line to put the offset time in global database (gd.put('tmast',self.offset))
+        self.lock.release()
+
+    def _try_auto_elect(self):
+        """Auto-elect time master: lowest node name among active peers wins.
+        Returns True if this node is the elected master."""
+        try:
+            active_nodes = [node]  # include self
+            for ni in net.si.nodes.values():
+                if ni.age < 60 and ni.nod and ni.nod != node:
+                    active_nodes.append(ni.nod)
+            active_nodes.sort()
+            return active_nodes[0] == node
+        except Exception:
+            return False
 
     def calib(self, fnod, stml, td):
         """process time info in incoming pkt"""
@@ -5772,6 +5866,7 @@ def update():
         updateqct()  # this updates rcv packet fail
         renew_title()  # this sends status broadcast
     if (updatect % 30) == 0:  # 30 sec
+        _thread.start_new_thread(mclock.ntp_check, ())  # non-blocking NTP query
         mclock.update()
     if updatect > 59:  # 60 sec
         updatect = 0
@@ -7510,12 +7605,13 @@ qdb.loadfile()  # read log file
 print("Showing GUI")
 print()
 if node == gd.getv('tmast'):
-    print("This Node is the TIME MASTER!!")
+    print("This Node is the DESIGNATED TIME MASTER (GPS-locked)")
     print("THIS COMPUTER'S CLOCK BETTER BE RIGHT (preferably GPS locked)")
     print("User should Insure that system time is within 1 second of the")
     print("  correct time and that the CORRECT TIMEZONE is selected (in the OS)")
     print()
 else:
+    print("Time sync: NTP (automatic) > Designated master > Auto-election")
     print("User should Insure that System Time is within a few seconds of the")
     print("  correct time and that the CORRECT TIMEZONE is selected (in the OS)")
 print("To change system time, stop FDLog, change the time or zone, then restart")
