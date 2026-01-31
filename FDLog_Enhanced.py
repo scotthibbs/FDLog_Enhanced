@@ -690,12 +690,11 @@ def initialize():
                 print("\nSkipping bonus questions. Use 'set' command later.")
                 print("Available bonus fields: public, infob, safety, sitere,")
                 print("eduact, social, gotaco, youth, svego, svroa, websub\n")
-        # Time Master - oh yeah the big question
+        # Time Master - GPS sync question
         anscount = ""
-        print("\n It is recommended that the first computer")
-        print("set up should also be the time master.")
-        print("\n IS THIS COMPUTER TIME CORRECT??? \n")
-        print("Will this computer be the time master?")
+        print("\n Is this computer GPS time synced?")
+        print("(If yes, this computer will be the designated time master.)")
+        print("(Other computers will sync via NTP or auto-election.)")
         print("Y = yes and N = no")
         while anscount != "1":
             kinp = str.lower(str.strip(sys.stdin.readline())[:1])
@@ -709,7 +708,7 @@ def initialize():
             globDb.put('tmast', node)
             qdb.globalshare('tmast', node)  # global to db
             renew_title()
-            print("Time travels to you!")
+            print("GPS time master set!")
         if kinp == "n":
             pass
         # Admin PIN setup
