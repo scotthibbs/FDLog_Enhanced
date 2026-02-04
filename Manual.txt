@@ -8,6 +8,7 @@ Scott Hibbs KD4SIR
 scotthibbs at gmail.com 
 
 In a Nutshell:
+    A participant is everyone. 
 	The Contestant is the one making contacts.
 	The Logger is the one entering data.
 	One of them needs to have a license.
@@ -49,7 +50,7 @@ COMMAND-LINE OPTIONS:
 
 SHORT HISTORY AND INTRODUCTION: 
 
-	This program is 40 years old!! 
+	This program is 40+ years old!! 
 
 	Alan K Biocca W6AKB (Formerly WB6ZQZ) Wrote this in 1984 using small c 
 	and it was titled "WB6ZQZ's Field Day Logging Program". In 2002, Mr Biocca 
@@ -87,8 +88,6 @@ WHY LOVE FDLOG_ENHANCED?:
 	Because it is Python 3, all you need is a PC - Linux, Mac, any Windoze, RaspberryPi - 
 	we don't care - doesn't matter. 
 	
-	Oh... Did you notice that it is HALF THE SIZE of a one page PDF file? (the ARRL Band Chart)?
-	
 	If I didn't HAVE you when I said, "free", "Zed is dead", and "I really don't care what 
 	kind you have", maybe this program isn't for you. :)
 
@@ -103,45 +102,52 @@ PROGRAM SETUP:
 	Find a router to bring to field day. I set the SSID to "Field Day" and
 	leave it open without a password. This will be what everyone will connect
 	to on field day. Test it to make sure it works. And don't leave it home. 
-	I've had to buy cheap routers the morning of - I got a collection.
+	I've had to buy cheap routers the morning of - I got a collection. 
 	
-	You will need a copy of python 3 from python.org for windows, Mac, & Linux. 
+	INTERNET:
+	Internet is prefered onsite for NTP servers and building the executables. 
+	The program works without the internet available, but the INTERNET IS REQUIRED 
+	TO BUILD THE EXECUTABLES FOR EACH TYPE (PC, MAC AND LINUX). 
+	If you don't have internet at your site, then you need these executables made before
+	going onsite. You will also need a copy of python 3 from python.org for windows, Mac, & Linux. 
 	Python because someone will not have python installed and you may be offline.
 	
 	With a USB flash drive:
-		Find a blank USB Flash Drive. You will need this program folder, and the python
-		3 install files on a on a flash drive. Once the USB flash drive is created, copy 
-		the program folder to your desktop and install python or unzip the program as needed. 
+		You will need the program folder with the pre-built executables, and the python
+		3 install files on a on a flash drive. Move the files to the new machine to install. 
 	Without a USB flash drive:
-		Have a zip and/or tar of the folder in the same folder as miniweb.py along with the
-		python install files. Start miniweb.py after a connection to a network is made. 
-		Navigate all the other computers to this server to download/share the zip 
-		and/or tar to the new computers. 
+		When you start the first machine on field day, the last set up question will ask
+		if you want to distribute the program. Say yes and it creates a zip file and 
+		starts share_fdlog.py (can be ran separately). Check that this zip file has any 
+		needed premade executables if needed. Go to the other machines on the network, 
+		browse to the webpage, download the zip and extract and build/run.  
 
-	We get this base copy ready for all the other computers first to avoid copying the database 
-	files this creates when it is first run. The person setting up 
-	this program on Field Day will want to run this program first and answer the basic questions.
-	Start FDLog_Enhanced.py. It will ask you some questions. Enter your name or the name of your station 
-	(others will see this) and the last two digits of the contest year like 23. 
-	Next it will ask if you need to set up for Field Day. Say yes and answer the questions. 
-	Don't worry if you don't know the class or other things as this can be set later too. 
-	Importantly, it will ask if this computer is the time master. Select yes. Don't add 
-	anything to the log that you don't want in your contest log at this point. This is your 
-	Time Master computer all the others will check against.
+	The setup questions should be answered by one person and answered once, the rest will say no. 
+	So the logging captain will do this. 
+	
+	But when the program starts it will ask everyone what is the name of the node it is running. 
+	I suggest the name of the station or location or antenna - Something everyone will recognize
+	where this node will be. This entry requires 7 digits, so letters will be added or removed 
+	to make this 7 digits. Everyone must use the same "auth" code which should be the last two 
+	digits of the contest year like 27. Next it will ask if you need to set up for Field Day. 
+	If you are not the logging captain, say no.  
+	Before any contacts are made, the logging captain can change the class and section if 
+	needed. 
 	
 	It is a good habit to check the time efore starting the program, because this program 
-	can not change the computer's clock. We start habits now. Check the clock. Now. 
+	can not change the computer's clock. Time is important to this program because the database
+	is shared. 
 
 	At Field Day:
 	
 	Set up the new router because you left yours at home. Also note many
-	public guest router networks will not allow computers to talk to each other. 
-	Start YOUR computer (Time Master) before the others and using an accurate 
-	time source - your cell phone, GPS clock, atomic clock, change the time on the 
-	computer to match this time source to within a second or two. Connect to
-	the router network if wireless (you could also be wired). Start the 
-	program on your time master. If you need to change the class or other information you added
-	earlier, this can be done with the .set commands found in the help menu. 
+	public "guest" router networks will not allow computers to talk to each other. 
+	Although not necessary, it is recommended to start the computer you want to be a 
+	designated Time Master first, set the time, Connect to the router network if wireless 
+	(you could also be wired). Start the program alone on the network. If you want this 
+	computer to be the designated time master use ".tmast me" or go to properties/Time Function
+	and check This node is Time Master. If you need to change the class or other information 
+	you added earlier, this can be done with the .set commands found in the help menu. 
 
 	Next you want a copy of the program on every computer. Using the methods above.
 	Before starting the program, set the time on the computer with your accurate time 
@@ -152,9 +158,7 @@ PROGRAM SETUP:
 	
 	The port that the program uses is listed in the program's heading at the top, this 
 	port number does change from year to year. Make sure to allow the port it uses 
-	through the firewall on each machine. It is recommended to not allow the Internet on
-	the field day network because this makes it easy to temporarily drop the firewall 
-	entirely, and secondly, it is a major distraction from Field Day. 
+	through the firewall on each machine if there is an issue.
 
 	Before field day ends, make sure your computer is the last to be turned off. 
 	This is so you have the most accurate log entries in case someone is editing 
@@ -173,15 +177,15 @@ PROGRAM SETUP:
 
 USING THE PROGRAM:	
 	
-	The Contestant is the person using the radio. The Logger is the one using the
-	program. The Operator field caused my club to debate if the person was 
-	Control Operator. We made a version that required a license for the operator. 
-	The problem then, was that a ham & non-ham pair had no idea who operated the 
-	radio or logged since it could only be entered one way. The ham got credit for 
-	contacts while logging and the non-ham had no idea about the number they 
-	logged or contacted (added together). So the Radio Operator and Control Operator
-	are different and confusing for this program. We changed the Operator name 
-	to Contestant.
+	Participants are everyone at Field Day. The Contestant is the person using 
+	the radio. The Logger is the one using the program. The Operator field caused 
+	my club to debate if the person was Control Operator. We made a version that 
+	required a license for the operator. The problem then, was that a ham & non-ham 
+	pair had no idea who operated the radio or logged since it could only be entered 
+	one way. The ham got credit for contacts while logging and the non-ham had no 
+	idea about the number they logged or contacted (added together). So the Radio 
+	Operator and Control Operator are different and confusing for this program. We 
+	changed the Operator name to Contestant.
 	
 	Non-hams are allowed and encouraged to operate with a Control Operator logging.
 	This program has always tracked the logger. So the Operator field is renamed 
@@ -220,22 +224,21 @@ LOGGING LIKE A PRO:
 	
 	Complete contacts like "kd4sir 1d IN" can be now copy or pasted into the entry window.
 	
+	Unless you see "QSL! May I have another!" it didn't log. 
+	
 
 COMMANDS: 
 
 	Adding Participants:
 	
-	Each participant has to have a unique set of initials. If you enter initials 
-	and a name pops up you will be correcting that participant - in effect erasing
-	them and adding your name. So make sure to enter a set of initials until  
-	a name does not appear. 
+	Each participant has to have a unique set of initials. Once set these initials can
+	not change. The Logging Captain has admin privileges and can edit a name, call, 
+    age, or title but not the initials. A participant can not be deleted if they have
+	calls in the log. 
 	
 	The age and visitor title are used to track official visitors and any youth 
 	participants that may attend. The program doesn't automatically count these yet
-	in it's summary. But one day it will. 
-	
-	Once you have unique initials, a name, call, age or title, simply hit enter
-	to add the participant to the logbook.  
+	in it's summary. But one day it will.
 
 	Editing:
 	
@@ -315,7 +318,78 @@ TROUBLESHOOTING:
 				 indicated, and no data is flowing into the upper display,
 				 the requests for data are not being answered.
 
+	How the program handles the Time:
+	● Time Sync Overview
 
+  Priority Chain (highest to lowest)
+  ┌──────────┬────────────────────┬───────────────────────────────────┬───────────────────────────────────┐
+  │ Priority │       Source       │              How Set              │             Behavior              │
+  ├──────────┼────────────────────┼───────────────────────────────────┼───────────────────────────────────┤
+  │ 1        │ tmast (designated) │ User sets via .tmast me or dialog │ Always wins if online             │
+  ├──────────┼────────────────────┼───────────────────────────────────┼───────────────────────────────────┤
+  │ 2        │ telect (elected)   │ Judge announces after election    │ Acts as master when tmast offline │
+  ├──────────┼────────────────────┼───────────────────────────────────┼───────────────────────────────────┤
+  │ 3        │ Client             │ Automatic                         │ Syncs from level 0 source         │
+  └──────────┴────────────────────┴───────────────────────────────────┴───────────────────────────────────┘
+  Time Levels
+
+  - Level 0 - Time master (designated, elected, or NTP-synced)
+  - Level 1-8 - Synced from a level N-1 source
+  - Level 9 - Unsynchronized
+
+  Election System
+
+  Judge: Lowest named active node
+
+  Election Triggers:
+  - tmast set but offline, no valid telect
+  - telect set but offline (and tmast still offline)
+  - No tmast, no telect, no time source for 90+ seconds
+
+  Election Process:
+  1. Judge sets telect = "election" (broadcast)
+  2. 10 second collection period
+  3. Judge evaluates: GPS > NTP > lowest node name
+  4. Judge sets telect = <winner> (broadcast)
+
+  Winner Priority: GPS-locked → NTP-synced → Lowest node name
+
+  Broadcast & Sync
+
+  - Nodes broadcast status every 10 seconds (includes time level)
+  - Clock update runs every 30 seconds
+  - Nodes receive time via calib() and adjust via _do_client_sync()
+  - Active node timeout: 60 seconds (considered offline after)
+
+  State Transitions
+
+  [No Master] --90s--> [Judge starts election] --10s--> [telect winner]
+                                                              |
+  [tmast returns] <------------ [telect defers] <-------------+
+        |
+        v
+  [tmast leaves] --> [telect resumes automatically]
+        |
+  [telect also leaves] --> [New election by remaining judge]
+
+  Key Commands
+  ┌───────────────┬────────────────────────────────────┐
+  │    Command    │               Action               │
+  ├───────────────┼────────────────────────────────────┤
+  │ .tmast        │ Show full status                   │
+  ├───────────────┼────────────────────────────────────┤
+  │ .tmast me     │ Set this node as designated master │
+  ├───────────────┼────────────────────────────────────┤
+  │ .tmast <node> │ Set specific node as designated    │
+  ├───────────────┼────────────────────────────────────┤
+  │ .tmast clear  │ Clear tmast and telect             │
+  ├───────────────┼────────────────────────────────────┤
+  │ .tmast elect  │ Force new election                 │
+  └───────────────┴────────────────────────────────────┘
+  Persistence
+
+  - tmast - Persists in log, survives restarts, never auto-cleared
+  - telect - Persists in log, cleared only by new election or .tmast clear
  
 	
 If you have any questions or suggestions for the program please email me. 

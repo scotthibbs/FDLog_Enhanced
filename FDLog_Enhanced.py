@@ -193,12 +193,17 @@ class ClockClass:
     errors = 0  # current error sum wrt best source, in total seconds
     errorn = 0  # number of time values in errors sum
     srclev = 10  # current best time source level
+    src_node = ''  # node we're syncing time from
     lock = threading.RLock()  # sharing lock
     ntp_offset = None  # last successful NTP offset (seconds) or None
     ntp_ok = False  # True if NTP has been reached recently
     ntp_last_try = 0  # monotonic time of last NTP attempt
     ntp_servers = ['pool.ntp.org', 'time.nist.gov', 'time.google.com']
     _no_master_cycles = 0  # consecutive update cycles with no master seen
+    _source_type = 'none'  # 'designated', 'ntp', 'elected', 'synced', 'none'
+    _election_pending = False  # True while election is in progress
+    _election_start_time = 0  # When election started (monotonic)
+    gps_locked = False  # True if local GPS hardware provides time
 
     def __init__(self):
         pass
@@ -247,68 +252,195 @@ class ClockClass:
             # Keep last known offset but mark NTP as unavailable after 3 failures
             self.ntp_ok = False
 
+    def _get_active_nodes(self):
+        """Return list of active node names including self."""
+        active = [node]
+        for ni in net.si.nodes.values():
+            if ni.age < 60 and ni.nod and ni.nod != node:
+                active.append(ni.nod)
+        return active
+
+    def _is_online(self, nname):
+        """Check if a node is active on the network."""
+        if not nname:
+            return False
+        nname_lower = str.lower(nname)
+        if nname_lower == str.lower(node):
+            return True
+        for ni in net.si.nodes.values():
+            if ni.age < 60 and ni.nod and str.lower(ni.nod) == nname_lower:
+                return True
+        return False
+
+    def _am_i_judge(self):
+        """Return True if this node is the election judge (lowest named active node)."""
+        active = self._get_active_nodes()
+        active_lower = [n.lower() for n in active]
+        active_lower.sort()
+        return active_lower[0] == node.lower()
+
+    def _run_election(self):
+        """Run election and return winner node name.
+        Priority: GPS-locked > NTP-synced > lowest node name."""
+        active = self._get_active_nodes()
+        # Build candidate list: (priority, name) where lower priority wins
+        # Priority: 0=GPS, 1=NTP, 2=none
+        candidates = []
+        for n in active:
+            if n.lower() == node.lower():
+                # This node - we know our own status
+                if self.gps_locked:
+                    candidates.append((0, n))
+                elif self.ntp_ok:
+                    candidates.append((1, n))
+                else:
+                    candidates.append((2, n))
+            else:
+                # Other nodes - assume no GPS/NTP unless we track it
+                # For now, treat all other nodes as priority 2
+                candidates.append((2, n))
+        # Sort by priority, then by name (lowercase)
+        candidates.sort(key=lambda x: (x[0], x[1].lower()))
+        return candidates[0][1] if candidates else node
+
     def update(self):
         """periodic clock update every 30 seconds"""
-        self.lock.acquire()
-        designated_master = node == str.lower(gd.getv('tmast'))
+        broadcast_action = None  # Collect broadcast to do after releasing lock
 
-        # Priority 1: Designated time master (GPS-locked)
-        if designated_master:
-            if self.level != 0:
-                print("Time Master (designated)")
-            self.offset = 0
-            self.level = 0
-            self._no_master_cycles = 0
-        # Priority 2: NTP-synced node
-        elif self.ntp_ok and self.ntp_offset is not None:
-            if self.level != 0:
-                print("Time Master (NTP-synced, offset %.3f S)" % self.ntp_offset)
-            self.offset = self.ntp_offset
-            self.level = 0
-            self._no_master_cycles = 0
-        else:
-            # Standard client logic
-            if self.errorn > 0:
-                error = float(self.errors) / self.errorn
-            else:
-                error = 0
-            self.adjusta = error
-            err = abs(error)
-            if (err <= 2) & (self.errorn > 0) & (self.srclev < 9):
-                self.level = self.srclev + 1
+        self.lock.acquire()
+        try:
+            # Get current master settings
+            tmast_val = gd.getv('tmast')
+            if isinstance(tmast_val, str) and tmast_val.startswith('get error'):
+                tmast_val = ''
+            telect_val = gd.getv('telect')
+            if isinstance(telect_val, str) and telect_val.startswith('get error'):
+                telect_val = ''
+
+            # Am I the designated master?
+            i_am_designated = node.lower() == tmast_val.lower() if tmast_val else False
+            # Is designated master online?
+            tmast_online = self._is_online(tmast_val) if tmast_val else False
+            # Is elected master online? (telect can be "election" during election)
+            telect_is_node = telect_val and telect_val.lower() != "election"
+            telect_online = self._is_online(telect_val) if telect_is_node else False
+            i_am_elected = telect_is_node and node.lower() == telect_val.lower()
+            election_in_progress = telect_val.lower() == "election" if telect_val else False
+
+            # === PRIORITY 1: Designated time master (tmast) ===
+            if i_am_designated:
+                if self._source_type != 'designated':
+                    print("Time Master (designated)")
+                self.offset = 0 if not self.ntp_offset else self.ntp_offset
+                self.level = 0
                 self._no_master_cycles = 0
+                self._source_type = 'designated'
+                self._election_pending = False  # Clear any pending election
+
+            # === PRIORITY 2: Elected time master (telect) when tmast offline ===
+            elif i_am_elected and not tmast_online:
+                if self._source_type != 'elected':
+                    print("Time Master (elected)")
+                self.offset = self.ntp_offset if self.ntp_ok else 0
+                self.level = 0
+                self._no_master_cycles = 0
+                self._source_type = 'elected'
+
+            # === Was elected but tmast came back - step down ===
+            elif i_am_elected and tmast_online:
+                if self._source_type == 'elected':
+                    print("Stepping down: designated master '%s' is back online" % tmast_val)
+                self._source_type = 'synced'
+                self._election_pending = False
+                self.level = 9  # Will sync to tmast
+                self._do_client_sync()
+
+            # === ELECTION JUDGE DUTIES ===
+            elif self._am_i_judge():
+                need_election = False
+                # tmast set but offline, no valid telect
+                if tmast_val and not tmast_online and not telect_online and not election_in_progress:
+                    need_election = True
+                    print("Judge: tmast '%s' is offline, starting election" % tmast_val)
+                # telect set but offline (and tmast still offline or not set)
+                elif telect_is_node and not telect_online and not tmast_online:
+                    need_election = True
+                    print("Judge: telect '%s' is offline, starting new election" % telect_val)
+                # No tmast, no telect, no time source for too long
+                elif not tmast_val and not telect_val and self._no_master_cycles >= 3:
+                    need_election = True
+                    print("Judge: no time master, starting election")
+
+                if need_election and not self._election_pending:
+                    # Start election
+                    self._election_pending = True
+                    self._election_start_time = time.monotonic()
+                    broadcast_action = "election"
+                    print("Judge: election announced, collecting status...")
+
+                # If election in progress and we're judge, wait then decide
+                if self._election_pending:
+                    elapsed = time.monotonic() - self._election_start_time
+                    if elapsed >= 10:  # 10 second collection period
+                        winner = self._run_election()
+                        print("Judge: election complete, winner is '%s'" % winner)
+                        broadcast_action = winner
+                        self._election_pending = False
+
+                # Judge also syncs time normally
+                self._do_client_sync()
+
+            # === NORMAL CLIENT: sync to available master ===
             else:
-                self.level = 9
-                self._no_master_cycles += 1
+                # Clear election state if we're no longer judge
+                self._election_pending = False
+                self._do_client_sync()
+
+        finally:
+            self.lock.release()
+
+        # Do broadcast after releasing lock to avoid deadlock
+        if broadcast_action:
+            self._broadcast_telect(broadcast_action)
+
+    def _do_client_sync(self):
+        """Standard client time synchronization logic."""
+        if self.errorn > 0:
+            error = float(self.errors) / self.errorn
+        else:
+            error = 0
+        self.adjusta = error
+        err = abs(error)
+        if (err <= 2) & (self.errorn > 0) & (self.srclev < 9):
+            self.level = self.srclev + 1
+            self._no_master_cycles = 0
+            self._source_type = 'synced'
+        else:
+            self.level = 9
+            self._no_master_cycles += 1
             if self.srclev > 8:
                 self.adjusta = 0  # no valid source
 
-                # Priority 3: Auto-election when no master for >90 seconds (3 cycles)
-                if self._no_master_cycles >= 3:
-                    elected = self._try_auto_elect()
-                    if elected:
-                        if self.level != 0:
-                            print("Time Master (auto-elected, no master available)")
-                        self.level = 0
+        if abs(self.adjusta) > 1:
+            print("Adjusting Clock %.1f S, src level %d, total offset %.1f S, at %s" %
+                  (self.adjusta, self.level, self.offset + self.adjusta, now()))
+        self.srclev = 10
+        self.src_node = ''  # Reset for next cycle
 
-            if abs(self.adjusta) > 1:
-                print("Adjusting Clock %.1f S, src level %d, total offset %.1f S, at %s" %
-                      (self.adjusta, self.level, self.offset + self.adjusta, now()))
-            self.srclev = 10
-        self.lock.release()
-
-    def _try_auto_elect(self):
-        """Auto-elect time master: lowest node name among active peers wins.
-        Returns True if this node is the elected master."""
+    def _broadcast_telect(self, value):
+        """Broadcast election status to the network.
+        value can be: 'election' (in progress), node name (winner), or '' (cleared)"""
         try:
-            active_nodes = [node]  # include self
-            for ni in net.si.nodes.values():
-                if ni.age < 60 and ni.nod and ni.nod != node:
-                    active_nodes.append(ni.nod)
-            active_nodes.sort()
-            return active_nodes[0] == node
-        except Exception:
-            return False
+            globDb.put('telect', value)
+            qdb.globalshare('telect', value)
+            if value == "election":
+                print("Broadcast: telect = 'election' (election in progress)")
+            elif value:
+                print("Broadcast: telect = '%s' (election winner)" % value)
+            else:
+                print("Broadcast: telect cleared")
+        except Exception as e:
+            print("Error broadcasting telect: %s" % e)
 
     def calib(self, fnod, stml, td):
         """process time info in incoming pkt"""
@@ -320,9 +452,12 @@ class ClockClass:
         if stml < self.srclev:
             self.errors, self.errorn = 0, 0
             self.srclev = stml
+            self.src_node = fnod  # track who we're syncing from
         if stml == self.srclev:
             self.errorn += 1
             self.errors += td
+            if not self.src_node:
+                self.src_node = fnod
         self.lock.release()  # release sem
 
     def adjust(self):
@@ -690,27 +825,6 @@ def initialize():
                 print("\nSkipping bonus questions. Use 'set' command later.")
                 print("Available bonus fields: public, infob, safety, sitere,")
                 print("eduact, social, gotaco, youth, svego, svroa, websub\n")
-        # Time Master - GPS sync question
-        anscount = ""
-        print("\n Is this computer GPS time synced?")
-        print("(If yes, this computer will be the designated time master.)")
-        print("(Other computers will sync via NTP or auto-election.)")
-        print("Y = yes and N = no")
-        while anscount != "1":
-            kinp = str.lower(str.strip(sys.stdin.readline())[:1])
-            if kinp == "y":
-                anscount = "1"
-            if kinp == "n":
-                anscount = '1'
-            if anscount == "":
-                print("Press Y or N please")
-        if kinp == "y":
-            globDb.put('tmast', node)
-            qdb.globalshare('tmast', node)  # global to db
-            renew_title()
-            print("GPS time master set!")
-        if kinp == "n":
-            pass
         # Admin PIN setup
         print("\n--- ADMIN PIN SETUP ---")
         print("Enter a 4-digit admin PIN for editing participants.")
@@ -3498,6 +3612,172 @@ def noddiag():
     #    pdiag('AuthKey',authk,r'.{3,12}$',12)
 
 
+class GPSSyncDialog:
+    """GPS Sync configuration dialog"""
+
+    _default_ntp_servers = ['pool.ntp.org', 'time.nist.gov', 'time.google.com']
+
+    def __init__(self):
+        pass
+
+    def dialog(self):
+        t = Toplevel(root)
+        t.transient(root)
+        t.title('Time Function Settings')
+        t.bind('<Escape>', lambda e: t.destroy())
+
+        # Read current state
+        current_tmast = globDb.get('tmast', '')
+        # Also check network-synced value
+        network_check = gd.getv('tmast')
+        if isinstance(network_check, str) and network_check.startswith('get error'):
+            network_check = ''
+        is_tmast = ((current_tmast == node or network_check == node) and node != '')
+        # Check if a custom NTP server is present (not in defaults)
+        custom_ntp = ''
+        if mclock.ntp_servers and mclock.ntp_servers[0] not in self._default_ntp_servers:
+            custom_ntp = mclock.ntp_servers[0]
+
+        # Determine current time master status
+        # Check network-synced global (gd) for designated master, not just local storage
+        network_tmast = gd.getv('tmast')
+        if isinstance(network_tmast, str) and network_tmast.startswith('get error'):
+            network_tmast = ''
+        # Check for auto-elected master
+        network_telect = gd.getv('telect')
+        if isinstance(network_telect, str) and network_telect.startswith('get error'):
+            network_telect = ''
+
+        def is_node_online(node_name):
+            """Check if a node is active on the network."""
+            if not node_name:
+                return False
+            node_lower = str.lower(node_name)
+            if node_lower == str.lower(node):
+                return True  # We are that node
+            for ni in net.si.nodes.values():
+                if ni.age < 60 and ni.nod and str.lower(ni.nod) == node_lower:
+                    return True
+            return False
+
+        effective_tmast = current_tmast or network_tmast
+        if effective_tmast:
+            online_status = "online" if is_node_online(effective_tmast) else "OFFLINE"
+            tmast_status = "Time Master: %s (designated, %s)" % (effective_tmast, online_status)
+        elif network_telect:
+            online_status = "online" if is_node_online(network_telect) else "OFFLINE"
+            tmast_status = "Time Master: %s (elected, %s)" % (network_telect, online_status)
+        elif mclock.level == 0:
+            tmast_status = "Time Master: %s (this node)" % node
+        else:
+            tmast_status = "Time Master: awaiting election"
+
+        tmast_var = IntVar(value=1 if is_tmast else 0)
+        gpsusb_var = IntVar(value=1 if mclock.gps_locked else 0)
+        ntp_var = StringVar(value=custom_ntp)
+
+        fr = Frame(t, padx=10, pady=10)
+        fr.grid(row=0, column=0, sticky=NSEW)
+
+        status_label = Label(fr, text=tmast_status, font=fdfont)
+        status_label.grid(row=0, column=0, sticky=W, pady=(0, 8))
+
+        if custom_ntp:
+            Label(fr, text="Current NTP Server: %s" % custom_ntp, font=fdfont) \
+                .grid(row=1, column=0, sticky=W, pady=2)
+
+        Label(fr, text="GPS NTP Address:", font=fdfont) \
+            .grid(row=2, column=0, sticky=W, pady=(8, 0))
+        ntp_entry = Entry(fr, textvariable=ntp_var, width=30, font=fdfont)
+        ntp_entry.grid(row=3, column=0, sticky=W, padx=10, pady=2)
+
+        effective_tmast_init = current_tmast or network_tmast
+        other_is_tmast = (effective_tmast_init != '' and effective_tmast_init != node)
+        cb_tmast = Checkbutton(fr, text="Make this node Time Master",
+                               variable=tmast_var, font=fdfont,
+                               state='disabled' if other_is_tmast else 'normal')
+        cb_tmast.grid(row=4, column=0, sticky=W, pady=2)
+
+        def update_status():
+            """Refresh time master status periodically."""
+            try:
+                cur_tmast = globDb.get('tmast', '')
+                # Also check network-synced global for designated master
+                net_tmast = gd.getv('tmast')
+                if isinstance(net_tmast, str) and net_tmast.startswith('get error'):
+                    net_tmast = ''
+                # Check for auto-elected master
+                net_telect = gd.getv('telect')
+                if isinstance(net_telect, str) and net_telect.startswith('get error'):
+                    net_telect = ''
+                effective_tmast = cur_tmast or net_tmast
+                if effective_tmast:
+                    online_status = "online" if is_node_online(effective_tmast) else "OFFLINE"
+                    new_status = "Time Master: %s (designated, %s)" % (effective_tmast, online_status)
+                elif net_telect:
+                    online_status = "online" if is_node_online(net_telect) else "OFFLINE"
+                    new_status = "Time Master: %s (elected, %s)" % (net_telect, online_status)
+                elif mclock.level == 0:
+                    new_status = "Time Master: %s (this node)" % node
+                else:
+                    new_status = "Time Master: awaiting election"
+                status_label.config(text=new_status)
+                # Update checkbox state - disable if another node is the designated master
+                other_master = (effective_tmast != '' and effective_tmast != node)
+                cb_tmast.config(state='disabled' if other_master else 'normal')
+                t.after(2000, update_status)
+            except Exception:
+                pass  # Dialog was closed
+
+        t.after(2000, update_status)
+        cb_gpsusb = Checkbutton(fr, text="GPS USB / GPS Locked Time",
+                                variable=gpsusb_var, font=fdfont)
+        cb_gpsusb.grid(row=5, column=0, sticky=W, pady=2)
+
+        ntp_error = Label(fr, text="", fg="red", font=fdfont)
+        ntp_error.grid(row=6, column=0, sticky=W)
+
+        def test_ntp(addr):
+            """Try an actual NTP query to the address. Returns True if it responds."""
+            try:
+                NTP_EPOCH = 2208988800
+                client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                client.settimeout(3)
+                data = b'\x1b' + 47 * b'\0'
+                client.sendto(data, (addr, 123))
+                data, _ = client.recvfrom(1024)
+                client.close()
+                return len(data) >= 48
+            except Exception:
+                return False
+
+        def apply_settings():
+            ntp_addr = ntp_var.get().strip()
+            if ntp_addr and not test_ntp(ntp_addr):
+                ntp_error.config(text="NTP server not responding")
+                return
+            if ntp_addr:
+                mclock.ntp_servers = [ntp_addr] + self._default_ntp_servers
+            else:
+                mclock.ntp_servers = list(self._default_ntp_servers)
+            mclock.gps_locked = bool(gpsusb_var.get())
+            if tmast_var.get():
+                globDb.put('tmast', node)
+                qdb.globalshare('tmast', node)
+            else:
+                globDb.put('tmast', '')
+                qdb.globalshare('tmast', '')
+            renew_title()
+            t.destroy()
+
+        btn_frame = Frame(fr)
+        btn_frame.grid(row=7, column=0, pady=10)
+        Button(btn_frame, text="Apply", command=apply_settings, font=fdfont) \
+            .grid(row=0, column=0, padx=10)
+        Button(btn_frame, text="Cancel", command=t.destroy, font=fdfont) \
+            .grid(row=0, column=1, padx=10)
+
+
 def viewprep(ttl=''):
     """view preparation core code"""
     w = Toplevel(root)
@@ -4409,6 +4689,102 @@ def proc_key(ch):
             print(maxp, "watts maximum power")
             kbuf = ""
             txtbillb.insert(END, "\n")
+            topper()
+            return
+        # Time Master command - .tmast [status|clear|elect|<nodename>]
+        if re.match(r'[.]tmast', kbuf):
+            parts = kbuf.strip().split()
+            tmast_val = gd.getv('tmast')
+            if isinstance(tmast_val, str) and tmast_val.startswith('get error'):
+                tmast_val = ''
+            telect_val = gd.getv('telect')
+            if isinstance(telect_val, str) and telect_val.startswith('get error'):
+                telect_val = ''
+
+            def check_node_online(nname):
+                if not nname:
+                    return False
+                nname_lower = str.lower(nname)
+                if nname_lower == str.lower(node):
+                    return True
+                for ni in net.si.nodes.values():
+                    if ni.age < 60 and ni.nod and str.lower(ni.nod) == nname_lower:
+                        return True
+                return False
+
+            if len(parts) == 1:  # .tmast - show status
+                txtbillb.insert(END, "\n--- Time Master Status ---\n")
+                # Show designated master
+                if tmast_val:
+                    online = "online" if check_node_online(tmast_val) else "OFFLINE"
+                    txtbillb.insert(END, "  tmast (designated): %s (%s)\n" % (tmast_val, online))
+                else:
+                    txtbillb.insert(END, "  tmast (designated): (none)\n")
+                # Show elected master
+                if telect_val == "election":
+                    txtbillb.insert(END, "  telect (elected):   ELECTION IN PROGRESS\n")
+                elif telect_val:
+                    online = "online" if check_node_online(telect_val) else "OFFLINE"
+                    txtbillb.insert(END, "  telect (elected):   %s (%s)\n" % (telect_val, online))
+                else:
+                    txtbillb.insert(END, "  telect (elected):   (none)\n")
+                # Show this node's status
+                txtbillb.insert(END, "  This node: %s, level %d\n" % (node, mclock.level))
+                # Show role
+                role_map = {
+                    'designated': 'DESIGNATED TIME MASTER',
+                    'ntp': 'NTP-synced',
+                    'elected': 'ELECTED TIME MASTER',
+                    'synced': 'Time client',
+                    'none': 'Unsynchronized'
+                }
+                role = role_map.get(mclock._source_type, 'Unknown')
+                txtbillb.insert(END, "  Role: %s\n" % role)
+                # Show judge status
+                is_judge = mclock._am_i_judge()
+                txtbillb.insert(END, "  Election judge: %s\n" % ("YES (this node)" if is_judge else "No"))
+                # Show time source info
+                if mclock.gps_locked:
+                    txtbillb.insert(END, "  GPS: locked\n")
+                if mclock.ntp_ok:
+                    txtbillb.insert(END, "  NTP: synced (offset %.3fs)\n" % (mclock.ntp_offset or 0))
+                if mclock._source_type == 'synced' and mclock.src_node:
+                    txtbillb.insert(END, "  Syncing from: %s (level %d)\n" % (mclock.src_node, mclock.srclev))
+                txtbillb.insert(END, "  No-master cycles: %d (election at 3)\n" % mclock._no_master_cycles)
+                # Show active nodes
+                active = [node]
+                for ni in net.si.nodes.values():
+                    if ni.age < 60 and ni.nod and ni.nod != node:
+                        active.append(ni.nod)
+                txtbillb.insert(END, "  Active nodes: %s\n" % ', '.join(active))
+            elif parts[1] == 'clear':  # .tmast clear - remove designation
+                globDb.put('tmast', '')
+                qdb.globalshare('tmast', '')
+                globDb.put('telect', '')
+                qdb.globalshare('telect', '')
+                mclock._election_pending = False
+                txtbillb.insert(END, "\nTime master designation cleared.\n")
+                txtbillb.insert(END, "Election will occur when judge detects no master.\n")
+            elif parts[1] == 'elect':  # .tmast elect - force election
+                globDb.put('telect', 'election')
+                qdb.globalshare('telect', 'election')
+                mclock._election_pending = True
+                mclock._election_start_time = time.monotonic()
+                txtbillb.insert(END, "\nElection triggered. Judge will announce winner.\n")
+            elif parts[1] == 'me':  # .tmast me - set this node
+                globDb.put('tmast', node)
+                qdb.globalshare('tmast', node)
+                txtbillb.insert(END, "\nThis node (%s) set as time master.\n" % node)
+            else:  # .tmast <nodename> - set specific node
+                new_tmast = parts[1]
+                if check_node_online(new_tmast):
+                    globDb.put('tmast', new_tmast)
+                    qdb.globalshare('tmast', new_tmast)
+                    txtbillb.insert(END, "\nTime master set to: %s\n" % new_tmast)
+                else:
+                    txtbillb.insert(END, "\nWarning: Node '%s' not found on network.\n" % new_tmast)
+                    txtbillb.insert(END, "Set anyway? Use: .set tmast %s\n" % new_tmast)
+            kbuf = ""
             topper()
             return
         if kbuf and kbuf[0] == '.':  # detect invalid command
@@ -5874,7 +6250,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v2026_Beta 4.2.3"  # Changed 30Jan2026
+version = "v2026_Beta 4.2.4"  # Changed 03Feb2026
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
@@ -5889,6 +6265,7 @@ modes = ('c', 'd', 'p')
 bandb = {}  # band button names
 newpart = NewParticipantDialog()
 editpart = EditParticipantDialog()
+gpssync = GPSSyncDialog()
 cf = {}
 participants = {}
 operatorsonline = {}
@@ -5929,6 +6306,7 @@ for name, desc, default, okre, maxlen in (
         ('fdstrt', 'yymmdd.hhmm   FD start time (UTC)', '020108.1800', r'[\d.]{11}$', 11),
         ('fdend', 'yymmdd.hhmm    FD end time (UTC)', '990629.2100', r'[\d.]{11}$', 11),
         ('tmast', '<text>         Time Master Node', '', r'[A-Za-z\d-]{0,8}$', 8),
+        ('telect', '<text>        Auto-elected Time Master', '', r'[A-Za-z\d-]{0,8}$', 8),
         ('kick', '<n>            Time to kick inactivity', '0', r'\d{1,2}$', 2)):
     gd.new(name, desc, default, okre, maxlen)
 
@@ -7211,6 +7589,7 @@ menu.add_cascade(label="Properties", menu=propmenu)
 propmenu.add_command(label="Set Node ID", command=noddiag)
 propmenu.add_command(label="Add Participants", command=newpart.dialog)
 propmenu.add_command(label="Edit Participant", command=editpart.dialog)
+propmenu.add_command(label="Time Functions", command=gpssync.dialog)
 logmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Logs", menu=logmenu)
 logmenu.add_command(label='Full Log', command=lambda: viewlogf(""))
