@@ -8,6 +8,20 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 To Do and Ideas:
 
 		(none currently)
+		
+  v2026_Beta 4.2.4 - Time Master Election Protocol
+	- Add election judge system (lowest named active node)
+		- Add telect global for elected time master tracking
+		- Judge announces election via telect="election", then winner
+		- Priority chain: tmast (designated) > telect (elected) > client
+		- Election triggers when tmast/telect offline or no master for 90s
+		- Winner selection: GPS-locked > NTP-synced > lowest node name
+		- Add .tmast command for status, clear, elect, and setting master
+		- Dialog shows online/offline status for time masters
+		- Fix lock safety with try/finally in update()
+		- Move broadcast outside lock to prevent deadlock
+		- Proper state transitions when tmast returns/leaves
+		- Update Manual.txt with time sync documentation
 
   v2026_Beta 4.2.3 30Jan2026 Enhanced Time Sync with NTP and Auto-Election
 
