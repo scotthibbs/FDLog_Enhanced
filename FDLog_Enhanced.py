@@ -238,8 +238,20 @@ class ClockClass:
 
     def ntp_check(self):
         """Attempt NTP sync periodically (every 300 seconds)."""
+        # Check for shared NTP server from network (every call, not just at sync time)
+        force_sync = False
+        try:
+            shared_ntp = gd.getv('tntp')
+            if isinstance(shared_ntp, str) and shared_ntp and not shared_ntp.startswith('get error'):
+                # Prepend shared server if not already first
+                if not self.ntp_servers or self.ntp_servers[0] != shared_ntp:
+                    print("Using shared NTP server: %s" % shared_ntp)
+                    self.ntp_servers = [shared_ntp] + [s for s in self.ntp_servers if s != shared_ntp]
+                    force_sync = True  # New server, query immediately
+        except Exception:
+            pass  # Ignore errors reading shared NTP
         mono = time.monotonic()
-        if mono - self.ntp_last_try < 300:
+        if not force_sync and mono - self.ntp_last_try < 300:
             return
         self.ntp_last_try = mono
         result = self._ntp_query()
@@ -255,7 +267,8 @@ class ClockClass:
     def _get_active_nodes(self):
         """Return list of active node names including self."""
         active = [node]
-        for ni in net.si.nodes.values():
+        # Copy values to avoid RuntimeError if dict changes during iteration
+        for ni in list(net.si.nodes.values()):
             if ni.age < 60 and ni.nod and ni.nod != node:
                 active.append(ni.nod)
         return active
@@ -267,7 +280,8 @@ class ClockClass:
         nname_lower = str.lower(nname)
         if nname_lower == str.lower(node):
             return True
-        for ni in net.si.nodes.values():
+        # Copy values to avoid RuntimeError if dict changes during iteration
+        for ni in list(net.si.nodes.values()):
             if ni.age < 60 and ni.nod and str.lower(ni.nod) == nname_lower:
                 return True
         return False
@@ -279,10 +293,30 @@ class ClockClass:
         active_lower.sort()
         return active_lower[0] == node.lower()
 
+    def _get_node_priority(self, n):
+        """Get priority for a node. 0=GPS, 1=NTP, 2=none. Lower is better."""
+        if n.lower() == node.lower():
+            if self.gps_locked:
+                return 0
+            elif self.ntp_ok:
+                return 1
+            return 2
+        ni = net.si.nodes.get(n)
+        if ni and ni.gps_locked:
+            return 0
+        elif ni and ni.ntp_ok:
+            return 1
+        return 2
+
     def _run_election(self):
         """Run election and return winner node name.
-        Priority: GPS-locked > NTP-synced > lowest node name."""
+        Priority: GPS-locked > NTP-synced > lowest node name.
+        Designated time master (tmast) is excluded from election."""
         active = self._get_active_nodes()
+        # Exclude designated time master from election
+        tmast_val = gd.getv('tmast')
+        if isinstance(tmast_val, str) and tmast_val and not tmast_val.startswith('get error'):
+            active = [n for n in active if n.lower() != tmast_val.lower()]
         # Build candidate list: (priority, name) where lower priority wins
         # Priority: 0=GPS, 1=NTP, 2=none
         candidates = []
@@ -296,9 +330,14 @@ class ClockClass:
                 else:
                     candidates.append((2, n))
             else:
-                # Other nodes - assume no GPS/NTP unless we track it
-                # For now, treat all other nodes as priority 2
-                candidates.append((2, n))
+                # Other nodes - look up their GPS/NTP status from broadcasts
+                ni = net.si.nodes.get(n)
+                if ni and ni.gps_locked:
+                    candidates.append((0, n))
+                elif ni and ni.ntp_ok:
+                    candidates.append((1, n))
+                else:
+                    candidates.append((2, n))
         # Sort by priority, then by name (lowercase)
         candidates.sort(key=lambda x: (x[0], x[1].lower()))
         return candidates[0][1] if candidates else node
@@ -370,6 +409,23 @@ class ClockClass:
                 elif not tmast_val and not telect_val and self._no_master_cycles >= 3:
                     need_election = True
                     print("Judge: no time master, starting election")
+                # Designated online but no elected backup
+                elif tmast_val and tmast_online and not telect_is_node and not election_in_progress:
+                    need_election = True
+                    print("Judge: no backup for tmast '%s', electing standby" % tmast_val)
+                # Better candidate available (e.g., GPS node joined while non-GPS is elected)
+                elif telect_online and not tmast_online:
+                    telect_priority = self._get_node_priority(telect_val)
+                    for n in self._get_active_nodes():
+                        # Skip the current elected master and designated master
+                        if n.lower() == telect_val.lower():
+                            continue
+                        if tmast_val and n.lower() == tmast_val.lower():
+                            continue
+                        if self._get_node_priority(n) < telect_priority:
+                            need_election = True
+                            print("Judge: node '%s' has better time source than '%s', starting election" % (n, telect_val))
+                            break
 
                 if need_election and not self._election_pending:
                     # Start election
@@ -377,6 +433,13 @@ class ClockClass:
                     self._election_start_time = time.monotonic()
                     broadcast_action = "election"
                     print("Judge: election announced, collecting status...")
+
+                # Adopt stalled election: another node published 'election' but
+                # this judge hasn't started tracking it yet.  Take over.
+                if election_in_progress and not self._election_pending:
+                    print("Judge: adopting election in progress")
+                    self._election_pending = True
+                    self._election_start_time = time.monotonic()
 
                 # If election in progress and we're judge, wait then decide
                 if self._election_pending:
@@ -2067,6 +2130,8 @@ class NodeInfoClass:
         self.msc = None
         self.bnd = None
         self.nod = None
+        self.gps_locked = False
+        self.ntp_ok = False
 
     @staticmethod
     def sqd(src, seq, t, b, c3, rp, p1, o, logr1):
@@ -2088,16 +2153,18 @@ class NodeInfoClass:
             r[n] = ival(i14[n]) & ival(m6[n])
         return "%s.%s.%s.%s" % (r[0], r[1], r[2], r[3])
 
-    def ssb(self, pkt_tm, host, sip, nod, stm, stml, ver, td):
+    def ssb(self, pkt_tm, host, sip, nod, stm, stml, ver, td, gps_locked='0', ntp_ok='0'):
         """process status broadcast (first line)"""
         self.lock.acquire()
-        if nod not in self.nodes:  # create if new 
+        if nod not in self.nodes:  # create if new
             self.nodes[nod] = NodeInfoClass()
             if nod != node:
                 print("New Node Heard", host, sip, nod, stm, stml, ver, td)
         i15 = self.nodes[nod]
         #        if debug: print "ssb before assign",i.nod,i.stm,i.bnd
         i15.ptm, i15.nod, i15.host, i15.ip, i15.stm, i15.age = pkt_tm, nod, host, sip, stm, 0
+        i15.gps_locked = (gps_locked == '1')
+        i15.ntp_ok = (ntp_ok == '1')
         self.lock.release()
         #   if debug:
         #  print "ssb:",pkt_tm,host,sip,nod,stm,stml,ver,td
@@ -2308,8 +2375,10 @@ class NetworkSync:
         self.send_qsomsg(nod, seq, self.bc_addr)
 
     def bcast_now(self):
-        msg = "b|%s|%s|%s|%s|%s|%s\n" % \
-              (self.hostname, self.my_addr, node, now(), mclock.level, version)
+        gps_flag = '1' if mclock.gps_locked else '0'
+        ntp_flag = '1' if mclock.ntp_ok else '0'
+        msg = "b|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
+              (self.hostname, self.my_addr, node, now(), mclock.level, version, gps_flag, ntp_flag)
         for i21 in self.si.node_status_list():
             msg += "s|%s|%s|%s|%s|%s\n" % i21  # nod,seq,bnd,msc,age
             # if debug: print i
@@ -2371,9 +2440,14 @@ class NetworkSync:
                     #                    if debug: sms.prmsg(line)
                     fields = line.split('|')
                     if fields[0] == 'b':  # status bcast
-                        host, sip, fnod, stm, stml, ver = fields[1:]
+                        # Parse with backwards compatibility for older nodes
+                        if len(fields) >= 9:
+                            host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag = fields[1:9]
+                        else:
+                            host, sip, fnod, stm, stml, ver = fields[1:7]
+                            gps_flag, ntp_flag = '0', '0'
                         td = tmsub(stm, pkt_tm)
-                        self.si.ssb(pkt_tm, host, sip, fnod, stm, stml, ver, td)
+                        self.si.ssb(pkt_tm, host, sip, fnod, stm, stml, ver, td, gps_flag, ntp_flag)
                         mclock.calib(fnod, stml, td)
                         if abs(td) >= tdwin:
                             print('Incoming packet clock error', td, host, sip, fnod, pkt_tm)
@@ -3682,14 +3756,30 @@ class GPSSyncDialog:
         status_label = Label(fr, text=tmast_status, font=fdfont)
         status_label.grid(row=0, column=0, sticky=W, pady=(0, 8))
 
-        if custom_ntp:
-            Label(fr, text="Current NTP Server: %s" % custom_ntp, font=fdfont) \
-                .grid(row=1, column=0, sticky=W, pady=2)
+        defaults_str = ', '.join(self._default_ntp_servers)
+        Label(fr, text="Default NTP Servers: %s" % defaults_str, font=fdfont) \
+            .grid(row=1, column=0, sticky=W, pady=2)
 
-        Label(fr, text="GPS NTP Address:", font=fdfont) \
+        Label(fr, text="Custom NTP Address:", font=fdfont) \
             .grid(row=2, column=0, sticky=W, pady=(8, 0))
         ntp_entry = Entry(fr, textvariable=ntp_var, width=30, font=fdfont)
         ntp_entry.grid(row=3, column=0, sticky=W, padx=10, pady=2)
+
+        ntp_info = Label(fr, text="", font=fdfont, fg="blue")
+        ntp_info.grid(row=3, column=0, sticky=E, padx=10)
+
+        def on_ntp_change(*_args):
+            addr = ntp_var.get().strip()
+            if addr:
+                if addr in self._default_ntp_servers:
+                    ntp_info.config(text="Already a default server", fg="gray")
+                else:
+                    ntp_info.config(text="Priority over defaults", fg="blue")
+            else:
+                ntp_info.config(text="")
+
+        ntp_var.trace_add('write', on_ntp_change)
+        on_ntp_change()  # Set initial state
 
         effective_tmast_init = current_tmast or network_tmast
         other_is_tmast = (effective_tmast_init != '' and effective_tmast_init != node)
@@ -3756,17 +3846,34 @@ class GPSSyncDialog:
             if ntp_addr and not test_ntp(ntp_addr):
                 ntp_error.config(text="NTP server not responding")
                 return
-            if ntp_addr:
-                mclock.ntp_servers = [ntp_addr] + self._default_ntp_servers
-            else:
-                mclock.ntp_servers = list(self._default_ntp_servers)
+            # NTP server - only publish if changed
+            if ntp_addr != custom_ntp:
+                if ntp_addr:
+                    mclock.ntp_servers = [ntp_addr] + self._default_ntp_servers
+                    globDb.put('tntp', ntp_addr)
+                    qdb.globalshare('tntp', ntp_addr)
+                else:
+                    mclock.ntp_servers = list(self._default_ntp_servers)
+            # GPS locked - always local, no broadcast needed
             mclock.gps_locked = bool(gpsusb_var.get())
-            if tmast_var.get():
-                globDb.put('tmast', node)
-                qdb.globalshare('tmast', node)
-            else:
-                globDb.put('tmast', '')
-                qdb.globalshare('tmast', '')
+            # Time master - only publish if changed
+            wants_tmast = bool(tmast_var.get())
+            if wants_tmast != is_tmast:
+                if wants_tmast:
+                    globDb.put('tmast', node)
+                    qdb.globalshare('tmast', node)
+                    # Designation supersedes any previous election
+                    globDb.put('telect', '')
+                    qdb.globalshare('telect', '')
+                else:
+                    # This node is stepping down - trigger immediate election
+                    globDb.put('tmast', '')
+                    qdb.globalshare('tmast', '')
+                    globDb.put('telect', 'election')
+                    qdb.globalshare('telect', 'election')
+                    mclock._election_pending = True
+                    mclock._election_start_time = time.monotonic()
+                    print("Designated master stepping down, triggering election")
             renew_title()
             t.destroy()
 
@@ -4075,14 +4182,9 @@ def whosonfirstyes(naturally, event=None):
             if t.age < 25:
                 d[t.nod] = (t.bnd, t.msc, t.age)
     for t in d:
-        ballgame = str(d)
-        ballgame = re.sub(r"[\[\]]", '', ballgame)
-        ballgame = ballgame.replace("'", "")
-        if "off" in ballgame:
-            continue
-        else:
-            if naturally in ballgame:
-                woflist.append(t)
+        bnd, msc, age = d[t]
+        if bnd and bnd != "off" and bnd == naturally:
+            woflist.append(t)
     if woflist:
         lines = ["Node     Band Opr/Lgr/Pwr        Last"]
         for what in woflist:
@@ -4216,10 +4318,10 @@ def buildmenus():
     lparticipants = (list(participants.values()))
     lparticipants.sort()
     # moved to top and added color. - Scott Hibbs KD4SIR 23Aug2022
-    opdsu.add_command(label="Add New Contestant", background='green', command=newpart.dialog)
     opdsu.add_command(label="Empty Contestant", background='yellow', command=clearoper)
-    logdsu.add_command(label="Add New Logger",  background='green', command=newpart.dialog)
+    opdsu.add_command(label="Add New Contestant", background='green', command=newpart.dialog)
     logdsu.add_command(label="Empty Logger", background='yellow', command=clearlog)
+    logdsu.add_command(label="Add New Logger",  background='green', command=newpart.dialog)
     for i30 in lparticipants:
         # Removed the $ which looks for the end of value - Scott Hibbs KD4SIR 2/12/2017
         '''
@@ -4353,7 +4455,10 @@ def topper():
     """This will reset the display for input. Added Jul/01/2016 KD4SIR Scott Hibbs"""
     txtbillb.config(font=fdfont)
     txtbillb.insert(END, "\n")
-    txtbillb.insert(END, "-Call-Class-Sect- \n")
+    if authk == "tst":
+        txtbillb.insert(END, "-Call-Class-Sect-  (.testq <n> to generate test QSOs)\n")
+    else:
+        txtbillb.insert(END, "-Call-Class-Sect- \n")
     txtbillb.see(END)  # added to always show the bottom line. Scott Hibbs KD4SIR 08Jul2022
 
 
@@ -4714,49 +4819,63 @@ def proc_key(ch):
 
             if len(parts) == 1:  # .tmast - show status
                 txtbillb.insert(END, "\n--- Time Master Status ---\n")
-                # Show designated master
+                # Collect status items as (label, value) pairs
+                items = []
+                # Designated master
                 if tmast_val:
                     online = "online" if check_node_online(tmast_val) else "OFFLINE"
-                    txtbillb.insert(END, "  tmast (designated): %s (%s)\n" % (tmast_val, online))
+                    items.append(("Designated", "%s (%s)" % (tmast_val, online)))
                 else:
-                    txtbillb.insert(END, "  tmast (designated): (none)\n")
-                # Show elected master
+                    items.append(("Designated", "(none)"))
+                # Elected master
                 if telect_val == "election":
-                    txtbillb.insert(END, "  telect (elected):   ELECTION IN PROGRESS\n")
+                    items.append(("Elected", "ELECTION IN PROGRESS"))
                 elif telect_val:
                     online = "online" if check_node_online(telect_val) else "OFFLINE"
-                    txtbillb.insert(END, "  telect (elected):   %s (%s)\n" % (telect_val, online))
+                    items.append(("Elected", "%s (%s)" % (telect_val, online)))
                 else:
-                    txtbillb.insert(END, "  telect (elected):   (none)\n")
-                # Show this node's status
-                txtbillb.insert(END, "  This node: %s, level %d\n" % (node, mclock.level))
-                # Show role
+                    items.append(("Elected", "(none)"))
+                # Role
                 role_map = {
-                    'designated': 'DESIGNATED TIME MASTER',
+                    'designated': 'DESIGNATED MASTER',
                     'ntp': 'NTP-synced',
-                    'elected': 'ELECTED TIME MASTER',
+                    'elected': 'ELECTED MASTER',
                     'synced': 'Time client',
                     'none': 'Unsynchronized'
                 }
-                role = role_map.get(mclock._source_type, 'Unknown')
-                txtbillb.insert(END, "  Role: %s\n" % role)
-                # Show judge status
+                items.append(("This node", "%s, level %d" % (node, mclock.level)))
+                items.append(("Role", role_map.get(mclock._source_type, 'Unknown')))
+                # Judge
                 is_judge = mclock._am_i_judge()
-                txtbillb.insert(END, "  Election judge: %s\n" % ("YES (this node)" if is_judge else "No"))
-                # Show time source info
+                items.append(("Judge", "YES (this node)" if is_judge else "No"))
+                items.append(("No-master cycles", "%d (election at 3)" % mclock._no_master_cycles))
+                # Time sources
                 if mclock.gps_locked:
-                    txtbillb.insert(END, "  GPS: locked\n")
+                    items.append(("GPS", "locked"))
                 if mclock.ntp_ok:
-                    txtbillb.insert(END, "  NTP: synced (offset %.3fs)\n" % (mclock.ntp_offset or 0))
+                    items.append(("NTP", "synced (offset %.3fs)" % (mclock.ntp_offset or 0)))
+                if mclock.ntp_servers:
+                    items.append(("NTP server", mclock.ntp_servers[0]))
+                shared_ntp = gd.getv('tntp')
+                if isinstance(shared_ntp, str) and shared_ntp and not shared_ntp.startswith('get error'):
+                    items.append(("Shared NTP", shared_ntp))
                 if mclock._source_type == 'synced' and mclock.src_node:
-                    txtbillb.insert(END, "  Syncing from: %s (level %d)\n" % (mclock.src_node, mclock.srclev))
-                txtbillb.insert(END, "  No-master cycles: %d (election at 3)\n" % mclock._no_master_cycles)
-                # Show active nodes
+                    items.append(("Syncing from", "%s (level %d)" % (mclock.src_node, mclock.srclev)))
+                # Active nodes
                 active = [node]
-                for ni in net.si.nodes.values():
+                for ni in list(net.si.nodes.values()):
                     if ni.age < 60 and ni.nod and ni.nod != node:
                         active.append(ni.nod)
-                txtbillb.insert(END, "  Active nodes: %s\n" % ', '.join(active))
+                items.append(("Active nodes", ', '.join(active)))
+                # Print in two columns
+                col_w = 38
+                for r in range(0, len(items), 2):
+                    left = "  %-13s %s" % (items[r][0] + ":", items[r][1])
+                    if r + 1 < len(items):
+                        right = "%-13s %s" % (items[r+1][0] + ":", items[r+1][1])
+                        txtbillb.insert(END, "%-*s %s\n" % (col_w, left, right))
+                    else:
+                        txtbillb.insert(END, "%s\n" % left)
             elif parts[1] == 'clear':  # .tmast clear - remove designation
                 globDb.put('tmast', '')
                 qdb.globalshare('tmast', '')
@@ -4997,11 +5116,11 @@ def proc_key(ch):
                 # so the logger only has to hit enter. Added by Scott Hibbs KD4SIR 02Aug2022
                 kbuf += ' '
                 txtbillb.insert(END, ch)
-                _dummy, repta = showthiscall2(call17)
+                found, repta = showthiscall2(call17)
                 repta = str(repta)
                 repta = re.sub(r"[\[\]]", '', repta)
                 repta = repta.replace("'", "")
-                if showthiscall(call17):  # shows the previous contacts with this station
+                if found:  # shows the previous contacts with this station
                     txtbillb.insert(END, " worked on different bands\n")
                     txtbillb.insert(END, "%s %s" % (xcall, repta))
                     kbuf += repta
@@ -6250,7 +6369,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v2026_Beta 4.2.4"  # Changed 03Feb2026
+version = "v2026_Beta 4.2.5"  # Changed 05Feb2026
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
@@ -6307,6 +6426,7 @@ for name, desc, default, okre, maxlen in (
         ('fdend', 'yymmdd.hhmm    FD end time (UTC)', '990629.2100', r'[\d.]{11}$', 11),
         ('tmast', '<text>         Time Master Node', '', r'[A-Za-z\d-]{0,8}$', 8),
         ('telect', '<text>        Auto-elected Time Master', '', r'[A-Za-z\d-]{0,8}$', 8),
+        ('tntp', '<text>         Shared NTP Server', '', r'[A-Za-z\d.-]{0,50}$', 50),
         ('kick', '<n>            Time to kick inactivity', '0', r'\d{1,2}$', 2)):
     gd.new(name, desc, default, okre, maxlen)
 
@@ -7942,7 +8062,10 @@ txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 txtbillb.insert(END, "Use space to check a prefix, suffix, or a call. \n")
 txtbillb.insert(END, "Paste contacts in call class section format for ex: 'kd4sir 1d in'  \n")
 txtbillb.insert(END, "To begin select a Contestant, a Logger, Power and Band/Mode in red above.\n\n")
-txtbillb.insert(END, "-Call-Class-Sect- \n")
+if authk == "tst":
+    txtbillb.insert(END, "-Call-Class-Sect-  (.testq <n> to generate test QSOs)\n")
+else:
+    txtbillb.insert(END, "-Call-Class-Sect- \n")
 txtbillb.config(insertwidth=3)
 txtbillb.focus_set()
 

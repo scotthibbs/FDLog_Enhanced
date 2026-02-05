@@ -9,6 +9,7 @@ import functools
 # Little Web Server. Serve files from a directory over HTTP.
 #
 # Revision History:
+#   3.1  04Feb2026  Claude / Scott Hibbs KD4SIR - Prevent multiple instances.
 #   3.0  27Jan2026  Claude / Scott Hibbs KD4SIR - Reliable LAN IP detection,
 #        error handling, serve from specific directory, graceful shutdown.
 #   2.0  21Jul2022  Scott Hibbs KD4SIR - Ported to Python 3.
@@ -18,7 +19,7 @@ import functools
 #   1.5  21Jun2004  Alan Biocca - Minor adjustments.
 #   1.4  21Jun2004  Alan Biocca - Comments added.
 
-VERSION = "3.0"
+VERSION = "3.1"
 PORT = 55555
 
 
@@ -34,8 +35,26 @@ def get_lan_ip():
         return socket.gethostbyname(socket.gethostname())
 
 
+def port_in_use(port):
+    """Check if a port is already in use."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(1)
+        s.bind(("", port))
+        s.close()
+        return False
+    except OSError:
+        return True
+
+
 def serve(directory=None, port=PORT):
     """Start the HTTP server to serve files from the share directory."""
+    if port_in_use(port):
+        print(f"\n  MiniWeb is already running on port {port}.")
+        print(f"  Only one instance is needed.\n")
+        input("Press Enter to exit...")
+        sys.exit(0)
+
     if directory is None:
         directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), "share")
     directory = os.path.abspath(directory)

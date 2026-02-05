@@ -23,7 +23,10 @@ INCLUDE_FILES = [
     "cw_keying.py",
     "parser.py",
     "build.py",
+    "share_fdlog.py",
     "miniweb.py",
+    "FDLog Icon.ico",
+    "FDLog Icon.png",
     "reset.py",
     "FDLog_Enhanced.spec",
     "requirements.txt",
@@ -47,6 +50,13 @@ INCLUDE_DIRS = [
     "tests",
 ]
 
+# Pre-built executables to include if found (built via build.py on each platform)
+EXECUTABLE_FILES = [
+    "FDLog_Enhanced.exe",       # Windows
+    "FDLog_Enhanced_linux",     # Linux
+    "FDLog_Enhanced_mac",       # macOS
+]
+
 
 def create_zip():
     """Create the distribution zip file in the share/ directory."""
@@ -63,6 +73,18 @@ def create_zip():
                 print(f"  + {filename}")
             else:
                 missing.append(filename)
+
+        # Include pre-built executables for each platform if available
+        exe_found = 0
+        for filename in EXECUTABLE_FILES:
+            filepath = os.path.join(SCRIPT_DIR, filename)
+            if os.path.isfile(filepath):
+                zf.write(filepath, os.path.join(FOLDER_IN_ZIP, filename))
+                size_mb = os.path.getsize(filepath) / (1024 * 1024)
+                print(f"  + {filename}  ({size_mb:.1f} MB)")
+                exe_found += 1
+        if not exe_found:
+            print("  (no executables found - run build.py to create them)")
 
         for dirname in INCLUDE_DIRS:
             dirpath = os.path.join(SCRIPT_DIR, dirname)

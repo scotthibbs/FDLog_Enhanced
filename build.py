@@ -12,8 +12,9 @@ Requirements:
     pip install pyinstaller
 
 Output:
-    dist/FDLog_Enhanced.exe (Windows)
-    dist/FDLog_Enhanced (Linux/Mac)
+    FDLog_Enhanced.exe       (Windows)
+    FDLog_Enhanced_linux     (Linux)
+    FDLog_Enhanced_mac       (macOS)
 """
 
 import subprocess
@@ -77,11 +78,18 @@ def build():
         print("BUILD SUCCESSFUL!")
         print("=" * 50)
 
-        # Copy exe to main directory for easy access
+        # Copy exe to main directory with platform-specific name
         import shutil
-        exe_name = 'FDLog_Enhanced.exe' if sys.platform == 'win32' else 'FDLog_Enhanced'
+        if sys.platform == 'win32':
+            exe_name = 'FDLog_Enhanced.exe'
+            dst = exe_name
+        elif sys.platform == 'darwin':
+            exe_name = 'FDLog_Enhanced'
+            dst = 'FDLog_Enhanced_mac'
+        else:
+            exe_name = 'FDLog_Enhanced'
+            dst = 'FDLog_Enhanced_linux'
         src = os.path.join('dist', exe_name)
-        dst = exe_name
         if os.path.exists(src):
             shutil.copy2(src, dst)
             print(f"\nExecutable copied to: {dst}")
@@ -93,7 +101,13 @@ def build():
         print("\nThe exe must be in the same folder as the data files")
     else:
         print("\nBuild failed. Check the errors above.")
-        sys.exit(1)
+        return False
+    return True
 
 if __name__ == '__main__':
-    build()
+    try:
+        build()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+    input("\nPress Enter to exit...")

@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 121 enhancements to the original FDLog so far.
+We have added 122 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -9,6 +9,43 @@ To Do and Ideas:
 
 		(none currently)
 		
+  v2026_Beta 4.2.5 05Feb2026 Bug Fixes and Distribution Improvements
+
+	- Fix shared NTP server not adopted promptly by other nodes.
+	  Moved shared NTP check before the 300-second sync guard so nodes
+	  pick up a shared server within 30 seconds and query it immediately.
+	- Fix stalled election when another node publishes an election but
+	  the judge never adopts it (e.g., designated master steps down or
+	  goes offline). Judge now detects and takes over in-progress elections.
+	- Fix band button tooltip never appearing when hovering over other
+	  nodes' bands. Old code checked the entire dict as one string so
+	  any node with band="off" suppressed all tooltips.
+	- Fix "worked on different bands" log entries printing twice.
+	  Removed redundant second call to showthiscall().
+	- Compact .tmast status output into two-column layout.
+	- Fix RuntimeError iterating net.si.nodes.values() by copying to list.
+	- Election now looks up remote nodes' actual GPS/NTP status from
+	  broadcasts instead of assuming lowest priority.
+	- Nodes broadcast gps_locked and ntp_ok flags in status packets
+	  with backwards compatibility for older nodes.
+	- Shared NTP server (tntp global) published across the network so
+	  all nodes use the same custom NTP server.
+	- GPS Sync dialog: renamed "GPS NTP Address" to "Custom NTP Address",
+	  shows default NTP servers, live feedback on custom entry, only
+	  publishes changes when values actually change.
+	- Designated master stepping down triggers immediate election.
+	  Designated master excluded from election candidates.
+	- Election re-triggers when a better candidate (e.g., GPS node) joins.
+	- Elected standby backup when designated master is online.
+	- .tmast shows active NTP server and shared NTP server.
+	- Test mode prompt shows (.testq <n>) hint.
+	- Menu reorder: "Empty" before "Add New" for Contestant/Logger.
+	- build.py: platform-specific executable names (FDLog_Enhanced.exe,
+	  FDLog_Enhanced_linux, FDLog_Enhanced_mac). Press Enter to exit.
+	- share_fdlog.py: auto-includes platform executables if found.
+	  Added share_fdlog.py and icon files to distribution zip.
+	- miniweb.py v3.1: prevents multiple instances on same port.
+
   v2026_Beta 4.2.4 - Time Master Election Protocol
 	- Add election judge system (lowest named active node)
 		- Add telect global for elected time master tracking
