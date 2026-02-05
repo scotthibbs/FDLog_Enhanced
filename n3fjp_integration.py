@@ -33,9 +33,10 @@ BAND_FREQ_MAP = {
 # Maps N3FJP mode strings to FDLog mode suffixes
 MODE_MAP = {
     "CW": "c", "SSB": "p", "USB": "p", "LSB": "p", "AM": "p", "FM": "p",
+    "PH": "p",  # N3FJP uses "PH" for phone
     "RTTY": "d", "PSK31": "d", "PSK": "d", "FT8": "d", "FT4": "d",
     "JS8": "d", "MFSK": "d", "OLIVIA": "d", "JT65": "d", "JT9": "d",
-    "DIGI": "d", "DATA": "d",
+    "DIGI": "d", "DIG": "d", "DATA": "d", "DG": "d",  # N3FJP uses "DIG"/"DG" for digital
 }
 
 
@@ -57,6 +58,7 @@ class N3FJPConfig:
 
 _CMD_RE = re.compile(r'<CMD>(.*?)</CMD>', re.DOTALL)
 _FIELD_RE = re.compile(r'<(\w+)>(.*?)</\1>', re.DOTALL)
+_WRAPPER_RE = re.compile(r'^<(\w+)>(.*)', re.DOTALL)
 
 
 def parse_messages(data: str) -> List[Dict[str, str]]:
@@ -64,26 +66,47 @@ def parse_messages(data: str) -> List[Dict[str, str]]:
 
     Each dict has a '_type' key for the command name and additional keys
     for any sub-fields found within.
+
+    Handles N3FJP API v2 wrapper-tag format:
+      <CMD><ENTEREVENT><CALL>W1AW</CALL>...</ENTEREVENT></CMD>
+    as well as bare-word format:
+      <CMD>PROGRAM<PROGRAM>FDLog</PROGRAM></CMD>
     """
     results = []
     for m in _CMD_RE.finditer(data):
         inner = m.group(1).strip()
         msg: Dict[str, str] = {}
-        # Extract sub-fields
-        for fm in _FIELD_RE.finditer(inner):
-            msg[fm.group(1).upper()] = fm.group(2)
-        # Determine command type from first token if no sub-fields parsed it
-        if not msg:
-            # Simple command like "ENTER" or "PROGRAM FDLog"
-            parts = inner.split(None, 1)
-            msg['_type'] = parts[0].upper() if parts else inner.upper()
-            if len(parts) > 1:
-                msg['_value'] = parts[1]
+
+        if inner.startswith('<'):
+            # Wrapper-tag format: <COMMANDTYPE><fields...></COMMANDTYPE>
+            wm = _WRAPPER_RE.match(inner)
+            if wm:
+                cmd_type = wm.group(1).upper()
+                msg['_type'] = cmd_type
+                content = wm.group(2)
+                # Strip closing wrapper tag if present
+                close_tag = f'</{wm.group(1)}>'
+                idx = content.upper().rfind(close_tag.upper())
+                if idx >= 0:
+                    content = content[:idx]
+                # Extract sub-fields from the unwrapped content
+                for fm in _FIELD_RE.finditer(content):
+                    msg[fm.group(1).upper()] = fm.group(2)
+            else:
+                msg['_type'] = 'UNKNOWN'
         else:
-            # Look for a top-level command keyword before the first '<'
-            prefix = inner[:inner.index('<')].strip() if '<' in inner else inner
-            tokens = prefix.split()
-            msg['_type'] = tokens[0].upper() if tokens else 'UNKNOWN'
+            # Bare-word format: COMMAND <FIELD>value</FIELD>...
+            for fm in _FIELD_RE.finditer(inner):
+                msg[fm.group(1).upper()] = fm.group(2)
+            if not msg:
+                parts = inner.split(None, 1)
+                msg['_type'] = parts[0].upper() if parts else inner.upper()
+                if len(parts) > 1:
+                    msg['_value'] = parts[1]
+            else:
+                prefix = inner[:inner.index('<')].strip() if '<' in inner else inner
+                tokens = prefix.split()
+                msg['_type'] = tokens[0].upper() if tokens else 'UNKNOWN'
         results.append(msg)
     return results
 
@@ -94,6 +117,16 @@ def build_cmd(command: str, **fields) -> str:
     for key, val in fields.items():
         parts.append(f"<{key}>{val}</{key}>")
     return f"<CMD>{''.join(parts)}</CMD>\r\n"
+
+
+def build_cmd_wrapped(command: str, **fields) -> str:
+    """Build N3FJP API v2 wrapped format:
+    <CMD><COMMAND><FIELD>value</FIELD>...</COMMAND></CMD>\\r\\n
+    """
+    inner_parts = []
+    for key, val in fields.items():
+        inner_parts.append(f"<{key}>{val}</{key}>")
+    return f"<CMD><{command}>{''.join(inner_parts)}</{command}></CMD>\r\n"
 
 
 def parse_adif(adif_str: str) -> Dict[str, str]:
@@ -165,12 +198,12 @@ class N3FJPClient:
     def set_frequency(self, freq_hz: int):
         """Send CHANGEFREQ to the N3FJP server."""
         if self._connected and self._sock:
-            self._send(build_cmd("CHANGEFREQ", FREQ=str(freq_hz)))
+            self._send(build_cmd_wrapped("CHANGEFREQ", VALUE=str(freq_hz)))
 
     def push_callsign(self, call: str):
         """Send UPDATE with callsign to the N3FJP server."""
         if self._connected and self._sock:
-            self._send(build_cmd("UPDATE", TXTENTRYCALL=call))
+            self._send(build_cmd_wrapped("UPDATE", CONTROL="TXTENTRYCALL", VALUE=call))
 
     def _send(self, msg: str):
         try:
@@ -210,10 +243,10 @@ class N3FJPClient:
         self._buffer = ""
         self.on_status_update("Connected")
         print(f"{self._log_prefix}: Connected to {self.config.host}:{self.config.client_port}")
-        # Identify ourselves
-        self._send(build_cmd("PROGRAM", PROGRAM="FDLog Enhanced"))
-        # Request update notifications
-        self._send(build_cmd("SETUPDATESTATE", STATE="ON"))
+        # Identify ourselves — N3FJP expects fields directly inside <CMD>
+        self._send("<CMD><PROGRAM>FDLog Enhanced</PROGRAM><APIVERSION>1.0.0.0</APIVERSION></CMD>\r\n")
+        # Request update notifications — N3FJP API v2 wrapped format
+        self._send(build_cmd_wrapped("SETUPDATESTATE", VALUE="TRUE"))
 
     def _receive_loop(self):
         while self._running and self._connected:
@@ -244,42 +277,102 @@ class N3FJPClient:
         cmd = msg.get('_type', '')
         if cmd == 'ENTEREVENT':
             self._handle_enter_event(msg)
+        elif cmd == 'CONTACTREPLACE':
+            # N3FJP v2 alternate name for a logged QSO
+            self._handle_enter_event(msg)
         elif cmd == 'READBMFRESPONSE':
             self._handle_band_change(msg)
+        elif cmd == 'UPDATE':
+            self._handle_update(msg)
         elif cmd == 'CALLTABEVENT':
-            pass  # informational only
+            self._handle_calltab(msg)
+        elif cmd == 'PROGRAMRESPONSE':
+            ver = msg.get('VER', '?')
+            apiver = msg.get('APIVER', '?')
+            print(f"{self._log_prefix}: Server: N3FJP v{ver}, API v{apiver}")
+        elif cmd == 'SETUPDATESTATERESPONSE':
+            print(f"{self._log_prefix}: Update notifications enabled")
+        elif cmd == 'CMD_NOT_FOUND':
+            print(f"{self._log_prefix}: WARNING - Server did not recognize a command")
 
-    def _handle_enter_event(self, msg: Dict[str, str]):
-        """Process an ENTEREVENT notification — a QSO was logged in N3FJP."""
-        call = msg.get('CALL', '').strip().upper()
-        if not call:
-            return
-        freq_str = msg.get('FREQ', '0')
+    def _handle_update(self, msg: Dict[str, str]):
+        """Handle UPDATE notification — a field changed in N3FJP."""
+        # Track frequency/band changes from UPDATE messages
+        freq_str = msg.get('FREQ', msg.get('TXTENTRYFREQUENCY', '0'))
         try:
             freq_hz = int(float(freq_str))
         except ValueError:
             freq_hz = 0
-        mode = msg.get('MODE', 'SSB')
+        if freq_hz:
+            band = freq_to_band(freq_hz)
+            if band and band != self._current_band:
+                self._current_band = band
+                if self.config.auto_band and self.on_band_change:
+                    self.on_band_change(band)
+                self.on_status_update(f"Connected ({band[:-1]}m)")
+
+    def _handle_calltab(self, msg: Dict[str, str]):
+        """Handle CALLTABEVENT — user tabbed from call field in N3FJP."""
+        freq_str = msg.get('FREQ', msg.get('TXTENTRYFREQUENCY', '0'))
+        try:
+            freq_hz = int(float(freq_str))
+        except ValueError:
+            freq_hz = 0
+        band = freq_to_band(freq_hz) if freq_hz else None
+        if not band:
+            band_str = msg.get('BAND', '')
+            mode_str = msg.get('MODE', msg.get('MODETEST', 'PH'))
+            suffix = _mode_suffix(mode_str)
+            if band_str:
+                band = band_str.replace('m', '').replace('M', '').replace('cm', '') + suffix
+        if band and band != self._current_band:
+            self._current_band = band
+            if self.config.auto_band and self.on_band_change:
+                self.on_band_change(band)
+            band_num = band[:-1]
+            self.on_status_update(f"Connected ({band_num}m)")
+
+    def _handle_enter_event(self, msg: Dict[str, str]):
+        """Process an ENTEREVENT/CONTACTREPLACE — a QSO was logged in N3FJP."""
+        # N3FJP uses various field names depending on version and contest type
+        call = (msg.get('CALL', '') or msg.get('TXTENTRYCALL', '')).strip().upper()
+        if not call:
+            return
+        freq_str = msg.get('FREQ', msg.get('TXTENTRYFREQUENCY', '0'))
+        try:
+            freq_hz = int(float(freq_str))
+        except ValueError:
+            freq_hz = 0
+        mode = msg.get('MODE', msg.get('TXTENTRYMODE', msg.get('CBOENTRYMODE', 'SSB')))
         band_mode = freq_to_band(freq_hz) if freq_hz else None
         if not band_mode:
             # Try to construct from band/mode fields
-            band_str = msg.get('BAND', '')
+            band_str = msg.get('BAND', msg.get('TXTENTRYBAND', msg.get('CBOENTRYBAND', '')))
             suffix = _mode_suffix(mode)
             if band_str:
                 band_mode = band_str.replace('m', '').replace('M', '') + suffix
         if not band_mode:
             print(f"{self._log_prefix}: Cannot determine band for {call}")
             return
-        exchange = msg.get('EXCHANGE', msg.get('MODESENT', ''))
+        # FD exchange: try direct exchange field first
+        exchange = (msg.get('EXCHANGE', '') or msg.get('MODESENT', '') or
+                    msg.get('TXTENTRYEXCHANGE', ''))
+        # Combine class + section fields (N3FJP FD uses CLASS and ARRL_SECT)
+        if not exchange:
+            fd_class = msg.get('CLASS', msg.get('TXTENTRYCLASS', ''))
+            fd_section = (msg.get('ARRL_SECT', '') or msg.get('SECTION', '') or
+                         msg.get('TXTENTRYARRLSECT', '') or msg.get('TXTENTRYSECTION', '') or
+                         msg.get('STATE', ''))
+            if fd_class and fd_section:
+                exchange = f"{fd_class} {fd_section}"
         parsed = parse_exchange(exchange)
         if parsed:
             fd_class, fd_section = parsed
             report = f"{fd_class.lower()} {fd_section.lower()}"
         else:
             report = exchange.lower() if exchange else ""
-        timestamp = msg.get('TIME', datetime.now(timezone.utc).strftime("%H%M"))
-        # Normalize timestamp to HHMM
-        timestamp = timestamp.replace(':', '')[:4]
+        # Use None for timestamp — let FDLog use its own now() for consistency
+        timestamp = None
         print(f"{self._log_prefix}: QSO logged - {call} on {band_mode}, exchange: {report}")
         self.on_qso_logged(call, band_mode, report, timestamp)
 
@@ -289,13 +382,22 @@ class N3FJPClient:
         try:
             freq_hz = int(float(freq_str))
         except ValueError:
-            return
-        band = freq_to_band(freq_hz)
+            freq_hz = 0
+        band = freq_to_band(freq_hz) if freq_hz else None
+        # N3FJP often sends FREQ=0 but provides BAND and MODE fields
+        if not band:
+            band_str = msg.get('BAND', '')
+            mode_str = msg.get('MODE', msg.get('MODETEST', 'PH'))
+            suffix = _mode_suffix(mode_str)
+            if band_str:
+                band = band_str.replace('m', '').replace('M', '').replace('cm', '') + suffix
         if band and band != self._current_band:
             self._current_band = band
             if self.config.auto_band and self.on_band_change:
                 self.on_band_change(band)
-            self.on_status_update(f"Connected ({band[:-1]}m)")
+            # Show just the band number in status
+            band_num = band[:-1]  # strip mode suffix
+            self.on_status_update(f"Connected ({band_num}m)")
 
 
 # ---------------------------------------------------------------------------

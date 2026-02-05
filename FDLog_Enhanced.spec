@@ -8,7 +8,7 @@ block_cipher = None
 data_files = [
     ('Arrl_sections_ref.txt', '.'),
     ('ARRL_Band_Plans.txt', '.'),
-    ('Manual.txt', '.'),
+    ('logcaptain.txt', '.'),
     ('Keyhelp.txt', '.'),
     ('Releaselog.txt', '.'),
     ('README.txt', '.'),

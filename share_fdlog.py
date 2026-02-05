@@ -33,7 +33,7 @@ INCLUDE_FILES = [
     "cty.dat",
     "Arrl_sections_ref.txt",
     "ARRL_Band_Plans.txt",
-    "Manual.txt",
+    "logcaptain.txt",
     "Keyhelp.txt",
     "NTS_eg.txt",
     "Releaselog.txt",
@@ -106,7 +106,17 @@ def create_zip():
 
 
 def main():
-    create_zip()
+    zip_path = os.path.join(SHARE_DIR, ZIP_NAME)
+    if os.path.isfile(zip_path):
+        size_mb = os.path.getsize(zip_path) / (1024 * 1024)
+        print(f"Found existing {ZIP_NAME} ({size_mb:.1f} MB)")
+        answer = input("Recreate zip? (y/n): ").strip().lower()
+        if answer == "y":
+            create_zip()
+        else:
+            print(f"Using existing {zip_path}\n")
+    else:
+        create_zip()
 
     sys.path.insert(0, SCRIPT_DIR)
     import miniweb

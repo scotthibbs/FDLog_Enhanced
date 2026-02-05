@@ -1,0 +1,539 @@
+Field Day Log Program Manual for the Logging Captain
+
+
+Last updated 05Feb2026 by Scott Hibbs KD4SIR
+If you have any questions or suggestions for the program please email me.
+
+Thanks for using the program,
+Scott Hibbs KD4SIR
+scotthibbs at gmail.com
+
+In a Nutshell:
+    A participant is everyone.
+	The Contestant is the one making contacts.
+	The Logger is the one entering data.
+	One of them needs to have a license.
+	If you see red, select something.
+	Bands are vertical. Modes are horizontal.
+	The modes are (C)ode, (D)igital, and (P)hone.
+	-Call-Class-Sect- is separated by spaces.
+	An example is kd4sir 1d ky <Enter>
+	Don't hit enter until after the contact is made.
+	Without "QSL - May I have another?" it didn't work.
+	Hit <Escape> to start over.
+	You can use the up arrow to retype the last contact.
+	You can now copy/past full entries.
+	Type ? for help.
+
+
+COMMAND-LINE OPTIONS: (I've never used them but you might)
+
+	You can run FDLog_Enhanced with command-line arguments to skip the
+	interactive prompts. This is useful for scripting and automation.
+
+	Usage: python FDLog_Enhanced.py [--node NAME] [--auth KEY]
+
+	Options:
+	  --node, -n    Station node name (7 chars, e.g., station1, station2, gota)
+	  --auth, -a    Authentication key (e.g., 24 for year 2024, or tst for testing)
+	  --help, -h    Show help message
+
+	Examples:
+	  python FDLog_Enhanced.py                        # Interactive mode
+	  python FDLog_Enhanced.py --node station1 --auth 24   # CLI mode
+	  python FDLog_Enhanced.py -n gota -a 24          # GOTA station (short form)
+
+	Notes:
+	- All nodes must use the same --auth key to communicate on the network
+	- Node names are padded to 8 characters with random letters for uniqueness
+	- If options are not provided, you will be prompted interactively
+
+
+SHORT HISTORY AND INTRODUCTION:
+
+	This program is 40+ years old!!
+
+	Alan K Biocca W6AKB (Formerly WB6ZQZ) Wrote this in 1984 using small c
+	and it was titled "WB6ZQZ's Field Day Logging Program". In 2002, Mr Biocca
+	rewrote the program in Python and renamed it FDLog. That year, FDLog was
+	released as open source with the GNU License. FDLog is still in use by the High Sierra
+	Field Day Group and maintained by Mr Biocca at www.fdlog.info.
+
+	My name is Scott Hibbs KD4SIR. I found FDLog on the Internet and started using it
+	for Field Day 2012. After using FDLog for Field Day 2013, the South Central Indiana
+	Communications Support Group (SCICSG - we pronounce it scuzzy) wanted to know their
+	individual scores and wanted a better way to see who was on what bands. When our
+	upgrades were not acted on, we decided to modify the program for ourselves for 2014.
+	It was eventually renamed FDLog_Enhanced and made a repository on www.github.com.
+	We have enhanced the original program and occasionally will pick up some of Mr Biocca's
+	new ideas too.
+
+	We hope you fall in love with the program (like we have) and can help us improve it.
+
+
+WHY LOVE FDLOG_ENHANCED?:
+
+	Simply, "It is a free networked logging program with a distributed database." If you
+	need more let me explain. Since it is networked, everyone can see the band and mode you
+	are on. Since the data is distributed, your contacts get sent to all the other users
+	in real time. No one can dupe and non-dupe contacts are displayed as you log. You can
+	send messages to all users. You can see how many contacts you have made, how many contacts
+	you have logged and see the combined phone and digital and CW contacts for the group. It tracks
+	who is the control operator (logger) for non-hams (as Contestant). 
+	
+	The GOTA station log is maintained WITH the regular log without conflicting with dupes. 
+	This allows GOTA to get previous contacts with other users, and allows everyone to 
+	know which band and mode everyone is using. 
+	
+	The INFO Node should be set up at the information desk or in a public area to show the 
+	current score and allow visitors to sign in to the program. 
+
+	The greatest thing is how it is not dependant on one computer! A computer can go down, bad
+	crash - like Zed is dead baby - and Field Day goes on. Add a new computer to
+	the network and all the other computers will catch the new one up very quickly.
+
+	Because it is Python 3, all you need is a PC - Linux, Mac, any Windoze, RaspberryPi -
+	we don't care - doesn't matter.
+
+	If I didn't HAVE you when I said, "free", "Zed is dead", and "I really don't care what
+	kind you have", maybe this program isn't for you. :)
+
+
+PROGRAM SETUP:
+
+	So you are the ham and or computer guru in charge of logging Field Day..
+	Here's all you have to do.
+
+	Before Field Day:
+
+	Find a router to bring to field day. I set the SSID to "Field Day" and
+	leave it open without a password. This will be what everyone will connect
+	to on field day. Test it to make sure it works. And don't leave it home.
+	I've had to buy cheap routers the morning of - I got a collection.
+
+	Building the executables:
+	Use build.py to build the executables. This needs to be ran on all the 
+	computer types (mac, linux, PC). 
+	
+	reset.py: This allows you to play with the program and asks to delete the
+	log files and rebuild the executable if changes are made. You may want to 
+	remove this file from your zip if you are worried someone will run it. 
+	
+	INTERNET:
+	Internet is prefered onsite for NTP servers and building the executables.
+	The program works without the internet available, but the INTERNET IS REQUIRED
+	TO BUILD THE EXECUTABLES FOR EACH TYPE (PC, MAC AND LINUX). 
+	
+	WITHOUT INTERNET: 
+	If you don't have internet at your site, then you need these executables made before
+	going onsite.
+
+	With a USB flash drive:
+		You will need the program folder with the pre-built executables. 
+		Move the files to the new machine to install.
+	Without a USB flash drive:
+		When you start the first machine on field day, the last set up question will ask
+		if you want to distribute the program. Say yes if you need to. If you already have 
+		a zip file it will ask if you want to replace it. Else it creates a zip file and
+		starts share_fdlog.py (can be ran separately). It will add any needed premade 
+		executables if found. Go to the other machines on the network,
+		browse to the webpage, download the zip and extract and build or run it.
+
+	The setup questions should be answered by one person and answered once, the rest will say no.
+	So the logging captain will do this.
+
+	But when the program starts it will ask everyone what is the name of the node it is running.
+	I suggest the name of the station or location or antenna - Something everyone will recognize
+	where this node will be. This entry requires 7 digits, so letters will be added or removed
+	to make this 7 digits. Everyone must use the same "auth" code which should be the last two
+	digits of the contest year like 27. Next it will ask if you need to set up for Field Day.
+	If you are not the logging captain, say no.
+	Before any contacts are made, the logging captain can change the class and section if
+	needed.
+
+	It is a good habit to check the time efore starting the program, because this program
+	can not change the computer's clock. Time is important to this program because the database
+	is shared.
+
+	At Field Day:
+
+	Set up the new router because you left yours at home. Also note many
+	public "guest" router networks will not allow computers to talk to each other.
+	Although not necessary, it is recommended to start the computer you want to be a
+	designated Time Master first, set the time, Connect to the router network if wireless
+	(you could also be wired). Start the program alone on the network. If you want this
+	computer to be the designated time master use ".tmast me" or go to properties/Time Function
+	and check This node is Time Master. If you need to change the class or other information
+	you added earlier, this can be done with the .set commands found in the help menu.
+
+	Next you want a copy of the program on every computer. Using the methods above.
+	Before starting the program, set the time on the computer with your accurate time
+	source within a second or two. If you forget this step, the program will spend time
+	adjusting it's time to the others. Start the program and set the name and year's digits.
+	Answer NO to the setup question. If connected to the network, it should see
+	your time master pc and grab all it's information. Rinse and Repeat for the others.
+
+	The port that the program uses is listed in the program's heading at the top, this
+	port number does change from year to year. Make sure to allow the port it uses
+	through the firewall on each machine if there is an issue.
+
+	Before field day ends, make sure your computer is the last to be turned off.
+	This is so you have the most accurate log entries in case someone is editing
+	their log after the contest.
+
+	After Field Day:
+
+	Look through the .set menu to set any missing information. Don't forget to
+	use .pr to make a "fdlog.txt" file that summarizes the contacts etc.
+	Using the program's info, you can submit your results. You're a hero and
+	everyone loves ya. At the recap meeting give everyone funny certificates
+	such as most contacts, least contacts, most points, prettiest radio,
+	and the most important one - most logged which means they helped others.
+	This person should be your best friend. Ask them for ideas for me.
+
+
+USING THE PROGRAM:
+
+	Participants are everyone at Field Day. The Contestant is the person using
+	the radio. The Logger is the one using the program. The Operator field caused
+	my club to debate if the person was Control Operator. We made a version that
+	required a license for the operator. The problem then, was that a ham & non-ham
+	pair had no idea who operated the radio or logged since it could only be entered
+	one way. The ham got credit for contacts while logging and the non-ham had no
+	idea about the number they logged or contacted (added together). So the Radio
+	Operator and Control Operator are different and confusing for this program. We
+	changed the Operator name to Contestant.
+
+	Non-hams are allowed and encouraged to operate with a Control Operator logging.
+	This program has always tracked the logger. So the Operator field is renamed
+	Contestant for the person at the radio. Thus, we can track the number of contacts
+	or data entries logged, and keep accurate logs for everyone, even for non-hams.
+	Hams can accurately know how many contacts they worked and who logged for them.
+	They can also see if they logged themselves and who they logged for in turn.
+	This maintains a score for contacts and a score for logging for each participant.
+	The program will check for a Control Operator (license needed for Contestant or
+	logger) before allowing a contact. - Scott Hibbs KD4SIR Mar/29/2017
+
+
+LOGGING LIKE A PRO:
+
+	If you are seeing red, you need to select something before trying to log
+	an entry. You need to select the Contestant, the Logger, the power (natural
+	does not mean a gas generator), and which band and mode you will be using.
+
+	Entry has been straight forward since 1984. That's before pretty pictures.
+	Enter the call and hit <space>. If this is a dupe it will show all the entries
+	for that call and be erased. If the call has been worked on a different band
+	those will populate and the call will remain for more entry. Next enter the
+	Class and the Section. Once confirmed hit enter to add this entry to the log.
+
+	If you're feeling fancy: You can also just enter the suffix and hit space.
+	It will show you those who might have been worked with that suffix on this
+	band. If correct continue with the Class and Section. If incorrect type the
+	correct prefix and hit space. Then continue with the call and Section. Hit
+	Enter to add the call to the log.
+
+	Many times the logging program will think you are getting fancy and try to be
+	fancy itself. If either of you are confused, just hit Escape to clear the
+	entry and start over - try not to get too fancy.
+
+	The up arrow will recall an entry previously typed before.
+
+	Complete contacts like "kd4sir 1d IN" can be now copy or pasted into the entry window.
+
+	Unless you see "QSL! May I have another!" it didn't log.
+
+
+LOG CAPTAIN COMMANDS:
+
+	As the Log Captain you are the admin of the event. You answer the setup
+	questions, manage participants, handle time sync, and make sure the contest
+	submission is correct when it's all over. Below are the commands and tools
+	you need to run things.
+
+	Admin PIN:
+
+	You can set a 4-digit admin PIN to protect admin functions from other nodes.
+	Use .set adminpin to open a dialog and set one. The PIN is stored as a hash
+	so it can't be read back. Anyone who needs admin access will be prompted for it.
+
+	Managing Participants:
+
+	Each participant needs a unique set of initials. Once set, initials can not
+	be changed. As Log Captain you can edit a participant's name, callsign, age,
+	or title but not their initials. A participant can not be deleted if they have
+	entries in the log.
+
+	The age and visitor title fields are used to track official visitors and youth
+	participants for Field Day reporting.
+
+	Editing Log Entries:
+
+	Click on the entry you want to edit in the log window. Entries made by your
+	node are dark blue while entries from other nodes are black. You can only edit
+	your own blue entries.
+
+	Adding Entries from a Paper Log:
+
+	Set the Contestant, Logger, power, and band/mode then type the entry with
+	this format:
+	:dd.hhmm <call> <class> <section>
+	The timestamp uses UTC in dd.hhmm format (day.hourminute).
+
+	Messaging:
+
+	#<message>   Send a broadcast message (QST) to all nodes on the network.
+	             Messages can be up to 40 characters.
+
+	Status and Reports:
+
+	.st          This station's status
+	.ba          Station and band status across all nodes
+	.re          Log summary report (contacts by band and mode)
+	.pr          Print contest entry and log files for submission
+	.h           Display the in-program help menu
+
+	Band and Power:
+
+	.band <bandmode>   Change your band and mode. Examples: 40p, 20c, 2d
+	                   Bands: 160, 80, 40, 20, 15, 10, 6, 2, 220, 440,
+	                   900, 1200, sat
+	                   Modes: c (CW), d (Digital), p (Phone)
+	.off               Change your band to off
+	.pow <value>       Set power level. Examples: 100, 1500n (n = natural power)
+
+	Time Master Commands:
+
+	Time sync is critical for the distributed database. As Log Captain you will
+	typically designate your main computer as the Time Master.
+
+	.tmast             Show Time Master status and election info
+	.tmast me          Set this node as the designated Time Master
+	.tmast <node>      Set a specific node as designated Time Master
+	.tmast clear       Remove Time Master designation and clear election state
+	.tmast elect       Force a new election for auto-elected Time Master
+
+	Time Master priority: Designated (tmast) beats Elected (telect) beats Client.
+	If the designated master goes offline, the system will auto-elect a replacement.
+	When the designated master returns, it automatically takes over again.
+
+	The .set Commands (Contest Configuration):
+
+	These commands set global values that are shared across all nodes on the
+	network. Use the format: .set <parameter> <value>
+
+	Contest and Site Information:
+	  .set class <val>    FD class, e.g. 2A (max 3 chars)
+	  .set contst <val>   Contest type: FD, WFD, or VHF (max 3 chars)
+	  .set fdcall <val>   Field Day callsign (max 6 chars)
+	  .set gcall <val>    GOTA callsign (max 6 chars)
+	  .set sect <val>     ARRL section abbreviation (max 3 chars)
+	  .set grid <val>     VHF grid square, e.g. CN88 (max 4 chars)
+	  .set grpnam <val>   Group name (max 35 chars)
+
+	Entry Form (for contest submission):
+	  .set fmcall <val>   Submitter callsign (max 6 chars)
+	  .set fmname <val>   Submitter name (max 35 chars)
+	  .set fmad1 <val>    Address line 1 (max 35 chars)
+	  .set fmad2 <val>    Address line 2 (max 35 chars)
+	  .set fmcity <val>   City (max 35 chars)
+	  .set fmst <val>     State (max 3 chars)
+	  .set fmzip <val>    Zip code (max 5 digits)
+	  .set fmem <val>     Email address (max 35 chars)
+
+	Site Details:
+	  .set public <val>   Public location description (max 35 chars)
+	  .set infob <0|1>    Public information booth (0=no, 1=yes)
+	  .set svego <val>    Government official visitor name (max 35 chars)
+	  .set svroa <val>    Agency site visitor name (max 35 chars)
+	  .set youth <val>    Number of participating youth (max 2 digits)
+
+	Bonus Points:
+	  .set websub <0|1>   Web submission bonus
+	  .set eduact <0|1>   Educational activity bonus
+	  .set gotaco <0|1>   GOTA coach bonus
+	  .set social <0|1>   Social media bonus
+	  .set safety <0|1>   Safety officer bonus
+	  .set sitere <0|1>   Site responsibilities bonus
+
+	Power Source:
+	  .set psgen <0|1>    Using generator power
+	  .set pscom <0|1>    Using commercial power
+	  .set psbat <0|1>    Using battery power
+	  .set psoth <val>    Other power source description (max 35 chars)
+
+	Time Parameters:
+	  .set fdstrt <val>   FD start time in UTC (format: yymmdd.hhmm)
+	  .set fdend <val>    FD end time in UTC (format: yymmdd.hhmm)
+	  .set tmast <val>    Designated Time Master node (max 8 chars)
+	  .set telect <val>   Auto-elected Time Master (max 8 chars)
+	  .set tntp <val>     Shared NTP server address (max 50 chars)
+	  .set kick <val>     Minutes of inactivity before kick (max 2 digits)
+
+	Other Admin Commands:
+
+	.node <name>       Set the ID of this logging node (1-8 chars)
+	.kick <min>        Set inactivity kick timer in minutes
+	.debug <n>         Set debug level for troubleshooting
+	.tdwin <sec>       Set time difference window in seconds (for displaying
+	                   node broadcast time skew)
+	.remip <x.x.x.x>  Set remote IP address for network operations
+	.testq <n>         Generate fake test entries (only works in test mode)
+	.set adminpin      Open dialog to set a 4-digit admin PIN
+
+
+	Quick Reference - Log Captain Checklist:
+
+	Before Field Day:
+	  [ ] Build executables for all platforms or prepare USB drives
+	  [ ] Test router and network connectivity
+
+	At Field Day:
+	  [ ] Start your node first on the network
+	  [ ] Answer YES to setup questions (everyone else says NO)
+	  [ ] Set yourself as Time Master with .tmast me if this node will be your time master
+	  [ ] Distribute program to other computers
+	  [ ] Verify all nodes see each other (check network status)
+	  [ ] Allow the program's port through each machine's firewall if needed
+
+	After Field Day:
+	  [ ] Be the last computer turned off
+	  [ ] Fill in any missing .set values (bonus points, site info, etc.)
+	  [ ] Run .pr to generate contest submission files
+	  [ ] Submit results using the generated files
+
+
+TROUBLESHOOTING:
+
+	  A new label for FDLog_Enhanced is the Network section. This label will now
+	describe your current network status with different colors. Grey shows if everything
+	is OK, Yellow will ask you if there is a problem, and Red displays if there IS a problem.
+	The messages in FDLog_Enhanced have been renamed to be more descriptive but the issues below
+	are the same.
+
+	Most network errors occur due to firewall issues. Please ensure the firewall isn't blocking traffic.
+
+
+	  SEND FAIL  or SNDP FAIL. The error displayed in FDLog_Enhanced is
+				 "SEND FAIL - Not sending data to others. (firewall?)"
+				 The Packet Sender has received an error from the operating
+				 system. This may occur when there is a network problem. Check the
+				 firewall. Restarting the program or rebooting may cure it.
+
+	  RCVP FAIL  In FDLog_Enhanced this is called
+				"Alone? Not receiving data from others. (firewall?)" Ten seconds have
+				 passed without receiving any packets. This indicates that no
+				 other packets from a FDLOG program are being received within
+				 the time window. This could indicate a problem with the network
+				 or auth key, or it could be normal if this is the only computer
+				 on this network running the program. Try restarting the program
+				 after the network is known to be working.
+
+				 * This will also flash occasionally under normal circumstances
+				 if there are only two computers on the network or if there
+				 is inactivity on the network in the programs.
+
+
+	  AUTH FAIL  A packet has been received (on the port) that has the incorrect
+				 authentication code. It will not be processed. All nodes
+				 participating must use the same authentication key. This is the
+				 two digit number entered when starting the program refering to
+				 the year of the contest ("23").
+
+				 Refer to the command window for more information about this error. It
+				 is best if test and production modes use different ports to
+				 avoid seeing each others packets which have differing
+				 authentication codes.
+
+	  NEED FILL  A node status broadcast has been received, and one or more
+				 of these nodes have data that this node's database does
+				 not have. This node will request the missing data until
+				 it is caught up. The new database items will be displayed in
+				 the upper display as they come in. If the NEED FILL is
+				 indicated, and no data is flowing into the upper display,
+				 the requests for data are not being answered.
+
+	How the program handles the Time:
+
+	Time Sync Overview
+
+  Priority Chain (highest to lowest)
+  +-----------+--------------------+-----------------------------------+-----------------------------------+
+  | Priority  |       Source       |              How Set              |             Behavior              |
+  +-----------+--------------------+-----------------------------------+-----------------------------------+
+  | 1         | tmast (designated) | User sets via .tmast me or dialog | Always wins if online             |
+  +-----------+--------------------+-----------------------------------+-----------------------------------+
+  | 2         | telect (elected)   | Judge announces after election    | Acts as master when tmast offline |
+  +-----------+--------------------+-----------------------------------+-----------------------------------+
+  | 3         | Client             | Automatic                         | Syncs from level 0 source        |
+  +-----------+--------------------+-----------------------------------+-----------------------------------+
+
+  Time Levels
+
+  - Level 0 - Time master (designated, elected, or NTP-synced)
+  - Level 1-8 - Synced from a level N-1 source
+  - Level 9 - Unsynchronized
+
+  Election System
+
+  Judge: Lowest named active node
+
+  Election Triggers:
+  - tmast set but offline, no valid telect
+  - telect set but offline (and tmast still offline)
+  - No tmast, no telect, no time source for 90+ seconds
+
+  Election Process:
+  1. Judge sets telect = "election" (broadcast)
+  2. 10 second collection period
+  3. Judge evaluates: GPS > NTP > lowest node name
+  4. Judge sets telect = <winner> (broadcast)
+
+  Winner Priority: GPS-locked > NTP-synced > Lowest node name
+
+  Broadcast & Sync
+
+  - Nodes broadcast status every 10 seconds (includes time level)
+  - Clock update runs every 30 seconds
+  - Nodes receive time via calib() and adjust via _do_client_sync()
+  - Active node timeout: 60 seconds (considered offline after)
+
+  State Transitions
+
+  [No Master] --90s--> [Judge starts election] --10s--> [telect winner]
+                                                              |
+  [tmast returns] <------------ [telect defers] <-------------+
+        |
+        v
+  [tmast leaves] --> [telect resumes automatically]
+        |
+  [telect also leaves] --> [New election by remaining judge]
+
+  Key Commands
+  +---------------+------------------------------------+
+  |    Command    |               Action               |
+  +---------------+------------------------------------+
+  | .tmast        | Show full status                   |
+  +---------------+------------------------------------+
+  | .tmast me     | Set this node as designated master |
+  +---------------+------------------------------------+
+  | .tmast <node> | Set specific node as designated    |
+  +---------------+------------------------------------+
+  | .tmast clear  | Clear tmast and telect             |
+  +---------------+------------------------------------+
+  | .tmast elect  | Force new election                 |
+  +---------------+------------------------------------+
+
+  Persistence
+
+  - tmast - Persists in log, survives restarts, never auto-cleared
+  - telect - Persists in log, cleared only by new election or .tmast clear
+
+
+If you have any questions or suggestions for the program please email me.
+
+Thanks for using the program,
+Scott Hibbs KD4SIR
+scotthibbs at gmail.com
+
+EOF

@@ -6369,7 +6369,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v2026_Beta 4.2.5"  # Changed 05Feb2026
+version = "v2026_Beta 4.2.6"  # Changed 05Feb2026
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
@@ -7415,20 +7415,22 @@ if N3FJP_AVAILABLE:
 
     def n3fjp_on_qso_logged(call, band_mode, report, timestamp):
         """Called when N3FJP logs a QSO. Runs on network thread."""
+        # FDLog uses lowercase calls internally (qparse regex is lowercase)
+        call_lower = call.lower()
         def _do_log():
             global band
             if not gd.getv('ession'):
                 print("N3FJP: Cannot log QSO - no operator set")
                 return
-            if qdb.dupck(call, band_mode):
-                print(f"N3FJP: Dupe - {call} on {band_mode}")
+            if qdb.dupck(call_lower, band_mode):
+                print(f"N3FJP: Dupe - {call_lower} on {band_mode}")
                 return
             if (n3fjp_client and n3fjp_client.config.auto_band) or \
                (n3fjp_server and n3fjp_server.config.auto_band):
                 if band != band_mode:
                     bandset(band_mode)
-            qdb.qsl(timestamp, call, band_mode, report)
-            print(f"N3FJP: Logged {call} on {band_mode} - {report}")
+            qdb.qsl(now(), call_lower, band_mode, report)
+            print(f"N3FJP: Logged {call_lower} on {band_mode} - {report}")
         try:
             root.after(0, _do_log)
         except Exception:
@@ -7810,7 +7812,7 @@ menu.add_cascade(label="Help", menu=helpmenu)
 # Removed Wireless Network as it is not needed - Scott Hibbs KD4SIR Mar/29/2017
 helpmenu.add_command(label="Quick Help", command=lambda: viewtextf('Keyhelp.txt'))
 helpmenu.add_command(label="Set Commands", command=gd.sethelp)
-helpmenu.add_command(label="The Manual", command=lambda: viewtextf('Manual.txt', "Manual"))
+helpmenu.add_command(label="Log Captain", command=lambda: viewtextf('logcaptain.txt', "Log Captain"))
 helpmenu.add_command(label="Release Log", command=lambda: viewtextf('Releaselog.txt'))
 helpmenu.add_command(label="GitHub ReadMe", command=lambda: viewtextf('readme.txt'))
 helpmenu.add_command(label="About FDLOG_Enhanced", command=lambda: viewtextv(about, "About"))

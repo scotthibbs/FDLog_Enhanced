@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 122 enhancements to the original FDLog so far.
+We have added 123 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -9,6 +9,26 @@ To Do and Ideas:
 
 		(none currently)
 		
+  v2026_Beta 4.2.6 05Feb2026 N3FJP Integration Fixes
+
+	- Fix N3FJP API v2 protocol support. Rewrote XML parser to handle
+	  N3FJP's wrapper-tag format (<CMD><ENTEREVENT>...</ENTEREVENT></CMD>).
+	- Fix connection handshake — SETUPDATESTATE command now uses proper
+	  N3FJP API v2 wrapped format (was causing CMD_NOT_FOUND).
+	- Fix Field Day exchange parsing — added ARRL_SECT and CLASS field
+	  lookups matching what N3FJP Field Day Contest Log actually sends.
+	- Fix mode mapping — added PH (phone), DIG and DG (digital) modes
+	  that N3FJP uses instead of SSB/DIGI.
+	- Fix band change tracking — falls back to BAND+MODE fields when
+	  FREQ is 0 (common when N3FJP has no radio connected).
+	- Fix dupe tracking and click-to-edit for N3FJP entries — lowercase
+	  calls from N3FJP to match FDLog's internal format.
+	- Use FDLog's own clock for QSO timestamps (consistent with all
+	  other QSO sources).
+	- Added handlers for CALLTABEVENT, UPDATE, CONTACTREPLACE,
+	  PROGRAMRESPONSE message types.
+	- Menu: renamed "The Manual" to "Log Captain".
+
   v2026_Beta 4.2.5 05Feb2026 Bug Fixes and Distribution Improvements
 
 	- Fix shared NTP server not adopted promptly by other nodes.
