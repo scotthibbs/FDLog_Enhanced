@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 123 enhancements to the original FDLog so far.
+We have added 121 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
