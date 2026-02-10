@@ -152,11 +152,15 @@ class N3FJPClient:
     _log_prefix = "N3FJP-Client"
 
     def __init__(self, config: N3FJPConfig, on_qso_logged: Callable,
-                 on_status_update: Callable, on_band_change: Optional[Callable] = None):
+                 on_status_update: Callable, on_band_change: Optional[Callable] = None,
+                 on_qso_deleted: Optional[Callable] = None,
+                 on_qso_replaced: Optional[Callable] = None):
         self.config = config
         self.on_qso_logged = on_qso_logged
         self.on_status_update = on_status_update
         self.on_band_change = on_band_change
+        self.on_qso_deleted = on_qso_deleted
+        self.on_qso_replaced = on_qso_replaced
         self._sock: Optional[socket.socket] = None
         self._thread: Optional[threading.Thread] = None
         self._running = False
@@ -278,8 +282,15 @@ class N3FJPClient:
         if cmd == 'ENTEREVENT':
             self._handle_enter_event(msg)
         elif cmd == 'CONTACTREPLACE':
-            # N3FJP v2 alternate name for a logged QSO
-            self._handle_enter_event(msg)
+            # QSO was edited/replaced in N3FJP
+            if self.on_qso_replaced:
+                call = (msg.get('CALL', '') or msg.get('TXTENTRYCALL', '')).strip().upper()
+                print(f"{self._log_prefix}: QSO replaced - {call}")
+                self.on_qso_replaced(call, msg)
+            else:
+                self._handle_enter_event(msg)
+        elif cmd in ('DELETECONTACT', 'CONTACTDELETE'):
+            self._handle_delete_event(msg)
         elif cmd == 'READBMFRESPONSE':
             self._handle_band_change(msg)
         elif cmd == 'UPDATE':
@@ -375,6 +386,13 @@ class N3FJPClient:
         timestamp = None
         print(f"{self._log_prefix}: QSO logged - {call} on {band_mode}, exchange: {report}")
         self.on_qso_logged(call, band_mode, report, timestamp)
+
+    def _handle_delete_event(self, msg: Dict[str, str]):
+        """Process a DELETECONTACT/CONTACTDELETE — a QSO was deleted in N3FJP."""
+        call = (msg.get('CALL', '') or msg.get('TXTENTRYCALL', '')).strip().upper()
+        print(f"{self._log_prefix}: QSO deleted - {call}")
+        if self.on_qso_deleted:
+            self.on_qso_deleted(call, msg)
 
     def _handle_band_change(self, msg: Dict[str, str]):
         """Process a READBMFRESPONSE — band/mode/freq update."""
@@ -489,7 +507,7 @@ class _N3FJPHandler(socketserver.StreamRequestHandler):
             if band and server.on_band_change:
                 server.on_band_change(band)
         elif cmd == 'SETUPDATESTATE':
-            pass  # acknowledged implicitly
+            self._send(build_cmd("SETUPDATESTATERESPONSE", VALUE="TRUE"))
 
     def _send(self, msg: str):
         try:
@@ -578,6 +596,29 @@ class N3FJPServer:
                 handler.request.sendall(msg.encode('utf-8'))
             except Exception:
                 pass
+
+    def notify_qso_logged(self, call: str, band_mode: str, exchange: str, timestamp: str):
+        """Notify all connected N3FJP clients that a QSO was logged locally.
+
+        Builds an ENTEREVENT XML message and broadcasts to all clients.
+        """
+        if not self._clients:
+            return
+        # Derive mode and band from FDLog band_mode string (e.g. "20p" -> band="20m", mode="SSB")
+        mode_suffix = band_mode[-1:] if band_mode else ''
+        band_num = band_mode[:-1] if band_mode else ''
+        mode_map = {'c': 'CW', 'p': 'SSB', 'd': 'FT8'}
+        mode = mode_map.get(mode_suffix, 'SSB')
+        freq = BAND_FREQ_MAP.get(band_mode, 0)
+        msg = build_cmd_wrapped("ENTEREVENT",
+                                CALL=call.upper(),
+                                BAND=f"{band_num}m" if band_num else '',
+                                MODE=mode,
+                                FREQ=str(freq),
+                                EXCHANGE=exchange,
+                                TIMESTAMP=timestamp or '')
+        self.broadcast(msg)
+        print(f"{self._log_prefix}: Notified {len(self._clients)} client(s) of QSO: {call.upper()} on {band_mode}")
 
     def _serve_loop(self):
         while self._serving:

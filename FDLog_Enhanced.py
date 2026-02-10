@@ -1512,6 +1512,14 @@ class QsoDb:
                         r = None
             else:
                 self.logdup()
+                # Notify N3FJP server clients of locally logged QSOs
+                if src == 'user' and self.band[0] != '*':
+                    try:
+                        if N3FJP_AVAILABLE and n3fjp_server and n3fjp_server.is_running():
+                            n3fjp_server.notify_qso_logged(
+                                self.call, self.band, self.rept, self.date)
+                    except Exception as e:
+                        print(f"N3FJP notify error: {e}")
         return r  # remember r is self.todb()
 
     def band_rpt(self):
@@ -6393,7 +6401,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v2026_Beta 4.2.8"  # Changed 10Feb2026
+version = "v2026_Beta 4.2.9"  # Changed 10Feb2026
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
@@ -7471,6 +7479,24 @@ if N3FJP_AVAILABLE:
         except Exception:
             pass
 
+    def n3fjp_on_qso_deleted(call, msg):
+        """Called when N3FJP deletes a QSO. Display notification only."""
+        def _do_notify():
+            sms.prmsg(f"N3FJP: QSO deleted - {call}")
+        try:
+            root.after(0, _do_notify)
+        except Exception:
+            pass
+
+    def n3fjp_on_qso_replaced(call, msg):
+        """Called when N3FJP edits/replaces a QSO. Display notification only."""
+        def _do_notify():
+            sms.prmsg(f"N3FJP: QSO edited - {call}")
+        try:
+            root.after(0, _do_notify)
+        except Exception:
+            pass
+
     def n3fjp_get_current_info():
         """Return current band/mode/freq for server responses."""
         global band
@@ -7701,7 +7727,9 @@ if FLDIGI_AVAILABLE:
 # Initialize N3FJP Integration after root is created
 if N3FJP_AVAILABLE:
     n3fjp_config = n3fjp_load_config()
-    n3fjp_client = N3FJPClient(n3fjp_config, n3fjp_on_qso_logged, n3fjp_status_update, n3fjp_on_band_change)
+    n3fjp_client = N3FJPClient(n3fjp_config, n3fjp_on_qso_logged, n3fjp_status_update, n3fjp_on_band_change,
+                                on_qso_deleted=n3fjp_on_qso_deleted,
+                                on_qso_replaced=n3fjp_on_qso_replaced)
     n3fjp_server = N3FJPServer(n3fjp_config, n3fjp_on_qso_logged, n3fjp_status_update, n3fjp_on_band_change,
                                 get_current_info=n3fjp_get_current_info,
                                 get_qso_count=n3fjp_get_qso_count,

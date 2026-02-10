@@ -9,6 +9,19 @@ To Do and Ideas:
 
 		(none currently)
 		
+  v2026_Beta 4.2.9 10Feb2026 N3FJP Integration Polish
+
+	- Handle DELETECONTACT/CONTACTDELETE events from N3FJP. Displays
+	  a notification in the billboard (no auto-delete for safety).
+	- Handle CONTACTREPLACE as an edit notification instead of
+	  re-logging the QSO (which caused dupe check rejections).
+	- N3FJP server now notifies connected clients when FDLog logs
+	  QSOs locally, keeping N3FJP-compatible loggers in sync.
+	- N3FJP server now responds to SETUPDATESTATE with proper
+	  SETUPDATESTATERESPONSE confirmation.
+	- Add missing integration files to distribution zip: n3fjp,
+	  wsjtx, voice_keying, fldigi, and rigctld modules.
+
   v2026_Beta 4.2.8 10Feb2026 Election Timeout Recovery
 
 	- Fix stalled election when judge crashes mid-election. Non-judge
