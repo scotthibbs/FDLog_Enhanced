@@ -2291,6 +2291,7 @@ class NetworkSync:
     rem_adr = ""  # remote bc address
     authkey = hashlib.md5()
     pkts_rcvd, fills, badauth_rcvd, send_errs = 0, 0, 0, 0
+    _malformed_count = 0
     hostname = socket.gethostname()
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -2437,6 +2438,7 @@ class NetworkSync:
             else:
                 lines = msg.split('\n')  # decode lines
                 for line in lines[1:-1]:  # skip auth hash, blank at end
+                  try:
                     #                    if debug: sms.prmsg(line)
                     fields = line.split('|')
                     if fields[0] == 'b':  # status bcast
@@ -2444,6 +2446,7 @@ class NetworkSync:
                         if len(fields) >= 9:
                             host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag = fields[1:9]
                         else:
+                            if len(fields) < 7: continue
                             host, sip, fnod, stm, stml, ver = fields[1:7]
                             gps_flag, ntp_flag = '0', '0'
                         td = tmsub(stm, pkt_tm)
@@ -2454,25 +2457,33 @@ class NetworkSync:
                         if showbc:  # this is around line 4380 to turn on/off.
                             print("bcast received", host, sip, fnod, ver, pkt_tm, td)
                     elif fields[0] == 's':  # source status
+                        if len(fields) != 6: continue  # expected: s|nod|seq|bnd|msc|age
                         nod, seq, bnd, msc, age3 = fields[1:]
                         # if debug: print pkt_tm,fnod,sip,stm,nod,seq,bnd,msc
                         self.si.sss(pkt_tm, fnod, sip, nod, seq, bnd, msc, age3)
                     elif fields[0] == 'r':  # fill request
+                        if len(fields) != 4: continue  # expected: r|destip|src|seq
                         destip, src, seq = fields[1:]
                         # if debug: print destip,src,seq
                         self.send_qsomsg(src, seq, destip)
                     elif fields[0] == 'q':  # qso data
+                        if len(fields) != 10: continue  # expected: q|src|seq|stm|b|c|rp|p|o|l
                         src, seq, stm, b, c5, rp, p3, o, l01 = fields[1:]
                         # if debug: print src,seq,stm,b,c,rp,p,o,l
                         self.si.sqd(src, seq, stm, b, c5, rp, p3, o, l01)
                     # Added user broadcast to see who is where - 30Nov2023 KD4SIR Scott Hibbs
                     elif fields[0] == 'u':  # User data - who is op and logger where.
+                        if len(fields) != 5: continue  # expected: u|where|op|logr|band
                         where, whoops, whologs, whatband = fields[1:]
                         whoops = exin(whoops)
                         operatorsonline.update({where: whoops})
                         buildmenus()
                     else:
                         sms.prmsg("msg not recognized %s" % addr)
+                  except (ValueError, IndexError) as e:
+                    self._malformed_count += 1
+                    if self._malformed_count == 1 or self._malformed_count % 10 == 0:
+                        print("rcvr: packet parse error #%d from %s: %s" % (self._malformed_count, addr, e))
 
     def start(self):
         """launch all threads"""
@@ -6369,7 +6380,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v2026_Beta 4.2.6"  # Changed 05Feb2026
+version = "v2026_Beta 4.2.7"  # Changed 10Feb2026
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'

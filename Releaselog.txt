@@ -9,6 +9,15 @@ To Do and Ideas:
 
 		(none currently)
 		
+  v2026_Beta 4.2.7 10Feb2026 Network Packet Hardening
+
+	- Protect rcvr() against malformed UDP packets. Added field count
+	  validation before tuple unpacking for s, r, q, and u packet types.
+	  A malformed packet from a buggy node no longer crashes the receiver
+	  thread (previously killed all network comms for the node).
+	- Added outer try/except safety net around packet parsing with
+	  rate-limited warning messages (first occurrence + every 10th).
+
   v2026_Beta 4.2.6 05Feb2026 N3FJP Integration Fixes
 
 	- Fix N3FJP API v2 protocol support. Rewrote XML parser to handle
