@@ -9,6 +9,14 @@ To Do and Ideas:
 
 		(none currently)
 		
+  v2026_Beta 4.2.8 10Feb2026 Election Timeout Recovery
+
+	- Fix stalled election when judge crashes mid-election. Non-judge
+	  nodes now track how long telect='election' has been stuck. After
+	  60 seconds (well beyond the 10s collection period), the node
+	  re-checks if it should become judge — by then the old judge's
+	  entry has aged out and the next-lowest node takes over.
+
   v2026_Beta 4.2.7 10Feb2026 Network Packet Hardening
 
 	- Protect rcvr() against malformed UDP packets. Added field count

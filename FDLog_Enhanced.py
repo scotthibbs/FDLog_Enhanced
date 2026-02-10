@@ -203,6 +203,7 @@ class ClockClass:
     _source_type = 'none'  # 'designated', 'ntp', 'elected', 'synced', 'none'
     _election_pending = False  # True while election is in progress
     _election_start_time = 0  # When election started (monotonic)
+    _election_seen_time = 0  # When non-judge first saw stalled election (monotonic)
     gps_locked = False  # True if local GPS hardware provides time
 
     def __init__(self):
@@ -457,6 +458,18 @@ class ClockClass:
             else:
                 # Clear election state if we're no longer judge
                 self._election_pending = False
+                # Detect stalled election — judge may have crashed
+                if election_in_progress:
+                    if self._election_seen_time == 0:
+                        self._election_seen_time = time.monotonic()
+                    elif time.monotonic() - self._election_seen_time > 60:
+                        if self._am_i_judge():
+                            print("Stalled election detected, this node is now judge")
+                            self._election_pending = True
+                            self._election_start_time = time.monotonic()
+                        self._election_seen_time = 0
+                else:
+                    self._election_seen_time = 0
                 self._do_client_sync()
 
         finally:
@@ -6380,7 +6393,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v2026_Beta 4.2.7"  # Changed 10Feb2026
+version = "v2026_Beta 4.2.8"  # Changed 10Feb2026
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
