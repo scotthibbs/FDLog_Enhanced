@@ -1,7 +1,7 @@
 Field Day Log Program Manual for the Logging Captain
 
 
-Last updated 05Feb2026 by Scott Hibbs KD4SIR
+Last updated 02Jul2026 by Scott Hibbs KD4SIR
 If you have any questions or suggestions for the program please email me.
 
 Thanks for using the program,
@@ -22,7 +22,8 @@ In a Nutshell:
 	Without "QSL - May I have another?" it didn't work.
 	Hit <Escape> to start over.
 	You can use the up arrow to retype the last contact.
-	You can now copy/past full entries.
+	You can now copy/paste full entries.
+	Orange text means we worked them in a previous Field Day.
 	Type ? for help.
 
 
@@ -31,22 +32,27 @@ COMMAND-LINE OPTIONS: (I've never used them but you might)
 	You can run FDLog_Enhanced with command-line arguments to skip the
 	interactive prompts. This is useful for scripting and automation.
 
-	Usage: python FDLog_Enhanced.py [--node NAME] [--auth KEY]
+	Usage: python FDLog_Enhanced.py [--node NAME] [--auth KEY] [--remote ADDR]
 
 	Options:
 	  --node, -n    Station node name (7 chars, e.g., station1, station2, gota)
-	  --auth, -a    Authentication key (e.g., 24 for year 2024, or tst for testing)
+	  --auth, -a    Authentication key (e.g., 26 for year 2026, or tst for testing)
+	  --remote, -r  Connect over the internet to a club's infotable node.
+	                Takes the IP address or trycloudflare.com URL the log
+	                captain shared with you (see INTERNET NODES below).
 	  --help, -h    Show help message
 
 	Examples:
 	  python FDLog_Enhanced.py                        # Interactive mode
-	  python FDLog_Enhanced.py --node station1 --auth 24   # CLI mode
-	  python FDLog_Enhanced.py -n gota -a 24          # GOTA station (short form)
+	  python FDLog_Enhanced.py --node station1 --auth 26   # CLI mode
+	  python FDLog_Enhanced.py -n gota -a 26          # GOTA station (short form)
+	  python FDLog_Enhanced.py -n scott26 -a 26 -r https://xyz.trycloudflare.com
 
 	Notes:
 	- All nodes must use the same --auth key to communicate on the network
 	- Node names are padded to 8 characters with random letters for uniqueness
 	- If options are not provided, you will be prompted interactively
+	  (--remote can also be set later from the Internet menu)
 
 
 SHORT HISTORY AND INTRODUCTION:
@@ -185,11 +191,60 @@ PROGRAM SETUP:
 
 	Look through the .set menu to set any missing information. Don't forget to
 	use .pr to make a "fdlog.txt" file that summarizes the contacts etc.
+	When you run .pr, the program now checks every contact against the
+	official operating period (1800 UTC Saturday to 2059 UTC Sunday) and
+	warns you about any that ARRL won't count - like leftover test contacts.
+	It's a warning only; delete them before submitting if they're not real.
+	The Info Table score already includes your bonus points, computed with
+	the same math as the entry form, so there should be no surprises.
 	Using the program's info, you can submit your results. You're a hero and
 	everyone loves ya. At the recap meeting give everyone funny certificates
 	such as most contacts, least contacts, most points, prettiest radio,
 	and the most important one - most logged which means they helped others.
 	This person should be your best friend. Ask them for ideas for me.
+
+
+INTERNET NODES (REMOTE OPERATORS):
+
+	New for 2026! Operators at home can join your Field Day network over the
+	internet. The Info Table node is the hub - remote nodes connect to it and
+	everything syncs both ways in real time: contacts, dupes, participants,
+	messages, and catch-up fills. Any number of remote operators can share
+	the same address.
+
+	On the Info Table node (the hub):
+
+	1. Click the small "Allow Internet Nodes" toggle at the top of the Info
+	   Table. This only starts the servers - nothing touches your router yet.
+	2. Pick one (or both) ways to accept connections:
+	   - Try UPnP: asks your router to forward TCP port 5100 automatically.
+	     If it works, share your public IP address with the remote operators.
+	   - Enable Cloudflare Tunnel: no router changes and no account needed.
+	     The first time it downloads a small helper (cloudflared), then it
+	     shows a https://something.trycloudflare.com URL with a Copy button.
+	     Share that URL with the remote operators.
+	3. IMPORTANT: don't restart the info node once remote operators are
+	   connected. Every tunnel restart makes a NEW random URL and you will
+	   have to send everyone the new one.
+
+	On the remote node (the operator at home):
+
+	Use the Internet menu -> Connect to Remote Infotable... and paste the
+	IP or URL. Or start the program with --remote (see COMMAND-LINE OPTIONS).
+	The connection retries automatically if it drops.
+
+	Internet node notes:
+
+	- Remote node clocks sync from internet time servers (NTP) automatically,
+	  NOT from your time master - internet delay makes packet timing useless
+	  for clock sync. For the same reason an internet node can never be the
+	  time master (the program refuses and will undo it if set anyway).
+	  If a remote operator sees the "NTP unreachable" warning, their network
+	  is blocking time servers (UDP port 123) and their clock is on its own.
+	- The hub adds Windows Firewall rules for ports 5100/5101 automatically
+	  when internet is enabled.
+	- Start order: info node first, get the URL working and shared, LAN
+	  nodes any time, remote nodes last.
 
 
 USING THE PROGRAM:
@@ -300,7 +355,10 @@ LOG CAPTAIN COMMANDS:
 	                   900, 1200, sat
 	                   Modes: c (CW), d (Digital), p (Phone)
 	.off               Change your band to off
-	.pow <value>       Set power level. Examples: 100, 1500n (n = natural power)
+	.pow <value>       Set power level. Examples: 100, 5n (n = natural power)
+	                   The program caps power at your class limit per the
+	                   2026 rules: 500W for classes A/B/C, 100W for D/E/F.
+	                   Over 100W drops the power multiplier to x1.
 
 	Time Master Commands:
 
@@ -377,8 +435,11 @@ LOG CAPTAIN COMMANDS:
 	.debug <n>         Set debug level for troubleshooting
 	.tdwin <sec>       Set time difference window in seconds (for displaying
 	                   node broadcast time skew)
-	.remip <x.x.x.x>  Set remote IP address for network operations
-	.testq <n>         Generate fake test entries (only works in test mode)
+	.remip <x.x.x.x>  Set the infotable address for an internet node
+	                   (easier: use the Internet menu)
+	.testq <n>         Generate test entries (test mode only). Uses real
+	                   calls from the bundled call history and requires the
+	                   same setup as real logging (license, band, power)
 	.set adminpin      Open dialog to set a 4-digit admin PIN
 
 
@@ -395,11 +456,14 @@ LOG CAPTAIN COMMANDS:
 	  [ ] Distribute program to other computers
 	  [ ] Verify all nodes see each other (check network status)
 	  [ ] Allow the program's port through each machine's firewall if needed
+	  [ ] If using remote operators: enable internet on the info node,
+	      share the URL/IP, and don't restart that node afterwards
 
 	After Field Day:
 	  [ ] Be the last computer turned off
 	  [ ] Fill in any missing .set values (bonus points, site info, etc.)
 	  [ ] Run .pr to generate contest submission files
+	  [ ] Fix anything the out-of-period warning flags (test contacts)
 	  [ ] Submit results using the generated files
 
 
@@ -451,7 +515,17 @@ TROUBLESHOOTING:
 				 it is caught up. The new database items will be displayed in
 				 the upper display as they come in. If the NEED FILL is
 				 indicated, and no data is flowing into the upper display,
-				 the requests for data are not being answered.
+				 the requests for data are not being answered. If the missing
+				 data left with a dead node, the request slows down but never
+				 stops - that's normal.
+
+	  CRASH LOG  If the program ever crashes, it writes the details to a
+				 file named fdlog_error.log next to the program. Email me
+				 that file with what you were doing and we'll fix it.
+
+	  TUNNEL DIED  On the info node, if the Cloudflare Tunnel process dies
+				 you'll see a "tunnel died" message. Toggle it back on to get
+				 a NEW URL, then send that new URL to every remote operator.
 
 	How the program handles the Time:
 
@@ -482,6 +556,7 @@ TROUBLESHOOTING:
   - tmast set but offline, no valid telect
   - telect set but offline (and tmast still offline)
   - No tmast, no telect, no time source for 90+ seconds
+  - Elected or designated master turns out to be an internet node
 
   Election Process:
   1. Judge sets telect = "election" (broadcast)
@@ -490,6 +565,7 @@ TROUBLESHOOTING:
   4. Judge sets telect = <winner> (broadcast)
 
   Winner Priority: GPS-locked > NTP-synced > Lowest node name
+  (internet nodes can never win - they sync to NTP on their own instead)
 
   Broadcast & Sync
 

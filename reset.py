@@ -32,6 +32,7 @@ def main():
     print("Delete all data files?")
     print("  - All *.sq3 database files")
     print("  - All *.fdd log journal files")
+    print("  - fdlog_error.log (crash log)")
     print()
     response = input("Delete data files? (yes/no): ").strip().lower()
 
@@ -56,6 +57,15 @@ def main():
                 deleted_count += 1
             except Exception as e:
                 print(f"  Error deleting {f}: {e}")
+
+        # Delete error log
+        if os.path.exists("fdlog_error.log"):
+            try:
+                os.remove("fdlog_error.log")
+                print("  Deleted: fdlog_error.log")
+                deleted_count += 1
+            except Exception as e:
+                print(f"  Error deleting fdlog_error.log: {e}")
 
         print()
         print(f"Deleted {deleted_count} data file(s).")

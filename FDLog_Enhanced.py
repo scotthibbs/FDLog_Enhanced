@@ -17,11 +17,64 @@ import argparse
 import subprocess
 import platform
 import struct
+import warnings
+# Cosmetic: requests prints this at import time on some Python installs even
+# when charset_normalizer is present (e.g. metadata not resolvable). Harmless.
+warnings.filterwarnings(
+    'ignore',
+    message=r'Unable to find acceptable character detection dependency',
+)
+try:
+    import upnpclient as _upnpclient
+except ImportError:
+    _upnpclient = None
+try:
+    import websockets.sync.server as _ws_srv
+    import websockets.sync.client as _ws_cli
+    import websockets.exceptions as _ws_exc
+    _WEBSOCKETS_OK = True
+except ImportError:
+    _ws_srv = _ws_cli = _ws_exc = None
+    _WEBSOCKETS_OK = False
 import pandas as pd
 import plotly.express as px
 from tkinter import END, Toplevel, Frame, Label, Entry, Button, \
     W, EW, E, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
-    Checkbutton, IntVar, Listbox, SUNKEN
+    Checkbutton, IntVar, Listbox, SUNKEN, Canvas
+
+# --- Early crash logger — catches errors before Tkinter starts and in threads ---
+def _fdlog_error_log_path():
+    base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) \
+        else os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(base, 'fdlog_error.log')
+    try:
+        open(path, 'a').close()  # test writability
+        return path
+    except Exception:
+        return os.path.join(os.path.expanduser('~'), 'fdlog_error.log')
+
+def _fdlog_write_error(exc_type, exc_value, exc_tb):
+    import traceback as _tb, datetime
+    msg = ''.join(_tb.format_exception(exc_type, exc_value, exc_tb))
+    stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    try:
+        with open(_fdlog_error_log_path(), 'a', encoding='utf-8') as _f:
+            _f.write('\n=== %s ===\n%s\n' % (stamp, msg))
+    except Exception:
+        pass
+
+def _fdlog_excepthook(exc_type, exc_value, exc_tb):
+    _fdlog_write_error(exc_type, exc_value, exc_tb)
+    sys.__excepthook__(exc_type, exc_value, exc_tb)
+
+sys.excepthook = _fdlog_excepthook
+
+# Catch unhandled exceptions in background threads (Python 3.8+)
+if hasattr(threading, 'excepthook'):
+    def _fdlog_thread_excepthook(args):
+        _fdlog_write_error(args.exc_type, args.exc_value, args.exc_traceback)
+    threading.excepthook = _fdlog_thread_excepthook
+# --- end early crash logger ---
 
 # Callsign parser with country lookup support
 from parser import CallSignParser, InvalidCallSignError, CallSignParserError
@@ -126,7 +179,7 @@ FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2026.
 def fingerprint():
     """Calculate and print MD5 fingerprint of source file."""
     try:
-        with open('FDLog_Enhanced.py') as f:
+        with open('FDLog_Enhanced.py', encoding='utf-8') as f:
             t = f.read()
         h = hashlib.md5()
         t = t.encode()
@@ -295,14 +348,23 @@ class ClockClass:
         return active_lower[0] == node.lower()
 
     def _get_node_priority(self, n):
-        """Get priority for a node. 0=GPS, 1=NTP, 2=none. Lower is better."""
+        """Get priority for a node. 0=GPS, 1=NTP, 2=none, None=ineligible. Lower is better.
+        Internet-relayed nodes are ineligible (None) — LAN nodes structurally can't
+        calibrate against them, since calib() is deliberately skipped for any packet
+        relayed from the internet (tunnel latency would be misread as clock skew).
+        Electing one would leave the LAN with no working sync path at all, regardless
+        of how accurate that node's own clock is."""
         if n.lower() == node.lower():
+            if net.is_internet_node():
+                return None
             if self.gps_locked:
                 return 0
             elif self.ntp_ok:
                 return 1
             return 2
         ni = net.si.nodes.get(n)
+        if ni and ni.is_internet:
+            return None
         if ni and ni.gps_locked:
             return 0
         elif ni and ni.ntp_ok:
@@ -312,33 +374,16 @@ class ClockClass:
     def _run_election(self):
         """Run election and return winner node name.
         Priority: GPS-locked > NTP-synced > lowest node name.
-        Designated time master (tmast) is excluded from election."""
+        Designated time master (tmast) and internet-relayed nodes are excluded."""
         active = self._get_active_nodes()
         # Exclude designated time master from election
         tmast_val = gd.getv('tmast')
         if isinstance(tmast_val, str) and tmast_val and not tmast_val.startswith('get error'):
             active = [n for n in active if n.lower() != tmast_val.lower()]
-        # Build candidate list: (priority, name) where lower priority wins
-        # Priority: 0=GPS, 1=NTP, 2=none
-        candidates = []
-        for n in active:
-            if n.lower() == node.lower():
-                # This node - we know our own status
-                if self.gps_locked:
-                    candidates.append((0, n))
-                elif self.ntp_ok:
-                    candidates.append((1, n))
-                else:
-                    candidates.append((2, n))
-            else:
-                # Other nodes - look up their GPS/NTP status from broadcasts
-                ni = net.si.nodes.get(n)
-                if ni and ni.gps_locked:
-                    candidates.append((0, n))
-                elif ni and ni.ntp_ok:
-                    candidates.append((1, n))
-                else:
-                    candidates.append((2, n))
+        # Build candidate list: (priority, name) where lower priority wins.
+        # Nodes with priority None (internet-relayed) are not eligible.
+        candidates = [(prio, n) for n in active
+                      for prio in [self._get_node_priority(n)] if prio is not None]
         # Sort by priority, then by name (lowercase)
         candidates.sort(key=lambda x: (x[0], x[1].lower()))
         return candidates[0][1] if candidates else node
@@ -366,6 +411,18 @@ class ClockClass:
             telect_online = self._is_online(telect_val) if telect_is_node else False
             i_am_elected = telect_is_node and node.lower() == telect_val.lower()
             election_in_progress = telect_val.lower() == "election" if telect_val else False
+
+            # An internet node must never be designated master - LAN nodes
+            # cannot sync to it across the relay (calib() skips relayed
+            # packets). Step down, clear the designation, and warn.
+            clear_tmast = False
+            if i_am_designated and net.is_internet_node():
+                print("WARNING: this node is now an internet node - removing its"
+                      " time master designation. LAN nodes cannot sync to it.")
+                clear_tmast = True
+                i_am_designated = False
+                tmast_val, tmast_online = '', False
+                self._source_type = 'none'
 
             # === PRIORITY 1: Designated time master (tmast) ===
             if i_am_designated:
@@ -398,8 +455,15 @@ class ClockClass:
             # === ELECTION JUDGE DUTIES ===
             elif self._am_i_judge():
                 need_election = False
+                # Designated master is an internet node (set via .set bypass or
+                # by an older version) - remove it and elect a replacement.
+                if tmast_val and self._get_node_priority(tmast_val) is None:
+                    need_election = True
+                    clear_tmast = True
+                    tmast_val, tmast_online = '', False
+                    print("Judge: tmast is an internet node, removing designation and starting election")
                 # tmast set but offline, no valid telect
-                if tmast_val and not tmast_online and not telect_online and not election_in_progress:
+                elif tmast_val and not tmast_online and not telect_online and not election_in_progress:
                     need_election = True
                     print("Judge: tmast '%s' is offline, starting election" % tmast_val)
                 # telect set but offline (and tmast still offline or not set)
@@ -417,16 +481,24 @@ class ClockClass:
                 # Better candidate available (e.g., GPS node joined while non-GPS is elected)
                 elif telect_online and not tmast_online:
                     telect_priority = self._get_node_priority(telect_val)
-                    for n in self._get_active_nodes():
-                        # Skip the current elected master and designated master
-                        if n.lower() == telect_val.lower():
-                            continue
-                        if tmast_val and n.lower() == tmast_val.lower():
-                            continue
-                        if self._get_node_priority(n) < telect_priority:
-                            need_election = True
-                            print("Judge: node '%s' has better time source than '%s', starting election" % (n, telect_val))
-                            break
+                    if telect_priority is None:
+                        # Elected master is internet-relayed (e.g. stale telect from
+                        # before this exclusion existed) — invalid, force re-election
+                        # rather than comparing against None below.
+                        need_election = True
+                        print("Judge: elected master '%s' is an internet node, starting election" % telect_val)
+                    else:
+                        for n in self._get_active_nodes():
+                            # Skip the current elected master and designated master
+                            if n.lower() == telect_val.lower():
+                                continue
+                            if tmast_val and n.lower() == tmast_val.lower():
+                                continue
+                            n_priority = self._get_node_priority(n)
+                            if n_priority is not None and n_priority < telect_priority:
+                                need_election = True
+                                print("Judge: node '%s' has better time source than '%s', starting election" % (n, telect_val))
+                                break
 
                 if need_election and not self._election_pending:
                     # Start election
@@ -472,10 +544,39 @@ class ClockClass:
                     self._election_seen_time = 0
                 self._do_client_sync()
 
+            # === INTERNET NODE: sync to NTP ===
+            # Relay latency blocks packet calibration in both directions, so an
+            # internet node can neither follow the time master nor be followed.
+            # NTP (which compensates for round-trip delay) is its only usable
+            # time source — slew toward it via the normal adjust() mechanism.
+            try:
+                i_am_internet = net.is_internet_node()
+            except NameError:
+                i_am_internet = False  # net not constructed yet
+            if i_am_internet and self._source_type not in ('designated', 'elected'):
+                if self.ntp_ok and self.ntp_offset is not None:
+                    self.adjusta = self.ntp_offset - self.offset
+                    self.level = 1
+                    if self._source_type != 'ntp':
+                        print("Internet node: syncing clock to NTP (correction %.3f S)"
+                              % self.adjusta)
+                    self._source_type = 'ntp'
+                elif self._source_type != 'ntp-fail':
+                    print("Internet node: NTP unreachable - clock is NOT synchronized!"
+                          " Check that this network allows NTP (UDP port 123).")
+                    self._source_type = 'ntp-fail'
+
         finally:
             self.lock.release()
 
-        # Do broadcast after releasing lock to avoid deadlock
+        # Do broadcasts after releasing lock to avoid deadlock
+        if clear_tmast:
+            try:
+                globDb.put('tmast', '')
+                qdb.globalshare('tmast', '')
+                print("Time master designation cleared (internet node).")
+            except Exception as e:
+                print("Error clearing tmast: %s" % e)
         if broadcast_action:
             self._broadcast_telect(broadcast_action)
 
@@ -659,7 +760,7 @@ def initialize():
         valid_sections = {}
         sect_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Arrl_sections_ref.txt")
         try:
-            with open(sect_file, "r") as f:
+            with open(sect_file, "r", encoding='utf-8') as f:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith("#"):
@@ -1096,7 +1197,7 @@ class QsoDb:
 
     def _log_to_file(self):
         with self.lock:
-            with open(logdbf, "a") as fd:
+            with open(logdbf, "a", encoding='utf-8') as fd:
                 fd.write(f"\nq|{self.src}|{self.seq}|{self.date}|{self.band}|{self.call}|{self.rept}|{self.powr}|"
                          f"{self.oper}|{self.logr}|")
 
@@ -1300,6 +1401,17 @@ class QsoDb:
         # Added tmob so that we can count time inactive - Scott Hibbs KD4SIR 09Aug2022
         global tmob
         tmob = now()
+        # 2026 rules 4.4: Class D gets no credit for working Class D - warn at
+        # entry time; the QSO is still logged but band_rpt() scores it zero.
+        if bandmod[:1] != '*' and re.match(r'\s*\d+\s*[dD]\b', report):
+            try:
+                c0 = gd.getv('class')
+                if isinstance(c0, str) and not c0.startswith('get error') \
+                        and c0.strip()[-1:].upper() == 'D':
+                    txtbillb.insert(END, " WARNING: Class D cannot claim credit for"
+                                         " Class D contacts - logged, 0 points.\n")
+            except Exception:
+                pass
         return self.post_new(time2, call4, bandmod, report, exin(operator),
                              exin(logger), power)
 
@@ -1473,10 +1585,9 @@ class QsoDb:
                 self.hiseq[self.src] = current + 1
                 # if debug: print "todb:",self.src,self.seq
                 r = self
-            elif self.seq == current:
-                if debug:
-                    print("dup sequence log entry ignored")
-            else:
+            elif self.seq <= current:
+                pass  # dup or fill spill below hiseq — already have it
+            else:  # seq > current + 1: genuine gap
                 print("out of sequence log entry ignored", self.seq, current + 1)
         # self.lock.release()
         return r
@@ -1531,6 +1642,14 @@ class QsoDb:
         # score points, max power, cw qsos, digital qsos, phone qsos, qso per gota operator, gota qsos,
         # natural power, satelite
         dummy, c1, g3 = self.cleanlog()  # by id, call-bnd, gota by call-bnd
+        # 2026 rules 4.4: Class D gets no QSO credit for working other Class D
+        own_d = False
+        try:
+            c0 = gd.getv('class')
+            if isinstance(c0, str) and not c0.startswith('get error'):
+                own_d = c0.strip()[-1:].upper() == 'D'
+        except Exception:
+            pass
         for i10 in list(c1.values()) + list(g3.values()):
             if re.search('sat', i10.band):
                 sat.append(i10)
@@ -1538,13 +1657,12 @@ class QsoDb:
                 nat.append(i10)
             # stop ignoring above 100 q's per oper per new gota rules. - Alan Biocca (W6AKB) Jun2005
             # GOTA q's stop counting over 400 (500 in 2009)
+            # 2026 rules: no limit on GOTA contacts - cap removed
             if i10.src == 'gotanode':  # analyze gota limits
                 qpgop[i10.oper] = qpgop.get(i10.oper, 0) + 1
                 qpop[i10.oper] = qpop.get(i10.oper, 0) + 1
                 qplg[i10.logr] = qplg.get(i10.logr, 0) + 1
                 qpst[i10.src] = qpst.get(i10.src, 0) + 1
-                if gotaq >= 500:
-                    continue  # stop over 500 total
                 gotaq += 1
                 tq += 1
                 score += 1
@@ -1562,6 +1680,14 @@ class QsoDb:
                     fonq += 1
                     qpb['gotap'] = qpb.get('gotap', 0) + 1
                     ppb['gotap'] = max(ppb.get('gotap', 0), ival(i10.powr))
+                continue
+            if own_d and re.match(r'\s*\d+\s*[dD]\b', i10.rept):
+                # Class D worked Class D - logged, tracked, but zero points
+                maxp = max(maxp, ival(i10.powr))
+                qpop[i10.oper] = qpop.get(i10.oper, 0) + 1
+                qplg[i10.logr] = qplg.get(i10.logr, 0) + 1
+                qpst[i10.src] = qpst.get(i10.src, 0) + 1
+                tq += 1
                 continue
             qpb[i10.band] = qpb.get(i10.band, 0) + 1
             ppb[i10.band] = max(ppb.get(i10.band, 0), ival(i10.powr))
@@ -1835,7 +1961,7 @@ class QsoDb:
 
         # Read section data
         try:
-            with open("Arrl_sections_ref.txt", "r") as fd:
+            with open("Arrl_sections_ref.txt", "r", encoding='utf-8') as fd:
                 for ln in fd:
                     if ln.startswith('#'):
                         continue
@@ -1913,7 +2039,7 @@ class QsoDb:
 
         # Read section data
         try:
-            with open("Arrl_sections_ref.txt", "r") as fd:
+            with open("Arrl_sections_ref.txt", "r", encoding='utf-8') as fd:
                 for ln in fd:
                     if ln.startswith('#'):
                         continue
@@ -2153,6 +2279,7 @@ class NodeInfoClass:
         self.nod = None
         self.gps_locked = False
         self.ntp_ok = False
+        self.is_internet = False
 
     @staticmethod
     def sqd(src, seq, t, b, c3, rp, p1, o, logr1):
@@ -2174,7 +2301,7 @@ class NodeInfoClass:
             r[n] = ival(i14[n]) & ival(m6[n])
         return "%s.%s.%s.%s" % (r[0], r[1], r[2], r[3])
 
-    def ssb(self, pkt_tm, host, sip, nod, stm, stml, ver, td, gps_locked='0', ntp_ok='0'):
+    def ssb(self, pkt_tm, host, sip, nod, stm, stml, ver, td, gps_locked='0', ntp_ok='0', is_internet='0'):
         """process status broadcast (first line)"""
         self.lock.acquire()
         if nod not in self.nodes:  # create if new
@@ -2186,6 +2313,7 @@ class NodeInfoClass:
         i15.ptm, i15.nod, i15.host, i15.ip, i15.stm, i15.age = pkt_tm, nod, host, sip, stm, 0
         i15.gps_locked = (gps_locked == '1')
         i15.ntp_ok = (ntp_ok == '1')
+        i15.is_internet = (is_internet == '1')
         self.lock.release()
         #   if debug:
         #  print "ssb:",pkt_tm,host,sip,nod,stm,stml,ver,td
@@ -2229,10 +2357,10 @@ class NodeInfoClass:
         for i18 in list(self.nodinfo.values()):  # for each node
             j1 = qdb.hiseq.get(i18.nod, 0)
             if int(i18.seq) > j1:  # if they have something we need
-                r.append((i18.fip, i18.nod, j1 + 1))  # add req for next to list
+                r.append((i18.fip, i18.nod, j1 + 1, int(i18.seq)))  # add req for range to list
                 # if debug: print "req fm",i.fip,"for",i.nod,i.seq,"have",j+1
         self.lock.release()
-        return r  # list of (addr,src,seq)
+        return r  # list of (addr,src,seqstart,seqend)
 
     def node_status_list(self):
         """return list of node status tuples"""
@@ -2313,6 +2441,16 @@ class NetworkSync:
     authkey = hashlib.md5()
     pkts_rcvd, fills, badauth_rcvd, send_errs = 0, 0, 0, 0
     _malformed_count = 0
+    tlasqdr = 0.0  # time of last q packet received (for fill quiet period)
+    _log_throttle = {}  # key -> last-printed time, for noisy/repeating console messages
+    # TCP internet relay
+    tcp_conn = {}               # {addr_str: (socket, addr_tuple)}
+    ws_conn  = {}               # {addr_str: (websocket, addr_tuple)}
+    tcp_internet_enabled = False
+    rem_host = '0.0.0.0'       # infotable IP for client mode (set via --remote)
+    TCP_PORT = 5100             # Alan Biocca's choice — firewall-friendly port
+    WS_PORT  = 5101             # WebSocket port for Cloudflare Tunnel
+    _ws_server_obj = None
     hostname = socket.gethostname()
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -2359,6 +2497,16 @@ class NetworkSync:
         #        print h; print self.auth(m); print
         return h == self.auth(m7)
 
+    def _tprint(self, key, msg, window=5.0):
+        """Print msg, but at most once per `window` seconds for a given key —
+        keeps repeating/stuck network chatter (e.g. an unanswerable fill
+        request) from flooding the console."""
+        now_t = time.time()
+        last = self._log_throttle.get(key, 0.0)
+        if now_t - last >= window:
+            self._log_throttle[key] = now_t
+            print(msg)
+
     def sndmsg(self, msg, addr):
         """send message to address list"""
         if authk != "" and node != "":
@@ -2382,6 +2530,12 @@ class NetworkSync:
                 except socket.error as e01:
                     self.send_errs += 1
                     print("error, pkt xmt failed %s %s [%s]" % (now(), e01.args, a))
+            # Forward to TCP and WebSocket internet connections on broadcast
+            if addr == 'bcast':
+                if self.tcp_conn:
+                    self._tcp_send_all(self._tcp_frame(amsg))
+                if self.ws_conn:
+                    self._ws_send_all(amsg)
 
     def send_qsomsg(self, nod, seq, destip):
         """send q record"""
@@ -2394,13 +2548,22 @@ class NetworkSync:
 
     def bc_qsomsg(self, nod, seq):
         """broadcast new q record"""
-        self.send_qsomsg(nod, seq, self.bc_addr)
+        self.send_qsomsg(nod, seq, 'bcast')
+
+    def is_internet_node(self):
+        """True if this instance is running as an internet-relay client (--remote /
+        saved remip). Self-reported in the 'b' broadcast so every node on the
+        network — not just the hub — sees the same origin tag regardless of how
+        many relay hops the packet took to reach them."""
+        rh = self.rem_host.strip()
+        return bool(rh) and rh != '0.0.0.0'
 
     def bcast_now(self):
         gps_flag = '1' if mclock.gps_locked else '0'
         ntp_flag = '1' if mclock.ntp_ok else '0'
-        msg = "b|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
-              (self.hostname, self.my_addr, node, now(), mclock.level, version, gps_flag, ntp_flag)
+        inet_flag = '1' if self.is_internet_node() else '0'
+        msg = "b|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
+              (self.hostname, self.my_addr, node, now(), mclock.level, version, gps_flag, ntp_flag, inet_flag)
         for i21 in self.si.node_status_list():
             msg += "s|%s|%s|%s|%s|%s\n" % i21  # nod,seq,bnd,msc,age
             # if debug: print i
@@ -2412,39 +2575,58 @@ class NetworkSync:
         self.sndmsg(msg, 'bcast')  # broadcast it
 
     def fillr(self):
-        """filler thread requests missing database records"""
+        """filler thread requests missing database records (block fill)"""
         time.sleep(0.2)
         if debug:
             print("filler thread starting")
+        _last_req, _last_req_tm = None, 0.0
+        _retry_state = {}  # (nod,seqs,seqe) -> (next_allowed_time, backoff_seconds)
         while 1:
-            time.sleep(.1)  # periodically check for fills
+            time.sleep(.2)
             if debug:
                 time.sleep(1)  # slow for debug
+            # quiet period: wait for data stream to settle before requesting more
+            if (time.time() - self.tlasqdr) < 0.5:
+                continue
             r = self.si.fill_requests_list()
             self.fills = len(r)
             if self.fills:
-                p2 = random.randrange(0, len(r))  # randomly select one
-                c4 = r[p2]
-                msg = "r|%s|%s|%s\n" % (self.my_addr, c4[1], c4[2])  # (addr,src,seq)
-                self.sndmsg(msg, c4[0])
-                print("req fill", c4)
+                now_t = time.time()
+                # drop backoff state for gaps that are no longer pending (resolved or superseded)
+                pending_keys = set((c[1], c[2], c[3]) for c in r)
+                for k in list(_retry_state.keys()):
+                    if k not in pending_keys:
+                        del _retry_state[k]
+                # only retry gaps whose backoff has expired — avoids hammering a
+                # permanently-unanswerable gap (e.g. data lost with a node that dropped)
+                due = [c for c in r if now_t >= _retry_state.get((c[1], c[2], c[3]), (0, 0))[0]]
+                if not due:
+                    continue
+                c4 = due[random.randrange(0, len(due))]  # randomly select one due gap
+                key = (c4[1], c4[2], c4[3])
+                # broadcast so LAN nodes and internet nodes (via relay) all see it
+                msg = "m|%s|%s|%s|%s\n" % (self.my_addr, c4[1], c4[2], c4[3])
+                self.sndmsg(msg, 'bcast')
+                prev_backoff = _retry_state.get(key, (0, 0.5))[1]
+                backoff = min(prev_backoff * 2, 30.0)
+                _retry_state[key] = (now_t + backoff, backoff)
+                # announce (throttled) so fill activity is visible on console, not just debug mode
+                if key != _last_req or now_t - _last_req_tm > 5:
+                    print("Fill request: node=%s seq %s-%s (%d gap(s) pending, next retry in %.0fs)" %
+                          (c4[1], c4[2], c4[3], self.fills, backoff))
+                    _last_req, _last_req_tm = key, now_t
 
     def rcvr(self):
         """receiver thread processes incoming packets"""
-        buffer_size = 800  # size of udp packets to be received
+        buffer_size = 4096
 
         if debug:
             print("receiver thread starting")
         r = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         r.bind(('', self.port))
         while 1:
-            msg, addr = r.recvfrom(buffer_size)
-
-            #  curious about udp packet size?  Most are less than 200 bytes
-            # msg_size = len(msg)  # Measure the size of the received packet
-            # print(f"Received packet from {addr}, size: {msg_size} bytes")
-
-            msg = msg.decode()
+            raw_bytes, addr = r.recvfrom(buffer_size)
+            msg = raw_bytes.decode('utf-8', errors='replace')
             if addr[0] != self.my_addr:
                 self.pkts_rcvd += 1
             # if authk == "": continue             # skip till auth set
@@ -2452,29 +2634,49 @@ class NetworkSync:
             host, sip, fnod, stm = '', '', '', ''
             if debug:
                 print("rcvr: %s: %s" % (addr, msg),)  # xx
-            if not self.ckauth(msg):  # authenticate packet
+            try:
+                authed = self.ckauth(msg)
+            except Exception as e:
+                # A packet with no newline (or other garbage) makes ckauth() raise before
+                # the per-line try/except below is even reached — must not kill the thread.
+                self._malformed_count += 1
+                print("rcvr: ckauth error from %s: %s" % (addr, e))
+                continue
+            if not authed:  # authenticate packet
                 # if debug: sms.prmsg("bad auth from: %s" %addr)
                 print("bad auth from:", addr)
                 self.badauth_rcvd += 1
             else:
                 lines = msg.split('\n')  # decode lines
+                relayed_pkt = False  # set if this whole UDP packet came via the internet relay
                 for line in lines[1:-1]:  # skip auth hash, blank at end
                   try:
                     #                    if debug: sms.prmsg(line)
                     fields = line.split('|')
+                    if fields[0] == 'i':  # internet-relay marker (see _mark_relayed)
+                        relayed_pkt = True
+                        continue
                     if fields[0] == 'b':  # status bcast
                         # Parse with backwards compatibility for older nodes
-                        if len(fields) >= 9:
+                        if len(fields) >= 10:
+                            host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag, inet_flag = fields[1:10]
+                        elif len(fields) >= 9:
                             host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag = fields[1:9]
+                            inet_flag = '0'
                         else:
                             if len(fields) < 7: continue
                             host, sip, fnod, stm, stml, ver = fields[1:7]
-                            gps_flag, ntp_flag = '0', '0'
+                            gps_flag, ntp_flag, inet_flag = '0', '0', '0'
                         td = tmsub(stm, pkt_tm)
-                        self.si.ssb(pkt_tm, host, sip, fnod, stm, stml, ver, td, gps_flag, ntp_flag)
-                        mclock.calib(fnod, stml, td)
-                        if abs(td) >= tdwin:
-                            print('Incoming packet clock error', td, host, sip, fnod, pkt_tm)
+                        self.si.ssb(pkt_tm, host, sip, fnod, stm, stml, ver, td, gps_flag, ntp_flag, inet_flag)
+                        if relayed_pkt:
+                            # internet relay latency is indistinguishable from clock skew —
+                            # same reason _tcp_proc_msg() skips calib() for direct internet packets
+                            pass
+                        else:
+                            mclock.calib(fnod, stml, td)
+                            if abs(td) >= tdwin:
+                                print('Incoming packet clock error', td, host, sip, fnod, pkt_tm)
                         if showbc:  # this is around line 4380 to turn on/off.
                             print("bcast received", host, sip, fnod, ver, pkt_tm, td)
                     elif fields[0] == 's':  # source status
@@ -2482,15 +2684,28 @@ class NetworkSync:
                         nod, seq, bnd, msc, age3 = fields[1:]
                         # if debug: print pkt_tm,fnod,sip,stm,nod,seq,bnd,msc
                         self.si.sss(pkt_tm, fnod, sip, nod, seq, bnd, msc, age3)
-                    elif fields[0] == 'r':  # fill request
+                    elif fields[0] == 'r':  # fill request (single)
                         if len(fields) != 4: continue  # expected: r|destip|src|seq
                         destip, src, seq = fields[1:]
                         # if debug: print destip,src,seq
                         self.send_qsomsg(src, seq, destip)
+                    elif fields[0] == 'm':  # block fill request
+                        if len(fields) != 5: continue  # expected: m|destip|src|seqs|seqe
+                        destip, src, seqs, seqe = fields[1:]
+                        self._tprint(('m-udp-rx', src, seqs, seqe),
+                                     "Fill request received (UDP) from %s: node=%s seq %s-%s" %
+                                     (addr, src, seqs, seqe))
+                        # destip is the requester's own self-reported IP. For a request
+                        # relayed from an internet node (marked 'i|1'), that's a private
+                        # address unreachable from this LAN — broadcast instead so the
+                        # hub can pick up the response and relay it back over TCP/WS.
+                        self.send_qsomsgs(src, int(seqs), int(seqe),
+                                           'bcast' if relayed_pkt else destip)
                     elif fields[0] == 'q':  # qso data
                         if len(fields) != 10: continue  # expected: q|src|seq|stm|b|c|rp|p|o|l
                         src, seq, stm, b, c5, rp, p3, o, l01 = fields[1:]
                         # if debug: print src,seq,stm,b,c,rp,p,o,l
+                        self.tlasqdr = time.time()
                         self.si.sqd(src, seq, stm, b, c5, rp, p3, o, l01)
                     # Added user broadcast to see who is where - 30Nov2023 KD4SIR Scott Hibbs
                     elif fields[0] == 'u':  # User data - who is op and logger where.
@@ -2498,13 +2713,560 @@ class NetworkSync:
                         where, whoops, whologs, whatband = fields[1:]
                         whoops = exin(whoops)
                         operatorsonline.update({where: whoops})
-                        buildmenus()
+                        # buildmenus() rebuilds Tk Menu widgets (deletes/recreates Tcl
+                        # commands) — Tcl/Tk is not thread-safe, must run on the main
+                        # thread. This is a background receiver thread, so marshal it.
+                        root.after(0, buildmenus)
                     else:
-                        sms.prmsg("msg not recognized %s" % addr)
-                  except (ValueError, IndexError) as e:
+                        sms.prmsg("msg not recognized %s" % (addr,))
+                  except Exception as e:
+                    # Catch everything, not just ValueError/IndexError — this loop runs on
+                    # a bare thread with no supervisor. Letting any exception escape (as a
+                    # stray TypeError once did here) kills rcvr() permanently and the node
+                    # goes silently deaf to all future network traffic.
                     self._malformed_count += 1
                     if self._malformed_count == 1 or self._malformed_count % 10 == 0:
                         print("rcvr: packet parse error #%d from %s: %s" % (self._malformed_count, addr, e))
+                # Relay to all remote internet nodes (TCP + WS)
+                if self.tcp_internet_enabled and addr[0] != self.my_addr:
+                    if self.tcp_conn:
+                        self._tcp_send_all(self._tcp_frame(raw_bytes))
+                    if self.ws_conn:
+                        self._ws_send_all(raw_bytes)
+
+    # -------------------------------------------------------------------------
+    # TCP Internet Relay — Alan Biocca's 3-byte framing, hub-and-spoke design
+    # Infotable is the TCP server hub; remote nodes connect as clients.
+    # -------------------------------------------------------------------------
+
+    def _tcp_frame(self, amsg):
+        """Wrap message bytes in 3-byte length+parity header."""
+        n = len(amsg)
+        i, j = n & 255, n >> 8
+        return bytes([i, j, i ^ j]) + amsg
+
+    def _tcp_recv_one(self, sock, addr_str=None):
+        """Read one framed message from a TCP socket. Returns bytes or None on error/close.
+        addr_str, if given, is only used to label the diagnostic print on failure."""
+        hdr = b''
+        while True:
+            while len(hdr) < 3:
+                try:
+                    chunk = sock.recv(3 - len(hdr))
+                except Exception as e:
+                    print("tcp recv error %s: %s" % (addr_str, e))
+                    return None
+                if not chunk:
+                    return None  # clean EOF — peer closed the connection normally
+                hdr += chunk
+            if hdr[0] ^ hdr[1] != hdr[2]:  # bad parity byte — slide window
+                hdr = hdr[1:]
+                continue
+            length = hdr[0] + 256 * hdr[1]
+            if length == 0 or length > 8200:  # sanity check
+                hdr = hdr[1:]
+                continue
+            break
+        msg = b''
+        while len(msg) < length:
+            try:
+                chunk = sock.recv(length - len(msg))
+            except Exception as e:
+                print("tcp recv error %s: %s" % (addr_str, e))
+                return None
+            if not chunk:
+                return None
+            msg += chunk
+        return msg
+
+    def _send_one(self, addr_str, amsg):
+        """Send an authenticated (unframed) message to one remote node, whether
+        it's connected via raw TCP (needs framing) or WebSocket (framing would
+        corrupt the payload — WS is already message-delimited)."""
+        if addr_str in self.tcp_conn:
+            self._tcp_send_one(addr_str, self._tcp_frame(amsg))
+        elif addr_str in self.ws_conn:
+            self._ws_send_one(addr_str, amsg)
+        else:
+            self._tprint(('no-conn', addr_str),
+                         "fill response: no live connection to %s (dropped)" % addr_str)
+
+    def _tcp_send_one(self, addr_str, tmsg):
+        """Send a framed message to one TCP connection."""
+        entry = self.tcp_conn.get(addr_str)
+        if not entry:
+            return
+        sock, _addr = entry
+        try:
+            sock.sendall(tmsg)
+        except Exception as e:
+            self.send_errs += 1
+            print("tcp send error %s: %s" % (addr_str, e))
+            try:
+                del self.tcp_conn[addr_str]
+            except Exception:
+                pass
+            try:
+                sock.close()
+            except Exception:
+                pass
+
+    def _tcp_send_all(self, tmsg, exclude=None):
+        """Send a framed message to all TCP connections except exclude."""
+        for a in list(self.tcp_conn.keys()):
+            if a != exclude:
+                self._tcp_send_one(a, tmsg)
+
+    # WebSocket relay (Cloudflare Tunnel path) --------------------------------
+
+    def _ws_close_info(self, e):
+        """Best-effort diagnostic string for why a WS connection ended —
+        distinguishes a real close handshake (with code/reason) from an
+        abrupt TCP-level drop (code 1006, e.g. tunnel/NAT/network cut the
+        connection with no warning)."""
+        if _ws_exc is not None and isinstance(e, _ws_exc.ConnectionClosed):
+            rcvd = getattr(e, 'rcvd', None)
+            sent = getattr(e, 'sent', None)
+            if rcvd is None and sent is None:
+                return ('abrupt drop, no close frame either direction '
+                        '(code 1006 — tunnel/NAT/network cut the connection, not a clean shutdown)')
+            parts = []
+            if rcvd is not None:
+                parts.append('received close: code=%s reason=%r' % (rcvd.code, rcvd.reason))
+            if sent is not None:
+                parts.append('sent close: code=%s reason=%r' % (sent.code, sent.reason))
+            return '; '.join(parts)
+        return '%s: %s' % (type(e).__name__, e)
+
+    def _ws_send_one(self, addr_str, raw_bytes):
+        """Send raw bytes to one WebSocket connection."""
+        entry = self.ws_conn.get(addr_str)
+        if not entry:
+            return
+        ws, _addr = entry
+        try:
+            ws.send(raw_bytes)
+        except Exception as e:
+            self.send_errs += 1
+            print("ws send error %s: %s" % (addr_str, e))
+            self.ws_conn.pop(addr_str, None)
+            try:
+                ws.close()
+            except Exception:
+                pass
+
+    def _ws_send_all(self, raw_bytes, exclude=None):
+        """Send raw bytes to all WebSocket connections except exclude."""
+        for a in list(self.ws_conn.keys()):
+            if a != exclude:
+                self._ws_send_one(a, raw_bytes)
+
+    def _ws_server(self):
+        """WebSocket server for Cloudflare Tunnel connections (port WS_PORT)."""
+        if not _WEBSOCKETS_OK:
+            print("websockets not available — cloudflare tunnel disabled")
+            return
+
+        def handler(ws):
+            addr = ws.remote_address
+            addr_str = '%s:%d' % (addr[0], addr[1])
+            self.ws_conn[addr_str] = (ws, addr)
+            print("WS internet node connected: %s" % addr_str)
+            t_connect = time.time()
+            msg_count = 0
+            t_heartbeat = t_connect
+            try:
+                for raw in ws:
+                    msg_count += 1
+                    now_t = time.time()
+                    if now_t - t_heartbeat >= 60:
+                        print("WS heartbeat %s: alive %.0fs, %d msgs rx" %
+                              (addr_str, now_t - t_connect, msg_count))
+                        t_heartbeat = now_t
+                    if isinstance(raw, str):
+                        raw = raw.encode('utf-8')
+                    self._tcp_proc_msg(raw, addr_str)
+                print("WS %s closed connection cleanly after %.0fs, %d msgs rx" %
+                      (addr_str, time.time() - t_connect, msg_count))
+            except Exception as e:
+                print("WS handler error %s after %.0fs (%d msgs rx): %s" %
+                      (addr_str, time.time() - t_connect, msg_count, self._ws_close_info(e)))
+            finally:
+                self.ws_conn.pop(addr_str, None)
+                try:
+                    ws.close()
+                except Exception:
+                    pass
+                print("WS internet node disconnected: %s" % addr_str)
+
+        print("WS server starting on port %d" % self.WS_PORT)
+        try:
+            with _ws_srv.serve(handler, '0.0.0.0', self.WS_PORT) as server:
+                self._ws_server_obj = server
+                server.serve_forever()
+        except Exception as e:
+            print("WS server error: %s" % e)
+        finally:
+            self._ws_server_obj = None
+        print("WS server stopped")
+
+    def _ws_client(self):
+        """Connect outbound to infotable via WebSocket URL (cloudflare tunnel client mode)."""
+        if not _WEBSOCKETS_OK:
+            print("websockets not available")
+            return
+        while True:
+            url = self.rem_host.strip()
+            if not url or url == '0.0.0.0' or not url.startswith('http'):
+                time.sleep(2)
+                continue
+            # websockets requires ws:// or wss:// scheme
+            ws_url = url.replace('https://', 'wss://', 1).replace('http://', 'ws://', 1)
+            print("WS client connecting to %s" % ws_url)
+            t_connect = time.time()
+            msg_count = 0
+            try:
+                with _ws_cli.connect(ws_url) as ws:
+                    addr_str = url
+                    self.ws_conn[addr_str] = (ws, (url, 0))
+                    print("WS client connected to %s" % url)
+                    # Status broadcasts ('b'/'s' lines — current band, op, logger) have no
+                    # fill/replay mechanism like QSOs do. Anything sent while disconnected
+                    # is gone for good until the next periodic bcast_now() — push one now
+                    # so a reconnect doesn't leave us looking idle for up to ~10s longer.
+                    self.bcast_now()
+                    t_heartbeat = t_connect
+                    for raw in ws:
+                        msg_count += 1
+                        now_t = time.time()
+                        if now_t - t_heartbeat >= 60:
+                            print("WS heartbeat %s: alive %.0fs, %d msgs rx" %
+                                  (url, now_t - t_connect, msg_count))
+                            t_heartbeat = now_t
+                        if isinstance(raw, str):
+                            raw = raw.encode('utf-8')
+                        self._tcp_proc_msg(raw, addr_str)
+                print("WS client: %s closed connection cleanly after %.0fs, %d msgs rx" %
+                      (url, time.time() - t_connect, msg_count))
+            except Exception as e:
+                print("WS client disconnected from %s after %.0fs (%d msgs rx) — %s" %
+                      (url, time.time() - t_connect, msg_count, self._ws_close_info(e)))
+            self.ws_conn.pop(url, None)
+            print("WS client will retry in 30s")
+            time.sleep(30)
+
+    def _mark_relayed(self, msg):
+        """Re-sign an internet-received message for LAN rebroadcast with a
+        leading 'i|1' marker, so LAN nodes know this packet's timing came
+        through the internet relay (tunnel/relay latency, not clock skew)
+        and must not be used for clock calibration. Can't just splice a
+        marker into the original bytes — the auth hash covers the exact
+        body, so a modified body needs a fresh signature."""
+        try:
+            _old_hash, body = msg.split('\n', 1)
+        except ValueError:
+            return None
+        marked = 'i|1\n' + body
+        return (self.auth(marked) + '\n' + marked).encode()
+
+    def _tcp_proc_msg(self, raw_bytes, from_addr_str):
+        """Authenticate, relay (if hub), and process one received TCP message."""
+        try:
+            msg = raw_bytes.decode('utf-8', errors='replace')
+        except Exception:
+            return
+        if not self.ckauth(msg):
+            self.badauth_rcvd += 1
+            print("tcp bad auth from %s" % from_addr_str)
+            return
+        self.pkts_rcvd += 1
+        # If we are the hub, relay to LAN (UDP), TCP nodes, and WS nodes
+        if self.tcp_internet_enabled:
+            try:
+                relayed = self._mark_relayed(msg)
+                if relayed:
+                    self.skt.sendto(relayed, (self.bc_addr, self.port))
+            except Exception as e:
+                print("tcp->udp relay error: %s" % e)
+            if self.tcp_conn:
+                self._tcp_send_all(self._tcp_frame(raw_bytes), exclude=from_addr_str)
+            if self.ws_conn:
+                self._ws_send_all(raw_bytes, exclude=from_addr_str)
+        # Process locally — same logic as rcvr()
+        pkt_tm = now()
+        host, sip, fnod = '', '', ''
+        lines = msg.split('\n')
+        for line in lines[1:-1]:
+            try:
+                fields = line.split('|')
+                if fields[0] == 'b':
+                    if len(fields) >= 10:
+                        host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag, inet_flag = fields[1:10]
+                    elif len(fields) >= 9:
+                        host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag = fields[1:9]
+                        inet_flag = '0'
+                    elif len(fields) >= 7:
+                        host, sip, fnod, stm, stml, ver = fields[1:7]
+                        gps_flag, ntp_flag, inet_flag = '0', '0', '0'
+                    else:
+                        continue
+                    td = tmsub(stm, pkt_tm)
+                    self.si.ssb(pkt_tm, host, sip, fnod, stm, stml, ver, td, gps_flag, ntp_flag, inet_flag)
+                    # skip calib() — internet packet td includes tunnel latency, not just clock skew
+                elif fields[0] == 's':
+                    if len(fields) != 6:
+                        continue
+                    nod, seq, bnd, msc, age3 = fields[1:]
+                    self.si.sss(pkt_tm, fnod, sip, nod, seq, bnd, msc, age3)
+                elif fields[0] == 'r':
+                    if len(fields) != 4:
+                        continue
+                    _destip, src, seq = fields[1:]
+                    self._send_qsomsg_tcp(from_addr_str, src, seq)
+                elif fields[0] == 'm':  # block fill request
+                    if len(fields) != 5:
+                        continue
+                    _destip, src, seqs, seqe = fields[1:]
+                    self._tprint(('m-tcp-rx', src, seqs, seqe),
+                                 "Fill request received (TCP/WS) from %s: node=%s seq %s-%s" %
+                                 (from_addr_str, src, seqs, seqe))
+                    self.send_qsomsgs_tcp(from_addr_str, src, int(seqs), int(seqe))
+                elif fields[0] == 'q':
+                    if len(fields) != 10:
+                        continue
+                    src, seq, stm, b, c5, rp, p3, o, l01 = fields[1:]
+                    self.tlasqdr = time.time()
+                    self.si.sqd(src, seq, stm, b, c5, rp, p3, o, l01)
+                elif fields[0] == 'u':
+                    if len(fields) != 5:
+                        continue
+                    where, whoops, whologs, whatband = fields[1:]
+                    whoops = exin(whoops)
+                    operatorsonline.update({where: whoops})
+                    # See rcvr()'s 'u' handler — buildmenus() touches Tk widgets and
+                    # must run on the main thread, not this network thread.
+                    root.after(0, buildmenus)
+            except Exception as e:
+                # Catch everything, not just ValueError/IndexError — since the WS/TCP
+                # handlers now wrap this whole call in their own try/except for
+                # connection-lifecycle diagnostics, letting a parse error escape here
+                # would tear down a perfectly healthy connection over one bad line.
+                self._malformed_count += 1
+                print("tcp parse error from %s: %s" % (from_addr_str, e))
+
+    def _send_qsomsg_tcp(self, addr_str, nod, seq):
+        """Respond to a TCP fill request from our local database."""
+        key = nod + '.' + str(seq)
+        if key in qdb.byid:
+            i20 = qdb.byid[key]
+            msg = "q|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
+                  (i20.src, i20.seq, i20.date, i20.band, i20.call,
+                   i20.rept, i20.powr, i20.oper, i20.logr)
+            amsg = (self.auth(msg) + '\n' + msg).encode()
+            self._send_one(addr_str, amsg)
+
+    def send_qsomsgs(self, nod, seqs, seqe, destip):
+        """Respond to a block fill request — send up to 20 QSOs per UDP packet."""
+        batch = []
+        found = 0
+        for s in range(seqs, seqe + 1):
+            key = nod + '.' + str(s)
+            if key in qdb.byid:
+                i20 = qdb.byid[key]
+                found += 1
+                batch.append("q|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
+                    (i20.src, i20.seq, i20.date, i20.band, i20.call,
+                     i20.rept, i20.powr, i20.oper, i20.logr))
+            if len(batch) >= 20:
+                self._flush_qso_batch(batch, destip)
+                batch = []
+        if batch:
+            self._flush_qso_batch(batch, destip)
+        self._tprint(('m-udp-tx', nod, seqs, seqe),
+                     "Fill response (UDP): node=%s seq %s-%s -> found %d/%d, sent to %s" %
+                     (nod, seqs, seqe, found, seqe - seqs + 1, destip))
+
+    def send_qsomsgs_tcp(self, addr_str, nod, seqs, seqe):
+        """Respond to a block fill request over TCP — send up to 20 QSOs per packet."""
+        batch = []
+        found = 0
+        for s in range(seqs, seqe + 1):
+            key = nod + '.' + str(s)
+            if key in qdb.byid:
+                i20 = qdb.byid[key]
+                found += 1
+                batch.append("q|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
+                    (i20.src, i20.seq, i20.date, i20.band, i20.call,
+                     i20.rept, i20.powr, i20.oper, i20.logr))
+            if len(batch) >= 20:
+                self._flush_qso_batch_tcp(addr_str, batch)
+                batch = []
+        if batch:
+            self._flush_qso_batch_tcp(addr_str, batch)
+        self._tprint(('m-tcp-tx', nod, seqs, seqe),
+                     "Fill response (TCP): node=%s seq %s-%s -> found %d/%d, sent to %s" %
+                     (nod, seqs, seqe, found, seqe - seqs + 1, addr_str))
+
+    def _flush_qso_batch(self, batch, destip):
+        """Send a batch of pre-formatted q-lines as one UDP packet."""
+        payload = ''.join(batch)
+        self.sndmsg(payload, destip)
+
+    def _flush_qso_batch_tcp(self, addr_str, batch):
+        """Send a batch of pre-formatted q-lines as one TCP packet."""
+        payload = ''.join(batch)
+        amsg = (self.auth(payload) + '\n' + payload).encode()
+        self._send_one(addr_str, amsg)
+
+    def _tcp_server_handler(self, addr_str):
+        """Receive loop for one accepted remote TCP connection."""
+        entry = self.tcp_conn.get(addr_str)
+        if not entry:
+            return
+        sock, _addr = entry
+        print("TCP internet node connected: %s" % addr_str)
+        t_connect = time.time()
+        msg_count = 0
+        t_heartbeat = t_connect
+        while True:
+            raw = self._tcp_recv_one(sock, addr_str)
+            if raw is None:
+                break
+            msg_count += 1
+            now_t = time.time()
+            if now_t - t_heartbeat >= 60:
+                print("TCP heartbeat %s: alive %.0fs, %d msgs rx" %
+                      (addr_str, now_t - t_connect, msg_count))
+                t_heartbeat = now_t
+            self._tcp_proc_msg(raw, addr_str)
+        print("TCP %s: connection ended after %.0fs, %d msgs rx" %
+              (addr_str, time.time() - t_connect, msg_count))
+        try:
+            del self.tcp_conn[addr_str]
+        except Exception:
+            pass
+        try:
+            sock.close()
+        except Exception:
+            pass
+        print("TCP internet node disconnected: %s" % addr_str)
+
+    def _tcp_manager(self):
+        """Accept incoming TCP connections (runs when internet mode is ON)."""
+        print("TCP server starting on port %d" % self.TCP_PORT)
+        try:
+            srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            srv.bind(('', self.TCP_PORT))
+            srv.listen(10)
+            srv.settimeout(2.0)
+            while self.tcp_internet_enabled:
+                try:
+                    conn, addr = srv.accept()
+                    addr_str = '%s:%d' % addr
+                    self.tcp_conn[addr_str] = (conn, addr)
+                    t = threading.Thread(target=self._tcp_server_handler,
+                                         args=(addr_str,), daemon=True)
+                    t.start()
+                except socket.timeout:
+                    continue
+                except Exception as e:
+                    if self.tcp_internet_enabled:
+                        print("TCP server accept error: %s" % e)
+            srv.close()
+        except Exception as e:
+            print("TCP server failed to start: %s" % e)
+        print("TCP server stopped")
+
+    def enable_internet(self):
+        """Start TCP and WebSocket servers to accept remote FDLog nodes."""
+        if self.tcp_internet_enabled:
+            return
+        self.tcp_internet_enabled = True
+        if sys.platform == 'win32':
+            try:
+                subprocess.run([
+                    'netsh', 'advfirewall', 'firewall', 'add', 'rule',
+                    'name=FDLog Enhanced Internet Relay',
+                    'protocol=TCP', 'dir=in',
+                    'localport=%d,%d' % (self.TCP_PORT, self.WS_PORT),
+                    'action=allow', 'enable=yes', 'profile=any',
+                ], capture_output=True, timeout=10)
+            except Exception:
+                pass
+        threading.Thread(target=self._tcp_manager, daemon=True, name='tcp-server').start()
+        threading.Thread(target=self._ws_server,   daemon=True, name='ws-server').start()
+        print("Internet relay enabled — TCP port %d, WS port %d" % (
+              self.TCP_PORT, self.WS_PORT))
+
+    def disable_internet(self):
+        """Stop servers and drop all remote connections."""
+        self.tcp_internet_enabled = False
+        for addr_str in list(self.tcp_conn.keys()):
+            try:
+                self.tcp_conn[addr_str][0].close()
+            except Exception:
+                pass
+        self.tcp_conn.clear()
+        for addr_str in list(self.ws_conn.keys()):
+            try:
+                self.ws_conn[addr_str][0].close()
+            except Exception:
+                pass
+        self.ws_conn.clear()
+        if self._ws_server_obj:
+            try:
+                self._ws_server_obj.shutdown()
+            except Exception:
+                pass
+        print("Internet relay disabled")
+
+    def _tcp_client(self):
+        """Connect outbound to a remote infotable TCP server (remote node mode)."""
+        while True:
+            rem = self.rem_host.split(':')[0].strip()  # strip port if user included it
+            if not rem or rem == '0.0.0.0' or rem.startswith('http'):
+                time.sleep(2)
+                continue
+            addr = (rem, self.TCP_PORT)
+            addr_str = '%s:%d' % addr
+            print("TCP client connecting to %s" % addr_str)
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            t_connect = time.time()
+            msg_count = 0
+            try:
+                sock.connect(addr)
+                self.tcp_conn[addr_str] = (sock, addr)
+                print("TCP client connected to %s" % addr_str)
+                # See _ws_client() — status has no replay mechanism, push it now on reconnect.
+                self.bcast_now()
+                t_heartbeat = t_connect
+                while self.rem_host == rem:
+                    raw = self._tcp_recv_one(sock, addr_str)
+                    if raw is None:
+                        break
+                    msg_count += 1
+                    now_t = time.time()
+                    if now_t - t_heartbeat >= 60:
+                        print("TCP heartbeat %s: alive %.0fs, %d msgs rx" %
+                              (addr_str, now_t - t_connect, msg_count))
+                        t_heartbeat = now_t
+                    self._tcp_proc_msg(raw, addr_str)
+                print("TCP client: %s connection ended after %.0fs, %d msgs rx" %
+                      (addr_str, time.time() - t_connect, msg_count))
+            except Exception as e:
+                print("TCP client error connecting to %s after %.0fs (%d msgs rx): %s" %
+                      (rem, time.time() - t_connect, msg_count, e))
+            try:
+                del self.tcp_conn[addr_str]
+            except Exception:
+                pass
+            try:
+                sock.close()
+            except Exception:
+                pass
+            print("TCP client will retry in 30s")
+            time.sleep(30)
 
     def start(self):
         """launch all threads"""
@@ -2517,6 +3279,8 @@ class NetworkSync:
         #        thread.start_new_thread(self.bcastr,())
         _thread.start_new_thread(self.fillr, ())
         _thread.start_new_thread(self.rcvr, ())
+        threading.Thread(target=self._tcp_client, daemon=True, name='tcp-client').start()
+        threading.Thread(target=self._ws_client,  daemon=True, name='ws-client').start()
         if debug:
             print("threads launched")
         time.sleep(0.5)  # let em print
@@ -2741,7 +3505,7 @@ def getfile(fn):
     """get file contents"""
     data = ""
     try:
-        fd = open(fn, "r")
+        fd = open(fn, "r", encoding='utf-8')
         data = fd.read()
         fd.close()
     except IOError:
@@ -2750,6 +3514,109 @@ def getfile(fn):
         print("Found file", fn)
         # print data
     return data
+
+
+def _read_file_quiet(fn):
+    """getfile() without the console print - safe for periodic callers."""
+    try:
+        with open(fn, "r", encoding='utf-8') as fd:
+            return fd.read()
+    except IOError:
+        return ""
+
+
+def fd_period(yr):
+    """Return (start, end) of the Field Day operating period for a year as
+    'YYMMDD.HHMMSS' strings: 1800 UTC Saturday of the fourth full June
+    weekend through 2059 UTC Sunday (rule 4)."""
+    import datetime as _dt
+    sats = [d for d in range(1, 31) if _dt.date(yr, 6, d).weekday() == 5]
+    sat = sats[3]  # fourth Saturday (its Sunday is always still in June)
+    return ("%02d06%02d.180000" % (yr % 100, sat),
+            "%02d06%02d.205959" % (yr % 100, sat + 1))
+
+
+def calc_bonus_points(gotaq, nat, sat, xmttrs):
+    """Compute all Field Day bonus points per the 2026 rules. Single source
+    of truth shared by the contest entry report (contestlog) and the
+    InfoTable live score (get_score_data).
+    Returns (total_bonus, lines) - lines are formatted for the entry form."""
+    lines = []
+    tot = 0
+    if gd.getv('pscom') == '0':
+        bp = 100 * xmttrs  # 100% Emergency Power, max 20 transmitters
+        if bp > 2000:
+            bp = 2000
+        tot += bp
+        lines.append("   %4s 100%s Emergency Power (%s xmttrs)" % (bp, '%', xmttrs))
+    if _read_file_quiet("media.txt") > "":
+        tot += 100
+        lines.append("    100 Media Publicity (copy below)")
+    public_bp = 0
+    public_place = gd.getv('public')
+    if public_place != "":
+        public_bp = 100
+        tot += public_bp
+        lines.append("    100 Set-up in a Public Place (%s)" % public_place)
+    if ival(gd.getv('infob')) > 0 and public_bp > 0:
+        tot += 100
+        lines.append("    100 Information Booth (photo included)")
+    if _read_file_quiet("nts_msg.txt") > "":
+        tot += 100
+        lines.append("    100 NTS message Originated to ARRL SM/SEC (copy below)")
+    n = 0
+    for i25 in range(0, 10):
+        if _read_file_quiet("nts_rly%d.txt" % i25) != "":
+            n += 1
+    nts_msgs_bp = min(10 * n, 100)
+    if nts_msgs_bp > 0:
+        tot += nts_msgs_bp
+        lines.append("    %3s Formal NTS messages handled (%s) (copy below)" % (nts_msgs_bp, n))
+    if len(sat) > 0:
+        tot += 100
+        lines.append("    100 Satellite QSO Completed (%s/1) (list below)" % len(sat))
+    if len(nat) >= 5:
+        tot += 100
+        lines.append("    100 Five Alternate power QSOs completed (%s/5) (list below)" % len(nat))
+    if len(_read_file_quiet("w1aw_msg.txt")) > 30:  # ignore short file placeholder 152i
+        tot += 100
+        lines.append("    100 W1AW FD Message Received (copy below)")
+    if gd.getv('svego') > "":
+        tot += 100
+        lines.append("    100 Site Visited by elected govt officials (%s)" % gd.getv('svego'))
+    if gd.getv('svroa') > "":
+        tot += 100
+        lines.append("    100 Site Visited by representative of agency (%s)" % gd.getv('svroa'))
+    # GOTA Contacts Bonus - 5 points per GOTA QSO (2026 rules: no QSO limit,
+    # bonus is not multiplied by the power multiplier)
+    if gotaq > 0:
+        tot += 5 * gotaq
+        lines.append("    %3s GOTA Contacts Bonus (%s QSOs x 5 pts)" % (5 * gotaq, gotaq))
+    if gd.getv('gotaco') == "1" and gotaq >= 10:
+        tot += 100
+        lines.append("    100 GOTA Coach Bonus (supervised 10+ contacts)")
+    if ival(gd.getv('youth')) > 0:
+        youth_bp = min(20 * ival(gd.getv('youth')), 100)  # 20/youth, max 5
+        tot += youth_bp
+        lines.append("    %3s Youth Participation Bonus (%s youth x 20 pts)"
+                     % (youth_bp, min(ival(gd.getv('youth')), 5)))
+    if gd.getv('eduact') == "1":
+        tot += 100
+        lines.append("    100 Educational Activity Bonus")
+    if gd.getv('social') == "1":
+        tot += 100
+        lines.append("    100 Social Media Bonus")
+    if gd.getv('safety') == "1":
+        tot += 100
+        lines.append("    100 Safety Officer Bonus")
+    if gd.getv('sitere') == "1":
+        tot += 50
+        lines.append("     50 Site Responsibilities Bonus")
+    # keep web submission last
+    if gd.getv('websub') == "1":
+        tot += 50
+        lines.append("     50 Web Submission Bonus")
+    return tot, lines
 
 
 def contestlog(pr):
@@ -2778,7 +3645,7 @@ def contestlog(pr):
     qpb, ppb, qpop, qplg, qpst, dummy, dummy, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
         qdb.band_rpt()  # and count it
     print("..", end=' ')
-    sys.stdout = open(logfile, "w")  # redirect output to file
+    sys.stdout = open(logfile, "w", encoding='utf-8')  # redirect output to file
     print("Field Day 20%s Entry Form" % datime[:2])
     print()
     print("Date Prepared:              %s UTC" % datime[:-2])
@@ -2815,120 +3682,20 @@ def contestlog(pr):
         powm = 2
     if maxp > 5:
         powm = 2
-    if maxp > 150:
+    if maxp > 100:  # 2026 rules: >100W is x1 (was 150W before 2023)
         powm = 1
-    if maxp > 1500:
+    if maxp > 500:  # 2026 rules: 500W PEP max for A/B/C (100W for D/E/F)
         powm = 0
     print("13. Power Multiplier:                  x %2s" % powm)
     qso_scor = qsop * powm
     print("14. Claimed QSO Score:                %5s" % qso_scor)
     print()
     print("15. Bonus Points:")
-    tot_bonus = 0
-    #  emerg_powr_bp = 0  # not used
-    if gd.getv('pscom') == '0':
-        emerg_powr_bp = 100 * xmttrs
-        if emerg_powr_bp > 2000:
-            emerg_powr_bp = 2000
-        tot_bonus += emerg_powr_bp
-        print("   %4s 100%s Emergency Power (%s xmttrs)" % (emerg_powr_bp, '%', xmttrs))
-    #  media_pub_bp = 0  # not used
-    if media_copy > "":
-        media_pub_bp = 100
-        tot_bonus += media_pub_bp
-        print("    %3s Media Publicity (copy below)" % media_pub_bp)
-    public_bp = 0
-    public_place = gd.getv('public')
-    if public_place != "":
-        public_bp = 100
-        tot_bonus += public_bp
-        print("    %3s Set-up in a Public Place (%s)" % (public_bp, public_place))
-    #  info_booth_bp = 0  # not used
-    if int(gd.getv('infob')) > 0 and public_bp > 0:
-        info_booth_bp = 100
-        tot_bonus += info_booth_bp
-        print("    %3s Information Booth (photo included)" % info_booth_bp)
-    #  nts_orig_bp = 0  # not used
-    if nts_orig_msg > "":
-        nts_orig_bp = 100
-        tot_bonus += nts_orig_bp
-        print("    %3s NTS message Originated to ARRL SM/SEC (copy below)" % nts_orig_bp)
-    n = len(nts_msg_relay)
-    nts_msgs_bp = 10 * n
-    if nts_msgs_bp > 100:
-        nts_msgs_bp = 100
-    if nts_msgs_bp > 0:
-        tot_bonus += nts_msgs_bp
-        print("    %3s Formal NTS messages handled (%s) (copy below)" % (nts_msgs_bp, n))
-    sat_qsos = len(sat)
-    #  sat_bp = 0  # not used
-    if sat_qsos > 0:
-        sat_bp = 100
-        tot_bonus += sat_bp
-        print("    %3s Satellite QSO Completed (%s/1) (list below)" % (sat_bp, sat_qsos))
-    natural_q = len(nat)
-    #  natural_bp = 0  # not used
-    if natural_q >= 5:
-        natural_bp = 100
-        tot_bonus += natural_bp
-        print("    %3s Five Alternate power QSOs completed (%s/5) (list below)" % (natural_bp, natural_q))
-    #  w1aw_msg_bp = 0  # not used
-    if len(w1aw_msg) > 30:  # ignore short file placeholder 152i
-        w1aw_msg_bp = 100
-        tot_bonus += w1aw_msg_bp
-        print("    %3s W1AW FD Message Received (copy below)" % w1aw_msg_bp)
-    #  site_visited_ego_bp = 0  # not used
-    if gd.getv('svego') > "":
-        site_visited_ego_bp = 100
-        tot_bonus += site_visited_ego_bp
-        print("    %3s Site Visited by elected govt officials (%s)" % (site_visited_ego_bp, gd.getv('svego')))
-    #  site_visited_roa_bp = 0  # not used
-    if gd.getv('svroa') > "":
-        site_visited_roa_bp = 100
-        tot_bonus += site_visited_roa_bp
-        print("    %3s Site Visited by representative of agency (%s)" % (site_visited_roa_bp, gd.getv('svroa')))
-    # GOTA Contacts Bonus - 5 points per GOTA QSO (up to 500 QSOs max)
-    if gotaq > 0:
-        gota_contact_bp = 5 * min(gotaq, 500)  # Cap at 500 GOTA QSOs
-        tot_bonus += gota_contact_bp
-        print("    %3s GOTA Contacts Bonus (%s QSOs x 5 pts)" % (gota_contact_bp, min(gotaq, 500)))
-    # GOTA Coach Bonus - 100 points if coach supervised 10+ contacts
-    if gd.getv('gotaco') == "1" and gotaq >= 10:
-        gota_coach_bp = 100
-        tot_bonus += gota_coach_bp
-        print("    %3s GOTA Coach Bonus (supervised 10+ contacts)" % gota_coach_bp)
-    # Youth Participation Bonus - 20 points per youth (max 100 = 5 youth)
-    if int(gd.getv('youth')) > 0:
-        youth_bp = 20 * int(gd.getv('youth'))
-        if youth_bp > 5 * 20:
-            youth_bp = 5 * 20
-        tot_bonus += youth_bp
-        print("    %3s Youth Participation Bonus (%s youth x 20 pts)" % (youth_bp, min(int(gd.getv('youth')), 5)))
-    # Educational Activity Bonus - 100 points
-    if gd.getv('eduact') == "1":
-        eduact_bp = 100
-        tot_bonus += eduact_bp
-        print("    %3s Educational Activity Bonus" % eduact_bp)
-    # Social Media Bonus - 100 points
-    if gd.getv('social') == "1":
-        social_bp = 100
-        tot_bonus += social_bp
-        print("    %3s Social Media Bonus" % social_bp)
-    # Safety Officer Bonus - 100 points
-    if gd.getv('safety') == "1":
-        safety_bp = 100
-        tot_bonus += safety_bp
-        print("    %3s Safety Officer Bonus" % safety_bp)
-    # Site Responsibilities Bonus - 50 points
-    if gd.getv('sitere') == "1":
-        sitere_bp = 50
-        tot_bonus += sitere_bp
-        print("    %3s Site Responsibilities Bonus" % sitere_bp)
-    # keep web submission last
-    if gd.getv('websub') == "1":
-        web_sub_bp = 50
-        tot_bonus += web_sub_bp
-        print("    %3s Web Submission Bonus" % web_sub_bp)
+    # Bonus math lives in calc_bonus_points() - shared with the InfoTable
+    # live score so the two can never disagree.
+    tot_bonus, bonus_lines = calc_bonus_points(gotaq, nat, sat, xmttrs)
+    for bl in bonus_lines:
+        print(bl)
     print()
     print("    Total Bonus Points Claimed: %5s" % tot_bonus)
     print()
@@ -3170,6 +3937,26 @@ def contestlog(pr):
     sys.stdout = sys.__stdout__  # revert print to console
     print()
     print("entry and log written to file", logfile)
+    # Operating-period check (rule 4: 1800 UTC Saturday of the fourth full
+    # June weekend through 2059 UTC Sunday). Warn only - we log freely while
+    # testing off-season, so nothing is excluded automatically.
+    try:
+        outside = []
+        for i26 in list(bycall.values()) + list(gotabycall.values()):
+            pstart, pend = fd_period(2000 + int(i26.date[:2]))
+            if not (pstart <= i26.date <= pend):
+                outside.append(i26)
+        if outside:
+            print()
+            print("WARNING: %d of %d QSOs are outside the Field Day operating"
+                  % (len(outside), len(bycall) + len(gotabycall)))
+            print("period (1800 UTC Sat - 2059 UTC Sun, 4th full June weekend).")
+            print("ARRL will not count them. First few:")
+            for i26 in outside[:5]:
+                print("  %s %s %s" % (i26.date, i26.call, i26.band))
+            print("For a real submission, delete these QSOs or check the clock.")
+    except Exception as e:
+        print("period check error: %s" % e)
 
 
 def bandset(b):
@@ -3890,6 +4677,10 @@ class GPSSyncDialog:
             mclock.gps_locked = bool(gpsusb_var.get())
             # Time master - only publish if changed
             wants_tmast = bool(tmast_var.get())
+            if wants_tmast and net.is_internet_node():
+                # LAN nodes can't sync to an internet node across the relay
+                ntp_error.config(text="Internet nodes cannot be time master - not set")
+                return
             if wants_tmast != is_tmast:
                 if wants_tmast:
                     globDb.put('tmast', node)
@@ -4258,16 +5049,64 @@ def testqgen(n):
     # Scott A Hibbs KD4SIR 07/25/2013
     # added if authk protection so that .testqgen only operates with a 'tst' database.
     # no funny business with the contest log
-    if authk == "tst":
-        while n:
-            call13 = rndlet() + rndlet() + rnddig() + rndlet() + rndlet() + rndlet()
-            rpt = rnddig() + rndlet() + ' ' + rndlet() + rndlet() + ' testQ'
-            print(call13, rpt)
-            n -= 1
-            qdb.qsl(now(), call13, band, rpt)
-            time.sleep(0.1)
-    else:
+    if authk != "tst":
         txtbillb.insert(END, "This command only available while testing with tst.")
+        return
+    # Same prerequisite checks a regular QSO entry requires (see proc_key, stat==5
+    # handler) — test QSOs shouldn't be generated with the station half set up,
+    # since a real operator could never log one in that state either.
+    legal = 0
+    if re.match(r'[a-z :]+ [a-zA-Z ]+, ([a-z\d]+)', operator):
+        legal += 1
+    if re.match(r'[a-z :]+ [a-zA-Z ]+, ([a-z\d]+)', logger):
+        legal += 1
+    if legal == 0:
+        txtbillb.insert(END, "\n\n .testq: The Contestant or the logger needs a license.\n")
+        return
+    em = ''
+    if band == "off":
+        em += " Band "
+    if power == "0":
+        em += " Power "
+    if len(operator) < 2:
+        em += " Contestant "
+    if len(logger) < 2:
+        em += " Logger "
+    if em != '':
+        txtbillb.insert(END, "\n .testq: WARNING: ( %s ) NOT SET — set up the station before "
+                              "generating test QSOs\n" % em)
+        return
+    # Draw from the loaded N1MM+ call history for realistic call/class/section data
+    # instead of purely random strings. Each pick is validated (real ARRL section,
+    # not already worked on this band) and re-picked on failure rather than logged bad.
+    pool = list(prev_log_calls.items())
+    generated = 0
+    attempts = 0
+    attempts_cap = max(200, n * 50)  # bound total attempts so a thin/exhausted pool can't hang
+    while generated < n and attempts < attempts_cap:
+        attempts += 1
+        if pool:
+            call13, data = pool[random.randrange(len(pool))]
+            exch_parts = data['exchange'].split()
+            if len(exch_parts) < 2:
+                continue  # missing class or section — repick
+            cls, sect = exch_parts[0], exch_parts[1]
+            if sect.upper() not in secName:
+                continue  # not a recognized ARRL section/state — repick
+            if qdb.dupck(call13, band):
+                continue  # already worked this call on this band — repick
+            rpt = '%s %s' % (cls, sect)
+        else:
+            # Fallback if no N1MM+ history was loaded
+            call13 = rndlet() + rndlet() + rnddig() + rndlet() + rndlet() + rndlet()
+            rpt = rnddig() + rndlet() + ' ' + rndlet() + rndlet()
+        print(call13, rpt)
+        qdb.qsl(now(), call13, band, rpt)
+        generated += 1
+        time.sleep(0.1)
+    if generated < n:
+        txtbillb.insert(END, "\n .testq: only generated %d/%d (ran out of usable N1MM+ entries)\n" %
+                         (generated, n))
 
 
 def testcmd(name8, rex, _):
@@ -4513,7 +5352,7 @@ def showthiscall(call16):
     return findany
 
 
-def showthiscall2(call16a):
+def showthiscall2(call16a, tag=None):
     """used by proc_key function to show the log entries for this call and return the previous report"""
     # Added by Scott Hibbs KD4SIR 02Aug2022
     repta = ""
@@ -4527,8 +5366,8 @@ def showthiscall2(call16a):
         if pa5[0] == qa[0]:
             repta = ra
             if findanya == 0:
-                txtbillb.insert(END, "\n")
-            txtbillb.insert(END, "%s\n" % ia31.prlogln(ia31))
+                txtbillb.insert(END, "\n", tag)
+            txtbillb.insert(END, "%s\n" % ia31.prlogln(ia31), tag)
             findanya = 1
     return findanya, repta
 
@@ -4572,7 +5411,7 @@ def readsections():
     """this will read the Arrl_sections_ref.txt file for sections"""
     # This modified from Alan Biocca FDLog version 153d - Scott Hibbs Feb/6/2017
     try:
-        fd = open("Arrl_sections_ref.txt", "r")  # read section data
+        fd = open("Arrl_sections_ref.txt", "r", encoding='utf-8')  # read section data
         while 1:
             ln = fd.readline().strip()  # read a line and put in db
             if not ln:
@@ -4923,12 +5762,28 @@ def proc_key(ch):
                 mclock._election_start_time = time.monotonic()
                 txtbillb.insert(END, "\nElection triggered. Judge will announce winner.\n")
             elif parts[1] == 'me':  # .tmast me - set this node
-                globDb.put('tmast', node)
-                qdb.globalshare('tmast', node)
-                txtbillb.insert(END, "\nThis node (%s) set as time master.\n" % node)
+                if net.is_internet_node():
+                    txtbillb.insert(END, "\nThis is an internet node - it cannot be time master.\n")
+                    txtbillb.insert(END, "LAN nodes cannot sync to it across the relay. Not set.\n")
+                else:
+                    globDb.put('tmast', node)
+                    qdb.globalshare('tmast', node)
+                    txtbillb.insert(END, "\nThis node (%s) set as time master.\n" % node)
             else:  # .tmast <nodename> - set specific node
                 new_tmast = parts[1]
-                if check_node_online(new_tmast):
+                # Internet nodes can't be time master - LAN nodes can't sync to them
+                tmast_is_internet = False
+                if new_tmast.lower() == node.lower():
+                    tmast_is_internet = net.is_internet_node()
+                else:
+                    for ni9 in list(net.si.nodes.values()):
+                        if ni9.nod and ni9.nod.lower() == new_tmast.lower():
+                            tmast_is_internet = ni9.is_internet
+                            break
+                if tmast_is_internet:
+                    txtbillb.insert(END, "\nNode '%s' is an internet node - it cannot be time master.\n" % new_tmast)
+                    txtbillb.insert(END, "LAN nodes cannot sync to it across the relay. Not set.\n")
+                elif check_node_online(new_tmast):
                     globDb.put('tmast', new_tmast)
                     qdb.globalshare('tmast', new_tmast)
                     txtbillb.insert(END, "\nTime master set to: %s\n" % new_tmast)
@@ -5041,7 +5896,6 @@ def proc_key(ch):
                         if rept2 in secName:
                             pass
                         else:
-                            print("\n Use one of these for the section:")
                             kk = ""
                             nx = 0
                             ny = 0
@@ -5056,8 +5910,6 @@ def proc_key(ch):
                                     if ny < 6:  # last line gets the rest
                                         kk += "\n  "
                                         nx = 0
-                            print(kk)
-                            # print('\n'.join("{} : {}".format(k, v) for k, v in secName.items()))
                             txtbillb.insert(END, kk)
                             txtbillb.insert(END, "\n  Up arrow and correct with another section listed above.")
                             topper()
@@ -5148,14 +6000,35 @@ def proc_key(ch):
                 # so the logger only has to hit enter. Added by Scott Hibbs KD4SIR 02Aug2022
                 kbuf += ' '
                 txtbillb.insert(END, ch)
-                found, repta = showthiscall2(call17)
+                found, repta = showthiscall2(call17, tag='worked_bands')
                 repta = str(repta)
                 repta = re.sub(r"[\[\]]", '', repta)
                 repta = repta.replace("'", "")
                 if found:  # shows the previous contacts with this station
-                    txtbillb.insert(END, " worked on different bands\n")
+                    txtbillb.insert(END, "Worked on different bands\n", 'worked_bands')
                     txtbillb.insert(END, "%s %s" % (xcall, repta))
                     kbuf += repta
+                # Check previous contest log / N1MM+ FD history (skip if worked this session or own call)
+                _own_calls = {str.lower(gd.getv('fdcall')), str.lower(gd.getv('gcall'))}
+                for _p in list(participants.values()):
+                    try:
+                        _own_calls.add(_p.split(', ')[2].lower())
+                    except (IndexError, AttributeError):
+                        pass
+                if not found and xcall not in _own_calls and xcall in prev_log_calls:
+                    prev = prev_log_calls[xcall]
+                    if prev['bands']:
+                        label = "\nWorked previously: %s" % ' '.join(prev['bands'])
+                    else:
+                        label = "\nPrevious FD participant"
+                    if prev.get('note'):
+                        label += " - %s" % prev['note']
+                    txtbillb.insert(END, label + "\n", 'prev_worked')
+                    if prev.get('exchange'):
+                        exch = prev['exchange']
+                        txtbillb.insert(END, "%s %s\n" % (xcall, exch), 'prev_worked')
+                        txtbillb.insert(END, "%s %s" % (xcall, exch), 'prev_worked')
+                        kbuf += exch
             return
     buf = kbuf + ch  # echo & add legal char to kbd buf
     if len(buf) < 50:
@@ -5441,7 +6314,6 @@ def pasteinterpreter():
                 if rept2 in secName:
                     pass
                 else:
-                    print("\n Use one of these for the section:")
                     kk = ""
                     nx = 0
                     ny = 0
@@ -5456,8 +6328,6 @@ def pasteinterpreter():
                             if ny < 6:  # last line gets the rest
                                 kk += "\n  "
                                 nx = 0
-                    print(kk)
-                    # print('\n'.join("{} : {}".format(k, v) for k, v in secName.items()))
                     txtbillb.insert(END, kk)
                     txtbillb.insert(END, "\n  correct section with up arrow, or before repasting again\n")
                     topper()
@@ -5989,11 +6859,12 @@ class InfoTableWindow:
     top operators/loggers, and allows visitors to register as participants.
     """
 
-    def __init__(self, root_window, qso_db, global_data, network):
+    def __init__(self, root_window, qso_db, global_data, network, popup=False):
         self.root = root_window
         self.qdb = qso_db
         self.gd = global_data
         self.net = network
+        self.popup = popup
         self.update_job = None
         self.title_label = None
         self.call_label = None
@@ -6006,6 +6877,27 @@ class InfoTableWindow:
         self.logger_labels = []
         self.was_label = None
         self.sections_label = None
+        self.active_bands_frame = None
+        self._op_panel_visible = False
+        self._op_panel_frame = None
+        self._op_toggle_btn = None
+        self._op_internet_enabled = False
+        self._op_internet_btn = None
+        self._node_count_label = None
+        self._ext_ip_label = None
+        self._cgnat_label = None
+        self._ext_ip_cache = None  # (ip_str, cgnat_bool) or None
+        self._upnp_label = None
+        self._upnp_btn = None
+        self._upnp_enabled = False
+        self._upnp_obj = None      # miniupnpc.UPnP instance when mapping is active
+        self._cf_process = None    # cloudflared subprocess
+        self._cf_url = None        # current tunnel URL
+        self._cf_url_var = None    # StringVar for URL display
+        self._cf_url_frame = None  # frame holding URL row (hidden until tunnel active)
+        self._cf_status_label = None
+        self._cf_enabled = False
+        self.attendees_label = None
         self.setup_ui()
         self.update_display()
 
@@ -6019,20 +6911,61 @@ class InfoTableWindow:
         # Remove any existing menus
         self.root.config(menu='')
 
-        # Create a hidden dummy txtbillb for NewParticipantDialog compatibility
-        txtbillb = Text(self.root)
-        # Don't pack it - keep it hidden but available for the dialog
-
-        self.root.title('FDLog_Enhanced - Information Table')
         self.root.configure(background='#1a1a2e')
 
-        # Make window fullscreen/maximized
-        self.root.state('zoomed')  # Maximized on Windows
-        # Alternative for true fullscreen: self.root.attributes('-fullscreen', True)
+        if self.popup:
+            self.root.title('FDLog Enhanced - Info Table View')
+            self.root.geometry('1200x800')
+            self.root.resizable(True, True)
+            self.root.protocol('WM_DELETE_WINDOW', self._on_popup_close)
+        else:
+            # Create a hidden dummy txtbillb for NewParticipantDialog compatibility
+            txtbillb = Text(self.root)
+            # Don't pack it - keep it hidden but available for the dialog
+            self.root.title('FDLog_Enhanced - Information Table')
+            # Make window fullscreen/maximized
+            self.root.state('zoomed')  # Maximized on Windows
 
-        # Main container frame
-        main_frame = Frame(self.root, background='#1a1a2e', padx=20, pady=10)
-        main_frame.pack(fill='both', expand=True)
+        # Scrollable container — screen sizes vary across nodes and the full layout
+        # can be taller than what's actually visible. A plain pack() would just
+        # crop the bottom with no way to reach it, so wrap everything in a
+        # canvas + scrollbar instead: nothing is ever permanently cut off.
+        outer = Frame(self.root, background='#1a1a2e')
+        outer.pack(fill='both', expand=True)
+        canvas = Canvas(outer, background='#1a1a2e', highlightthickness=0)
+        vscroll = Scrollbar(outer, orient='vertical', command=canvas.yview)
+        canvas.configure(yscrollcommand=vscroll.set)
+        canvas.pack(side='left', fill='both', expand=True)
+        vscroll.pack(side='right', fill='y')
+
+        main_frame = Frame(canvas, background='#1a1a2e', padx=20, pady=10)
+        canvas_window = canvas.create_window((0, 0), window=main_frame, anchor='nw')
+
+        def _on_frame_configure(_event):
+            canvas.configure(scrollregion=canvas.bbox('all'))
+        main_frame.bind('<Configure>', _on_frame_configure)
+
+        def _on_canvas_configure(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+        canvas.bind('<Configure>', _on_canvas_configure)
+
+        # Mouse-wheel scrolling — only bound while the cursor is over this canvas,
+        # so it doesn't hijack scrolling in other windows (bind_all is app-wide).
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), 'units')
+        def _bind_mousewheel(_event):
+            canvas.bind_all('<MouseWheel>', _on_mousewheel)
+        def _unbind_mousewheel(_event):
+            canvas.unbind_all('<MouseWheel>')
+        canvas.bind('<Enter>', _bind_mousewheel)
+        canvas.bind('<Leave>', _unbind_mousewheel)
+
+        # Operator panel — small toggle at top, collapsible content below.
+        # Internet relay is controlled from the dedicated info node only — a
+        # regular logging node opening the "View Info Table" popup shouldn't
+        # get its own Allow Internet control.
+        if not self.popup:
+            self.create_operator_panel_toggle(main_frame)
 
         # Register button at TOP so it's always visible
         self.create_register_button(main_frame)
@@ -6042,6 +6975,9 @@ class InfoTableWindow:
 
         # Score panel
         self.create_score_panel(main_frame)
+
+        # Active stations panel
+        self.create_active_bands_panel(main_frame)
 
         # Leaderboards frame (side by side)
         leaderboards_frame = Frame(main_frame, background='#1a1a2e')
@@ -6122,6 +7058,511 @@ class InfoTableWindow:
                                  foreground='white', background='#1a1a2e')
         self.mode_label.pack(side='left', expand=True)
 
+    def create_operator_panel_toggle(self, parent):
+        """Create a small unobtrusive toggle button and the collapsible operator panel."""
+        # Wrapper row — always visible, just the height of the toggle button
+        self._op_wrapper = Frame(parent, background='#1a1a2e')
+        self._op_wrapper.pack(fill='x')
+
+        self._op_toggle_btn = Button(
+            self._op_wrapper, text='▶ Allow Internet', font=('Helvetica', 7),
+            foreground='#888888', background='#1a1a2e', activeforeground='white',
+            activebackground='#2a2a4e', relief='flat', cursor='hand2',
+            command=self._toggle_operator_panel)
+        self._op_toggle_btn.pack(side='left', anchor='w')
+
+        # Collapsible content frame — created in parent, hidden until toggled
+        self._op_panel_frame = Frame(parent, background='#0d0d1a', pady=6, padx=12,
+                                     relief='groove', bd=1)
+        # Not packed yet — _toggle_operator_panel controls visibility
+
+        # Internet enable toggle
+        self._op_internet_btn = Button(
+            self._op_panel_frame,
+            text='○  Allow Internet Nodes for FDLog_Enhanced  [OFF]',
+            font=('Helvetica', 12, 'bold'),
+            foreground='#888888', background='#1a1a2e',
+            activeforeground='white', relief='raised', cursor='hand2',
+            command=self._toggle_internet_nodes)
+        self._op_internet_btn.pack(fill='x', pady=(0, 8))
+
+        # Row 0: LAN node count + remote TCP count + TCP port
+        row0 = Frame(self._op_panel_frame, background='#0d0d1a')
+        row0.pack(fill='x', pady=2)
+        Label(row0, text='Nodes:', font=('Helvetica', 11, 'bold'),
+              foreground='#aaaaaa', background='#0d0d1a').pack(side='left')
+        self._node_count_label = Label(row0, text='--', font=('Helvetica', 11),
+                                       foreground='white', background='#0d0d1a')
+        self._node_count_label.pack(side='left', padx=(4, 20))
+        Label(row0, text='TCP Port:', font=('Helvetica', 11, 'bold'),
+              foreground='#aaaaaa', background='#0d0d1a').pack(side='left')
+        Label(row0, text=str(net.TCP_PORT), font=('Courier', 11),
+              foreground='#ffdd00', background='#0d0d1a').pack(side='left', padx=(4, 4))
+        Label(row0, text='(click Try UPnP below, or forward this port manually)',
+              font=('Helvetica', 10, 'italic'),
+              foreground='#666666', background='#0d0d1a').pack(side='left')
+
+        # Row 1: external IP + CGNAT status
+        row1 = Frame(self._op_panel_frame, background='#0d0d1a')
+        row1.pack(fill='x', pady=2)
+        Label(row1, text='External IP:', font=('Helvetica', 11, 'bold'),
+              foreground='#aaaaaa', background='#0d0d1a').pack(side='left')
+        self._ext_ip_label = Label(row1, text='detecting...', font=('Courier', 11),
+                                   foreground='white', background='#0d0d1a')
+        self._ext_ip_label.pack(side='left', padx=(4, 20))
+        self._cgnat_label = Label(row1, text='', font=('Helvetica', 11),
+                                  foreground='#ffdd00', background='#0d0d1a')
+        self._cgnat_label.pack(side='left')
+
+        # Row 2: UPnP port mapping — manual choice, not automatic
+        row2 = Frame(self._op_panel_frame, background='#0d0d1a')
+        row2.pack(fill='x', pady=(6, 2))
+        self._upnp_btn = Button(
+            row2,
+            text='○  Try UPnP  [OFF]',
+            font=('Helvetica', 11, 'bold'),
+            foreground='#888888', background='#1a1a2e',
+            activeforeground='white', relief='raised', cursor='hand2',
+            command=self._toggle_upnp)
+        self._upnp_btn.pack(side='left')
+        self._upnp_label = Label(row2,
+                                  text='(enable internet above, then choose Try UPnP)',
+                                  font=('Helvetica', 10, 'italic'),
+                                  foreground='#555555', background='#0d0d1a')
+        self._upnp_label.pack(side='left', padx=(10, 0))
+
+        # Row 3: Cloudflare Tunnel toggle + status
+        row3 = Frame(self._op_panel_frame, background='#0d0d1a')
+        row3.pack(fill='x', pady=(6, 2))
+        self._cf_btn = Button(
+            row3,
+            text='○  Enable Cloudflare Tunnel  [OFF]',
+            font=('Helvetica', 11, 'bold'),
+            foreground='#888888', background='#1a1a2e',
+            activeforeground='white', relief='raised', cursor='hand2',
+            command=self._toggle_cloudflared)
+        self._cf_btn.pack(side='left')
+        self._cf_status_label = Label(
+            row3,
+            text='(enable cloudflare tunnel to get a public URL)',
+            font=('Helvetica', 10, 'italic'),
+            foreground='#555555', background='#0d0d1a')
+        self._cf_status_label.pack(side='left', padx=(10, 0))
+
+        # Row 4: URL display (hidden until tunnel is active)
+        self._cf_url_var = StringVar(value='')
+        self._cf_url_frame = Frame(self._op_panel_frame, background='#0d0d1a')
+        # not packed yet — shown when tunnel URL arrives
+        Label(self._cf_url_frame,
+              text='Share this URL with the Internet nodes:',
+              font=('Helvetica', 11, 'bold'),
+              foreground='#aaaaaa', background='#0d0d1a').pack(side='left')
+        self._cf_url_entry = Entry(
+            self._cf_url_frame, textvariable=self._cf_url_var,
+            font=('Courier', 11), foreground='#00ff88', background='#0d1a0d',
+            state='readonly', width=48, relief='flat')
+        self._cf_url_entry.pack(side='left', padx=(8, 4))
+        Button(self._cf_url_frame, text='Copy',
+               font=('Helvetica', 10), cursor='hand2',
+               command=lambda: (self.root.clipboard_clear(),
+                                self.root.clipboard_append(self._cf_url_var.get()))
+               ).pack(side='left')
+
+        # Kick off background IP detection
+        import threading as _threading
+        _threading.Thread(target=self._detect_external_ip, daemon=True).start()
+
+    def _toggle_operator_panel(self):
+        """Show or hide the operator control panel."""
+        self._op_panel_visible = not self._op_panel_visible
+        if self._op_panel_visible:
+            self._op_panel_frame.pack(fill='x', pady=(0, 4), after=self._op_wrapper)
+            self._op_toggle_btn.config(text='▼ Allow Internet')
+        else:
+            self._op_panel_frame.pack_forget()
+            self._op_toggle_btn.config(text='▶ Allow Internet')
+
+    def _toggle_internet_nodes(self):
+        """Toggle internet node support on/off. Enabling only starts the
+        TCP/WS servers — the operator picks UPnP and/or Cloudflare Tunnel
+        separately below, since not everyone wants an automatic router change."""
+        self._op_internet_enabled = not self._op_internet_enabled
+        if self._op_internet_enabled:
+            net.enable_internet()
+            self._op_internet_btn.config(
+                text='●  Allow Internet Nodes for FDLog_Enhanced  [ON]',
+                foreground='#00ff88', background='#003322')
+        else:
+            net.disable_internet()
+            self._op_internet_btn.config(
+                text='○  Allow Internet Nodes for FDLog_Enhanced  [OFF]',
+                foreground='#888888', background='#1a1a2e')
+            self._upnp_enabled = False
+            threading.Thread(target=self._upnp_cleanup, daemon=True,
+                             name='upnp-cleanup').start()
+            if self._upnp_label:
+                self._upnp_label.config(
+                    text='(enable internet above, then choose Try UPnP)',
+                    foreground='#555555')
+            if self._upnp_btn:
+                self._upnp_btn.config(
+                    text='○  Try UPnP  [OFF]',
+                    foreground='#888888', background='#1a1a2e')
+
+    def _toggle_upnp(self):
+        """Toggle UPnP port mapping on/off — a deliberate operator choice,
+        not automatic, since it changes the router's port forwarding."""
+        if not self._op_internet_enabled:
+            return
+        self._upnp_enabled = not self._upnp_enabled
+        if self._upnp_enabled:
+            self._upnp_btn.config(
+                text='●  Try UPnP  [ON]',
+                foreground='#00ff88', background='#003322')
+            threading.Thread(target=self._upnp_setup, daemon=True,
+                             name='upnp-setup').start()
+        else:
+            self._upnp_btn.config(
+                text='○  Try UPnP  [OFF]',
+                foreground='#888888', background='#1a1a2e')
+            threading.Thread(target=self._upnp_cleanup, daemon=True,
+                             name='upnp-cleanup').start()
+            if self._upnp_label:
+                self._upnp_label.config(
+                    text='(click Try UPnP to attempt automatic port mapping)',
+                    foreground='#555555')
+
+    def _toggle_cloudflared(self):
+        """Toggle Cloudflare Tunnel on/off."""
+        self._cf_enabled = not self._cf_enabled
+        if self._cf_enabled:
+            if not self._op_internet_enabled:
+                # Internet must be enabled first
+                self._cf_enabled = False
+                return
+            self._cf_btn.config(
+                text='●  Enable Cloudflare Tunnel  [ON]',
+                foreground='#00ff88', background='#003322')
+            threading.Thread(target=self._cloudflared_start, daemon=True,
+                             name='cf-tunnel').start()
+        else:
+            self._cf_btn.config(
+                text='○  Enable Cloudflare Tunnel  [OFF]',
+                foreground='#888888', background='#1a1a2e')
+            threading.Thread(target=self._cloudflared_stop, daemon=True,
+                             name='cf-stop').start()
+
+    def _upnp_setup(self):
+        """Attempt UPnP port mapping in a background thread."""
+        def _set(text, color):
+            try:
+                self.root.after(0, lambda t=text, c=color:
+                                self._upnp_label.config(text=t, foreground=c))
+            except Exception:
+                pass
+
+        _set('trying...', '#ffdd00')
+        upnpclient = _upnpclient
+        if upnpclient is None:
+            _set('upnpclient not installed — run: pip install upnpclient', '#ff6666')
+            return
+        try:
+            devices = upnpclient.discover(timeout=3)
+            wan_svc = None
+            for dev in devices:
+                for svc in dev.services:
+                    if 'WANIPConnection' in svc.service_type or \
+                       'WANPPPConnection' in svc.service_type:
+                        wan_svc = svc
+                        break
+                if wan_svc:
+                    break
+            if wan_svc is None:
+                # SSDP may be blocked (Windows Firewall) — try default gateway directly
+                gw = None
+                try:
+                    if sys.platform == 'win32':
+                        import subprocess as _sp
+                        _r = _sp.run(['route', 'print', '0.0.0.0'],
+                                     capture_output=True, text=True, timeout=5)
+                        for _ln in _r.stdout.splitlines():
+                            _p = _ln.split()
+                            if len(_p) >= 3 and _p[0] == '0.0.0.0':
+                                gw = _p[2]
+                                break
+                except Exception:
+                    pass
+                if gw:
+                    for _port in (2189, 49000, 5000):
+                        try:
+                            _dev = upnpclient.Device(
+                                'http://%s:%d/rootDesc.xml' % (gw, _port))
+                            for svc in _dev.services:
+                                if 'WANIPConnection' in svc.service_type or \
+                                   'WANPPPConnection' in svc.service_type:
+                                    wan_svc = svc
+                                    break
+                            if wan_svc:
+                                break
+                        except Exception:
+                            continue
+            if wan_svc is None:
+                _set('no UPnP gateway found — If UPnP fails, try Cloudflare Tunnel below.', '#ffdd00')
+                return
+            # Route toward the gateway to find the correct LAN-facing IP
+            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                _s.connect((wan_svc.device.location.split('/')[2].split(':')[0], 80))
+                local_ip = _s.getsockname()[0]
+            finally:
+                _s.close()
+            try:
+                wan_svc.DeletePortMapping(
+                    NewRemoteHost='', NewExternalPort=net.TCP_PORT, NewProtocol='TCP')
+            except Exception:
+                pass
+            wan_svc.AddPortMapping(
+                NewRemoteHost='', NewExternalPort=net.TCP_PORT, NewProtocol='TCP',
+                NewInternalPort=net.TCP_PORT, NewInternalClient=local_ip,
+                NewEnabled='1', NewPortMappingDescription='FDLog Enhanced',
+                NewLeaseDuration=0)
+            ext = wan_svc.GetExternalIPAddress().get('NewExternalIPAddress', 'unknown')
+            self._upnp_obj = wan_svc
+            # The router's own answer beats the web-detected one — a VPN on
+            # this PC makes ipify report the VPN exit IP, not the WAN address.
+            try:
+                import ipaddress
+                addr = ipaddress.ip_address(ext)
+                cgnat = addr.is_private or addr in ipaddress.ip_network('100.64.0.0/10')
+                self._ext_ip_cache = ('%s (UPnP)' % ext, cgnat)
+            except ValueError:
+                pass  # router returned 'unknown'/garbage — keep web-detected value
+            _set('port %d auto-mapped  →  %s:%d  ✓' % (net.TCP_PORT, ext, net.TCP_PORT),
+                 '#00ff88')
+        except Exception as e:
+            _set('error — %s  |  If UPnP fails, try Cloudflare Tunnel below.' % str(e),
+                 '#ff6666')
+
+    def _upnp_cleanup(self):
+        """Remove UPnP port mapping when internet is disabled."""
+        svc = self._upnp_obj
+        self._upnp_obj = None
+        if svc is None:
+            return
+        try:
+            svc.DeletePortMapping(
+                NewRemoteHost='', NewExternalPort=net.TCP_PORT, NewProtocol='TCP')
+            print("UPnP port %d mapping removed" % net.TCP_PORT)
+        except Exception:
+            pass
+
+    def _cloudflared_start(self):
+        """Download cloudflared if needed, start tunnel, update UI."""
+        def _set(text, color):
+            try:
+                self.root.after(0, lambda t=text, c=color:
+                                self._cf_status_label.config(text=t, foreground=c))
+            except Exception:
+                pass
+
+        def _set_url(url):
+            try:
+                self.root.after(0, lambda u=url: (
+                    self._cf_url_var.set(u),
+                    self._cf_url_frame.pack(fill='x', pady=(2, 0))
+                ))
+            except Exception:
+                pass
+
+        _set('downloading cloudflared...', '#ffdd00')
+        base = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) \
+               else os.path.dirname(os.path.abspath(__file__))
+        cf_exe = 'cloudflared.exe' if sys.platform == 'win32' else 'cloudflared'
+        cf_path = os.path.join(base, cf_exe)
+
+        if not os.path.exists(cf_path):
+            try:
+                import urllib.request
+                fname = 'cloudflared-windows-amd64.exe' if sys.platform == 'win32' \
+                        else 'cloudflared-linux-amd64'
+                url = ('https://github.com/cloudflare/cloudflared/releases/'
+                       'latest/download/' + fname)
+                urllib.request.urlretrieve(url, cf_path)
+                if sys.platform != 'win32':
+                    os.chmod(cf_path, 0o755)
+            except Exception as e:
+                _set('download failed: %s' % e, '#ff6666')
+                return
+
+        _set('starting tunnel...', '#ffdd00')
+        try:
+            proc = subprocess.Popen(
+                [cf_path, 'tunnel', '--url',
+                 'http://localhost:%d' % net.WS_PORT,
+                 '--no-autoupdate'],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, bufsize=1)
+            self._cf_process = proc
+            import re as _re
+            url_found = False
+            for line in proc.stdout:
+                line = line.strip()
+                m = _re.search(r'https://[a-z0-9\-]+\.trycloudflare\.com', line)
+                if m:
+                    self._cf_url = m.group(0)
+                    _set_url(self._cf_url)
+                    _set('tunnel active', '#00ff88')
+                    url_found = True
+                    break
+            if not url_found:
+                _set('tunnel failed — no URL received', '#ff6666')
+                self._cf_process = None
+                return
+            # Watchdog: monitor process and alert if it dies
+            proc.wait()
+            if self._cf_process is not None:  # not stopped intentionally
+                _set('tunnel died — restart to get a new URL', '#ff4444')
+                self._cf_url = None
+                self.root.after(0, lambda: self._cf_url_frame.pack_forget())
+        except Exception as e:
+            _set('error: %s' % e, '#ff6666')
+            self._cf_process = None
+
+    def _cloudflared_stop(self):
+        """Stop cloudflared tunnel."""
+        proc = self._cf_process
+        self._cf_process = None
+        self._cf_url = None
+        if proc:
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+        try:
+            self._cf_url_frame.pack_forget()
+        except Exception:
+            pass
+        try:
+            self._cf_status_label.config(
+                text='(enable cloudflare tunnel to get a public URL)',
+                foreground='#555555')
+        except Exception:
+            pass
+
+    def _detect_external_ip(self):
+        """Detect external IP and CGNAT status in a background thread."""
+        import urllib.request
+        import ipaddress
+        try:
+            with urllib.request.urlopen('https://api.ipify.org', timeout=5) as resp:
+                ext_ip = resp.read().decode().strip()
+            addr = ipaddress.ip_address(ext_ip)
+            cgnat = addr.is_private or addr in ipaddress.ip_network('100.64.0.0/10')
+            self._ext_ip_cache = (ext_ip, cgnat)
+        except Exception:
+            self._ext_ip_cache = ('unavailable', False)
+
+    def update_operator_panel(self):
+        """Refresh operator panel data (called every 10s with update_display)."""
+        if not self._op_panel_visible:
+            return
+        # Node count (LAN + internet) — net.si.nodes mixes both origins with no
+        # tag to tell them apart, so back out the internet-connected count to
+        # get the true LAN figure instead of double-counting.
+        try:
+            node_list = list(net.si.nodes.values())
+            active_total = sum(1 for n in node_list if n.age < 55)
+            internet_count = len(net.tcp_conn) + len(net.ws_conn)
+            lan_count = max(active_total - internet_count, 0)
+            if internet_count:
+                self._node_count_label.config(
+                    text='%d LAN  +  %d internet' % (lan_count, internet_count))
+            else:
+                self._node_count_label.config(text='%d LAN' % lan_count)
+        except Exception:
+            pass
+        # External IP / CGNAT
+        if self._ext_ip_cache is not None:
+            ip_str, cgnat = self._ext_ip_cache
+            self._ext_ip_label.config(text=ip_str)
+            if ip_str == 'unavailable':
+                self._cgnat_label.config(text='(could not reach ipify.org)',
+                                         foreground='#ff6666')
+            elif cgnat:
+                self._cgnat_label.config(
+                    text='WARNING: CGNAT detected — remote nodes cannot connect inbound',
+                    foreground='#ff6666')
+            else:
+                self._cgnat_label.config(text='OK — public IP',
+                                         foreground='#88ff88')
+
+    def create_active_bands_panel(self, parent):
+        """Create the active stations panel (nodes not on 'off')."""
+        outer = Frame(parent, background='#1a1a2e', padx=10)
+        outer.pack(fill='x', pady=5)
+        Label(outer, text="ACTIVE STATIONS",
+              font=('Helvetica', 20, 'bold'),
+              foreground='white', background='#1a1a2e').pack(pady=(0, 5))
+        self.active_bands_frame = Frame(outer, background='#1a1a2e')
+        self.active_bands_frame.pack(fill='x')
+
+    def update_active_bands(self):
+        """Refresh the active stations panel."""
+        if self.active_bands_frame is None:
+            return
+        for w in self.active_bands_frame.winfo_children():
+            w.destroy()
+
+        # Gather active nodes (exclude 'off' and internal '*' bands)
+        active = []
+        for nod, seq, bnd, msc, age in self.net.si.node_status_list():
+            if bnd and bnd != 'off' and not bnd.startswith('*'):
+                active.append((nod, bnd, msc))
+
+        # Sort by band frequency
+        _band_order = {b: i for i, b in enumerate(
+            ('160', '80', '40', '20', '15', '10', '6', '2', '220', '440', '900', '1200', 'sat'))}
+        active.sort(key=lambda x: _band_order.get(x[1][:-1], 99))
+
+        if not active:
+            Label(self.active_bands_frame, text="No active stations",
+                  font=('Courier', 18), foreground='#888888',
+                  background='#1a1a2e').pack()
+            return
+
+        qpb = self.qdb.band_rpt()[0]
+        _mode_name = {'c': 'CW', 'd': 'Digital', 'p': 'Phone'}
+
+        for nod, bnd, msc in active:
+            band_num = bnd[:-1]
+            mode_char = bnd[-1:]
+            band_text = '%sm %s' % (band_num, _mode_name.get(mode_char, mode_char.upper()))
+            qso_count = qpb.get(bnd, 0)
+
+            msc_parts = msc.split()
+            op_ini = msc_parts[0] if len(msc_parts) > 0 else ''
+            lg_ini = msc_parts[1] if len(msc_parts) > 1 else ''
+            op_text = 'Op: %s' % self._participant_display(op_ini) if op_ini else 'Op: ---'
+            lg_text = 'Log: %s' % self._participant_display(lg_ini) if lg_ini else 'Log: ---'
+
+            row = Frame(self.active_bands_frame, background='#16213e', padx=10, pady=4)
+            row.pack(fill='x', pady=2)
+            row.columnconfigure(1, weight=1)
+            row.columnconfigure(2, weight=1)
+
+            Label(row, text=band_text, font=('Courier', 18, 'bold'),
+                  foreground='#00ff88', background='#16213e',
+                  width=14, anchor='w').grid(row=0, column=0, sticky='w')
+            Label(row, text=op_text, font=('Courier', 18),
+                  foreground='white', background='#16213e',
+                  anchor='w').grid(row=0, column=1, sticky='ew', padx=10)
+            Label(row, text=lg_text, font=('Courier', 18),
+                  foreground='white', background='#16213e',
+                  anchor='w').grid(row=0, column=2, sticky='ew', padx=10)
+            Label(row, text='%d QSOs' % qso_count, font=('Courier', 18, 'bold'),
+                  foreground='#ffdd00', background='#16213e',
+                  anchor='e').grid(row=0, column=3, sticky='e', padx=(10, 0))
+
     def create_contestants_panel(self, parent):
         """Create the top Contestants leaderboard."""
         contestants_frame = Frame(parent, background='#1a1a2e', padx=10)
@@ -6138,7 +7579,7 @@ class InfoTableWindow:
             entry_frame = Frame(contestants_frame, background='#16213e', padx=10, pady=5)
             entry_frame.pack(fill='x', pady=2)
             lbl = Label(entry_frame, text=f"{idx+1}. ---",
-                        font=('Courier', 20),
+                        font=('Courier', 14),
                         foreground='white', background='#16213e', anchor='w')
             lbl.pack(fill='x')
             self.contestant_labels.append(lbl)
@@ -6159,7 +7600,7 @@ class InfoTableWindow:
             entry_frame = Frame(loggers_frame, background='#16213e', padx=10, pady=5)
             entry_frame.pack(fill='x', pady=2)
             lbl = Label(entry_frame, text=f"{idx+1}. ---",
-                        font=('Courier', 20),
+                        font=('Courier', 14),
                         foreground='white', background='#16213e', anchor='w')
             lbl.pack(fill='x')
             self.logger_labels.append(lbl)
@@ -6192,8 +7633,12 @@ class InfoTableWindow:
                                  foreground='white', background='#1a1a2e')
         self.time_label.pack(pady=(0, 10))
 
+        # Row holding the sign-in button and the attendee count side by side
+        row = Frame(button_frame, background='#1a1a2e')
+        row.pack(pady=10)
+
         # Use a more visible style for Windows compatibility
-        register_btn = Button(button_frame, text=">>> Sign In Here Please <<<",
+        register_btn = Button(row, text=">>> Sign In Here Please <<<",
                                font=('Helvetica', 18, 'bold'),
                                foreground='black', background='#00ff00',
                                activeforeground='white', activebackground='#00aa00',
@@ -6201,21 +7646,44 @@ class InfoTableWindow:
                                padx=40, pady=20,
                                cursor='hand2',
                                command=self.register_visitor)
-        register_btn.pack(pady=10)
+        register_btn.pack(side='left')
+
+        self.attendees_label = Label(row, text="Attendees: 0",
+                                      font=('Helvetica', 16, 'bold'),
+                                      foreground='#00ff88', background='#1a1a2e')
+        self.attendees_label.pack(side='left', padx=(20, 0))
+
+    def _on_popup_close(self):
+        """Cancel the update loop and destroy the popup window."""
+        if self.update_job:
+            self.root.after_cancel(self.update_job)
+            self.update_job = None
+        self.root.destroy()
 
     def update_display(self):
         """Refresh all data on the display."""
         self.update_header()
         self.update_time()
         self.update_score()
+        self.update_active_bands()
         self.update_leaderboards()
         self.update_progress()
+        self.update_operator_panel()
+        self.update_attendees()
 
-        # Keep the network alive so other nodes see us
-        self.net.bcast_now()
+        # Keep the network alive — only in standalone mode; popup relies on main GUI
+        if not self.popup:
+            self.net.bcast_now()
 
         # Schedule next update in 10 seconds
         self.update_job = self.root.after(10000, self.update_display)
+
+    def update_attendees(self):
+        """Refresh the attendee count next to the sign-in button. participants is
+        synced network-wide via globDb, so this counts everyone registered from
+        any node, not just walk-ins entered at this info table."""
+        if self.attendees_label:
+            self.attendees_label.config(text="Attendees: %d" % len(participants))
 
     def update_header(self):
         """Update header fields from synced global data."""
@@ -6252,9 +7720,11 @@ class InfoTableWindow:
     def update_score(self):
         """Update the score display."""
         score_data = self.get_score_data()
-        total_score, cwq, digq, fonq, total_qsos = score_data
+        total_score, cwq, digq, fonq, total_qsos, qso_score, bonus_pts = score_data
 
-        self.score_label.config(text=f"CURRENT SCORE: {total_score:,}")
+        self.score_label.config(
+            text=f"CURRENT SCORE: {total_score:,}  "
+                 f"({qso_score:,} QSO + {bonus_pts:,} bonus)")
         self.qso_label.config(text=f"Total QSOs: {total_qsos}")
         self.mode_label.config(text=f"CW: {cwq}  |  Digital: {digq}  |  Phone: {fonq}")
 
@@ -6317,7 +7787,7 @@ class InfoTableWindow:
     def get_score_data(self):
         """Calculate and return current score data.
 
-        Returns: (total_score, cwq, digq, fonq, total_qsos)
+        Returns: (total_score, cwq, digq, fonq, total_qsos, qso_score, bonus)
         """
         qpb, ppb, qpop, qplg, qpst, tq, score, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
             self.qdb.band_rpt()
@@ -6333,15 +7803,23 @@ class InfoTableWindow:
             powm = 2
         if maxp > 5:
             powm = 2
-        if maxp > 150:
+        if maxp > 100:  # 2026 rules: >100W is x1 (was 150W before 2023)
             powm = 1
-        if maxp > 1500:
+        if maxp > 500:  # 2026 rules: 500W PEP max for A/B/C (100W for D/E/F)
             powm = 0
 
-        total_score = qsop * powm
+        # Bonus points - same math as the contest entry report
+        try:
+            tot_bonus, dummy = calc_bonus_points(
+                gotaq, nat, sat, ival(self.gd.getv('class')))
+        except Exception:
+            tot_bonus = 0
+
+        qso_score = qsop * powm
+        total_score = qso_score + tot_bonus
         total_qsos = cwq + digq + fonq
 
-        return total_score, cwq, digq, fonq, total_qsos
+        return total_score, cwq, digq, fonq, total_qsos, qso_score, tot_bonus
 
     def get_top_operators(self, n=5):
         """Get the top n operators by QSO count.
@@ -6401,7 +7879,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v2026_Beta 4.2.9"  # Changed 10Feb2026
+version = "v2026_Beta 4.3.0"  # Changed 02Jul2026
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
@@ -6573,6 +8051,8 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument('--node', '-n', type=str, help='Station node name (7 chars, e.g., station1)')
 parser.add_argument('--auth', '-a', type=str, help='Authentication key (e.g., 24 for year 2024)')
+parser.add_argument('--remote', '-r', type=str, default='',
+                    help='Infotable external IP for internet relay (e.g., 1.2.3.4)')
 args = parser.parse_args()
 
 # Load globals after all these default values are set.
@@ -6679,6 +8159,13 @@ print("Starting Network")
 net = NetworkSync()  # setup net
 net.setport(port_base)
 net.setauth(authk)
+# Set remote infotable IP (--remote arg takes priority, then saved value)
+if args.remote:
+    net.rem_host = args.remote.split(':')[0].strip()  # strip port if included
+    globDb.put('remip', net.rem_host)
+    print("Internet relay: will connect to %s:%d" % (net.rem_host, net.TCP_PORT))
+else:
+    net.rem_host = globDb.get('remip', '0.0.0.0')
 print("Saving Persistent Configuration in", globDb.dbPath)
 saveglob()
 if operator != "":
@@ -7658,6 +9145,12 @@ print("Starting GUI setup")
 
 root = Tk()  # setup Tk GUI
 
+# Wire Tkinter callback exceptions into the same logger
+def _tk_exception(exc_type, exc_value, exc_tb):
+    _fdlog_write_error(exc_type, exc_value, exc_tb)
+
+root.report_callback_exception = _tk_exception
+
 # Set application icon (cross-platform)
 try:
     _icon_dir = os.path.dirname(os.path.abspath(__file__))
@@ -7748,6 +9241,206 @@ if RIGCTLD_AVAILABLE:
         rigctld_client.start()
     print(f"rigctld: Initialized - Host: {rigctld_config.host}:{rigctld_config.port}, Enabled: {rigctld_config.enabled}")
 
+# Previous contest log lookup
+prev_log_calls = {}  # normalized call -> {'bands': ['40p', '20p'], 'exchange': '1d in', 'source': '2025fd'}
+
+def _prev_log_merge(new_calls):
+    """Merge new_calls into prev_log_calls, preferring richer data."""
+    global prev_log_calls
+    for call, data in new_calls.items():
+        if call not in prev_log_calls:
+            prev_log_calls[call] = {'bands': [], 'exchange': '', 'note': '', 'source': ''}
+            prev_log_calls[call].update(data)
+        else:
+            for b in data['bands']:
+                if b not in prev_log_calls[call]['bands']:
+                    prev_log_calls[call]['bands'].append(b)
+            if data['exchange'] and not prev_log_calls[call]['exchange']:
+                prev_log_calls[call]['exchange'] = data['exchange']
+            if data.get('note') and not prev_log_calls[call].get('note'):
+                prev_log_calls[call]['note'] = data['note']
+            if data.get('source') == 'adif':
+                prev_log_calls[call]['source'] = 'adif'
+
+
+def load_n1mm_callhistory(filepath):
+    """Load N1MM+ Field Day call history file (!!Order!! header format) into worked-before lookup."""
+    try:
+        new_calls = {}
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+        # Parse !!Order!! header to get column positions
+        col = {}
+        for line in lines:
+            line = line.strip()
+            if line.startswith('!!Order!!'):
+                headers = [h.strip() for h in line.split(',')]
+                for i, h in enumerate(headers):
+                    col[h] = i
+                break
+        if 'Call' not in col:
+            print("N1MM+ call history: no !!Order!! header found in %s" % filepath)
+            return 0
+        # !!Order!! occupies col 0 in the header but is absent in data rows — subtract 1
+        call_i = col.get('Call', 0) - 1
+        exch_i = col.get('Exch1', -1) - 1
+        sect_i = col.get('Sect', -1) - 1
+        note_i = col.get('UserText', -1) - 1
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith('#') or line.startswith('!!'):
+                continue
+            parts = line.split(',')
+            if call_i < 0 or call_i >= len(parts):
+                continue
+            call = parts[call_i].strip().lower()
+            if not call:
+                continue
+            base_call = call.split('/')[0]
+            cls = parts[exch_i].strip().lower() if exch_i >= 0 and exch_i < len(parts) else ''
+            sect = parts[sect_i].strip().lower() if sect_i >= 0 and sect_i < len(parts) else ''
+            note = parts[note_i].strip() if note_i >= 0 and note_i < len(parts) else ''
+            exchange = ('%s %s' % (cls, sect)).strip() if (cls and sect) else (cls or sect)
+            new_calls[base_call] = {'bands': [], 'exchange': exchange, 'note': note, 'source': 'n1mm'}
+        _prev_log_merge(new_calls)
+        count = len(new_calls)
+        print("N1MM+ call history loaded: %d calls from %s" % (count, os.path.basename(filepath)))
+        return count
+    except Exception as e:
+        print("N1MM+ call history load error: %s" % e)
+        return 0
+
+def load_prev_log(filepath):
+    """Load a previous contest log (ADIF) and merge into worked-before lookup."""
+    try:
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+        new_calls = {}
+        for record in re.split(r'<eor>', content, flags=re.IGNORECASE):
+            fields = {}
+            for m in re.finditer(r'<(\w+):\d+[^>]*>([^<]*)', record):
+                fields[m.group(1).upper()] = m.group(2).strip()
+            raw_call = fields.get('CALL', '').lower().strip()
+            if not raw_call:
+                continue
+            base_call = raw_call.split('/')[0]
+            band = fields.get('BAND', '').lower().replace('m', '')  # '40m' -> '40'
+            mode = fields.get('MODE', '').upper()
+            mode_char = 'c' if mode == 'CW' else ('d' if mode in ('DIGITAL', 'FT8', 'FT4', 'JS8', 'DATA') else 'p')
+            band_label = (band + mode_char) if band else ''
+            # Standard ADIF fields first; N1MM+ uses APP_N1MM_EXCHANGE1/2 for contest exchange
+            cls = fields.get('CLASS', '') or fields.get('APP_N1MM_EXCHANGE1', '')
+            sect = (fields.get('ARRL_SECT', '') or fields.get('STATE', '')
+                    or fields.get('APP_N1MM_EXCHANGE2', ''))
+            if cls and sect:
+                exchange = ('%s %s' % (cls, sect)).lower()
+            else:
+                exchange = fields.get('SRX_STRING', fields.get('STX_STRING', '')).lower()
+            if base_call not in new_calls:
+                new_calls[base_call] = {'bands': [], 'exchange': exchange, 'source': 'adif'}
+            if band_label and band_label not in new_calls[base_call]['bands']:
+                new_calls[base_call]['bands'].append(band_label)
+            if exchange and not new_calls[base_call]['exchange']:
+                new_calls[base_call]['exchange'] = exchange
+        _prev_log_merge(new_calls)
+        count = len(new_calls)
+        print("Previous log loaded: %d calls from %s" % (count, os.path.basename(filepath)))
+        try:
+            import tkinter.messagebox
+            tkinter.messagebox.showinfo("Previous Log Loaded",
+                                        "Loaded %d calls from %s" % (count, os.path.basename(filepath)))
+        except Exception:
+            pass
+        return count
+    except Exception as e:
+        print("Previous log load error: %s" % e)
+        try:
+            import tkinter.messagebox
+            tkinter.messagebox.showerror("Load Error", str(e))
+        except Exception:
+            pass
+        return 0
+
+def open_prev_log_dialog():
+    """Open file dialog to select a previous contest log (ADIF)."""
+    import tkinter.filedialog
+    fp = tkinter.filedialog.askopenfilename(
+        title="Load Previous Contest Log",
+        filetypes=[("ADIF files", "*.adi *.adif"), ("All files", "*.*")]
+    )
+    if fp:
+        load_prev_log(fp)
+
+def internet_connect_dialog():
+    """Dialog to set the remote infotable IP or Cloudflare tunnel URL for internet relay."""
+    dlg = Toplevel(root)
+    dlg.title("Internet Relay — Connect to Infotable")
+    dlg.geometry("520x190")
+    dlg.resizable(False, False)
+    dlg.grab_set()
+
+    Label(dlg, text="Enter the infotable's IP address  —or—  Cloudflare Tunnel URL.",
+          font=('Helvetica', 11)).pack(pady=(14, 4))
+
+    row = Frame(dlg)
+    row.pack(pady=4)
+    Label(row, text="IP or URL:", font=('Helvetica', 11)).pack(side='left')
+    current = net.rem_host if net.rem_host not in ('0.0.0.0', '') else ''
+    ip_var = StringVar(value=current)
+    ip_entry = Entry(row, textvariable=ip_var, font=('Courier', 11), width=42)
+    ip_entry.pack(side='left', padx=8)
+    ip_entry.focus_set()
+
+    msg_label = Label(dlg, text='', font=('Helvetica', 10))
+    msg_label.pack()
+
+    def do_connect():
+        val = ip_var.get().strip()
+        if not val:
+            msg_label.config(text="Enter an IP address or https:// URL.", foreground='red')
+            return
+        is_url = val.startswith('http://') or val.startswith('https://')
+        is_ip  = re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$',
+                          val.split(':')[0]) is not None
+        if not is_url and not is_ip:
+            msg_label.config(text="Enter a valid IP address or https:// URL.",
+                             foreground='red')
+            return
+        net.rem_host = val if is_url else val.split(':')[0]
+        globDb.put('remip', net.rem_host)
+        dlg.destroy()
+
+    def do_disconnect():
+        old = net.rem_host
+        net.rem_host = '0.0.0.0'
+        globDb.put('remip', '0.0.0.0')
+        # Close TCP connection if any
+        entry = net.tcp_conn.get('%s:%d' % (old, net.TCP_PORT))
+        if entry:
+            try:
+                entry[0].close()
+            except Exception:
+                pass
+        # Close WebSocket connection if any
+        ws_entry = net.ws_conn.get(old)
+        if ws_entry:
+            try:
+                ws_entry[0].close()
+            except Exception:
+                pass
+        dlg.destroy()
+
+    btns = Frame(dlg)
+    btns.pack(pady=8)
+    Button(btns, text="Connect", command=do_connect, width=12).pack(side='left', padx=5)
+    Button(btns, text="Disconnect", command=do_disconnect, width=12).pack(side='left', padx=5)
+    Button(btns, text="Cancel", command=dlg.destroy, width=12).pack(side='left', padx=5)
+
+    dlg.bind('<Return>', lambda e: do_connect())
+    dlg.bind('<Escape>', lambda e: dlg.destroy())
+    dlg.wait_window()
+
+
 menu = Menu(root)
 root.config(menu=menu)
 filemenu = Menu(menu, tearoff=0)
@@ -7757,6 +9450,9 @@ filemenu.add_command(label="PreView Saved Entry File",
                      command=lambda: viewtextf('fdlog.log'))
 filemenu.add_command(label="View Log Data File",
                      command=lambda: viewtextf(logdbf))
+filemenu.add_separator()
+filemenu.add_command(label="Load Previous Contest Log...", command=open_prev_log_dialog)
+filemenu.add_separator()
 filemenu.add_command(label="Exit", command=root.quit)
 propmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Properties", menu=propmenu)
@@ -7853,6 +9549,11 @@ fontmenu.add_command(label="Courier - 11pt", command=lambda: set_font("Courier",
 fontmenu.add_command(label="Courier - 12pt", command=lambda: set_font("Courier", 12))
 fontmenu.add_command(label="Courier - 13pt", command=lambda: set_font("Courier", 13))
 fontmenu.add_command(label="Courier - 14pt", command=lambda: set_font("Courier", 14))
+
+# Internet menu
+internetmenu = Menu(menu, tearoff=0)
+menu.add_cascade(label="Internet", menu=internetmenu)
+internetmenu.add_command(label="Connect to Remote Infotable...", command=internet_connect_dialog)
 
 # Help menu
 helpmenu = Menu(menu, tearoff=0)
@@ -8073,17 +9774,18 @@ sound_cb = Checkbutton(f1b, text="Sound", variable=sound_enabled,
 # Added wof label - KD4SIR Scott Hibbs Jan/19/2017
 # Added port label - KD4SIR Scott Hibbs Jan/19/2017
 
-# Function buttons
-redrawbutton = Button(f1b, text="Redraw Log", font=fdfont, relief='raised', foreground='blue', command=logwredraw,
+# Function buttons — in their own sub-frame so they don't extend f1b's column count
+_funcbar = Frame(f1b, bd=0)
+redrawbutton = Button(_funcbar, text="Redraw Log", font=fdfont, relief='raised', foreground='blue', command=logwredraw,
                       background='light gray')
-opsonlinebutton = Button(f1b, text="Contestants Working", font=fdfont, relief='raised', foreground='blue',
+opsonlinebutton = Button(_funcbar, text="Contestants Working", font=fdfont, relief='raised', foreground='blue',
                          command=showoperatorsonline, background='light gray')
-mapbutton = Button(f1b, text="WAS Map", font=fdfont, relief='raised', foreground='blue',
+mapbutton = Button(_funcbar, text="WAS Map", font=fdfont, relief='raised', foreground='blue',
                    command=generate_map, background='light gray')
-sectionmapbutton = Button(f1b, text="Section Map", font=fdfont, relief='raised', foreground='blue',
+sectionmapbutton = Button(_funcbar, text="Section Map", font=fdfont, relief='raised', foreground='blue',
                           command=generate_section_map, background='light gray')
 phonetic_visible = False  # Track phonetic display visibility (hidden by default)
-phonetic_toggle_btn = Button(f1b, text="Show Phonetic", font=fdfont, relief='raised', foreground='blue',
+phonetic_toggle_btn = Button(_funcbar, text="Show Phonetic", font=fdfont, relief='raised', foreground='blue',
                              command=toggle_phonetic_display, background='light gray')
 
 # Who's on First Window to display operators on bands
@@ -8121,6 +9823,8 @@ if authk == "tst":
 else:
     txtbillb.insert(END, "-Call-Class-Sect- \n")
 txtbillb.config(insertwidth=3)
+txtbillb.tag_config('worked_bands', foreground='green')
+txtbillb.tag_config('prev_worked', foreground='dark orange')
 txtbillb.focus_set()
 
 # Phonetic alphabet display frame - Added by Scott Hibbs KD4SIR
@@ -8203,12 +9907,41 @@ if node == "infotable":
     print("  globals saved")
     print("\n\n FDLog_Enhanced Information Table has shut down.")
     time.sleep(0.5)
-    exit(0)
+    sys.exit(0)
 
 renew_title()
 secName = {}
 readsections()
 updatect = 0
+
+# Auto-load 2025 ARRL Field Day results as built-in worked-before reference
+# When frozen by PyInstaller, __file__ is inside the temp extraction dir — use sys.executable instead
+if getattr(sys, 'frozen', False):
+    _app_dir = os.path.dirname(sys.executable)
+else:
+    _app_dir = os.path.dirname(os.path.abspath(__file__))
+# Load N1MM+ FD call history first (13k+ calls, multi-year baseline)
+_n1mm_ch = os.path.join(_app_dir, 'FD_2026-LAST.txt')
+if os.path.exists(_n1mm_ch):
+    load_n1mm_callhistory(_n1mm_ch)
+else:
+    print("N1MM+ FD call history not found at: %s" % _n1mm_ch)
+
+_info_table_popup = None
+
+def open_info_table_popup():
+    """Open the Info Table display in a popup window. Raises existing window if already open."""
+    global _info_table_popup
+    if _info_table_popup is not None:
+        try:
+            if _info_table_popup.winfo_exists():
+                _info_table_popup.lift()
+                _info_table_popup.focus_force()
+                return
+        except Exception:
+            pass
+    _info_table_popup = Toplevel(root)
+    InfoTableWindow(_info_table_popup, qdb, gd, net, popup=True)
 
 #  #### GUI GRIDS #####
 # Grid for Network Row
@@ -8260,12 +9993,17 @@ powlbl.grid(row=0, column=6, sticky=NSEW)
 powcb.grid(row=0, column=7, sticky=NSEW)
 natpwr_countdown.grid(row=0, column=8, sticky=NSEW)
 sound_cb.grid(row=0, column=9, sticky=NSEW)
-# Grid for functionbuttons
-redrawbutton.grid(row=1, column=0, columnspan=2, sticky=NSEW)
-opsonlinebutton.grid(row=1, column=2, columnspan=2, sticky=NSEW)
-mapbutton.grid(row=1, column=4, columnspan=2, sticky=NSEW)
-sectionmapbutton.grid(row=1, column=6, columnspan=2, sticky=NSEW)
-phonetic_toggle_btn.grid(row=1, column=8, columnspan=2, sticky=NSEW)
+# Grid for functionbuttons — _funcbar spans all 10 cols of f1b, has its own 6-col grid
+_funcbar.grid(row=1, column=0, columnspan=10, sticky=NSEW)
+for _i in range(6):
+    _funcbar.grid_columnconfigure(_i, weight=1)
+redrawbutton.grid(row=0, column=0, sticky=NSEW)
+opsonlinebutton.grid(row=0, column=1, sticky=NSEW)
+mapbutton.grid(row=0, column=2, sticky=NSEW)
+sectionmapbutton.grid(row=0, column=3, sticky=NSEW)
+phonetic_toggle_btn.grid(row=0, column=4, sticky=NSEW)
+Button(_funcbar, text="Info Table", font=fdfont, foreground='blue', background='light gray',
+       relief='raised', cursor='hand2', command=open_info_table_popup).grid(row=0, column=5, sticky=NSEW)
 # Grid for log window
 root.grid_rowconfigure(2, weight=1)
 logw.grid(row=3, column=0, sticky=NSEW)

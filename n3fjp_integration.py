@@ -217,14 +217,19 @@ class N3FJPClient:
 
     def _run_loop(self):
         backoff = 1
+        _error_reported = False
         while self._running:
             try:
                 self._connect()
                 backoff = 1
+                _error_reported = False
                 self._receive_loop()
+            except ConnectionRefusedError:
+                pass  # N3FJP not running — status label shows Disconnected, no need to spam
             except Exception as e:
-                if self._running:
+                if self._running and not _error_reported:
                     print(f"{self._log_prefix}: Connection error - {e}")
+                    _error_reported = True
             if self._connected:
                 self._connected = False
                 self.on_status_update("Disconnected")

@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 121 enhancements to the original FDLog so far.
+We have added 125 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -7,8 +7,93 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
 To Do and Ideas:
 
-		(none currently)
+		N1MM+ UDP broadcast listener - receive QSOs from stations
+			running N1MM+ (UDP port 12060) for mixed-software setups.
+		MSHV support - verify the WSJT-X listener handles MSHV's
+			broadcasts (same port 2237); add a listener if not.
+		Info Table Display redesign.
+		Sign-in form update - feed the visit/participation bonuses
+			automatically from sign-in (live on the InfoTable score):
+			1. Youth bonus from the age field (replaces .set youth).
+			2. Elected official visit checkbox (replaces .set svego).
+			3. First responder / agency representative visit checkbox
+			   (replaces .set svroa).
 		
+  v2026_Beta 4.3.0 02Jul2026 Internet Nodes
+
+	+ 122 Internet node support! Remote operators can now join the club
+	  network over the internet. The InfoTable node is the hub; remote
+	  nodes connect via the Internet menu or --remote on the command line.
+	- Two free connection paths, no accounts required: UPnP automatic
+	  router port forwarding (TCP 5100) and Cloudflare Quick Tunnel
+	  (port 5101, cloudflared downloaded automatically on first use).
+	- UPnP and Cloudflare Tunnel are separate explicit toggles so the
+	  operator decides what touches the router. Internet controls only
+	  appear on the dedicated InfoTable node.
+	- Full two-way sync between LAN and internet nodes: QSOs, deletes,
+	  participants, operator assignments, elections, and block fills.
+	- Internet nodes are excluded from clock calibration and from
+	  winning the time-master election - tunnel delay would otherwise
+	  be misread as clock error. Internet nodes sync via NTP instead
+	  and warn the operator if NTP is blocked.
+	- Internet nodes cannot be designated time master (.tmast refuses,
+	  and a designation is auto-removed if that node moves to the
+	  internet).
+	+ 123 Previous Field Day history: bundled N1MM+ community call history
+	  (FD_2026-LAST.txt, 13,716 calls) loads at startup. Known stations
+	  show an orange "Previous FD participant" line with pre-fill.
+	+ 124 Add your club's previous log via File -> Load Previous Contest Log
+	  (ADIF, handles N1MM+ exchange fields).
+	- InfoTable window is now scrollable so nothing is cut off on
+	  smaller screens.
+	- InfoTable Active Bands panel shows each node's band, mode,
+	  operator, power, and per-band QSO counts live.
+	- Attendee count displayed next to the InfoTable sign-in button.
+	- "View Info Table" button added to the main window.
+	- Crash logging: unhandled errors now write fdlog_error.log next
+	  to the program for easier bug reports. reset.py cleans it up.
+	- Fix network receiver thread being killed permanently by a single
+	  bad packet, leaving the node deaf until restart.
+	- Fix menu rebuild crash when operator changes arrive from the
+	  network ("can't delete Tcl command").
+	- Fix N3FJP client repeating connection errors when N3FJP is not
+	  running (now reports once).
+	- Fix shutdown error in the packaged exe version.
+	+ 125 .testq now generates realistic test QSOs from the bundled call
+	  history and requires the same station setup as real QSO entry.
+	- Updated scoring to the current ARRL Field Day rules: power
+	  multiplier is x2 up to 100 watts and x1 above (the old 150W
+	  threshold ended in 2023; over 500W scores zero), and the GOTA
+	  500-QSO cap is removed (current rules have no limit).
+	- InfoTable now shows the true total score: bonus points are
+	  computed live with the same math as the entry report (new shared
+	  calc_bonus_points) and shown as QSO score + bonus breakdown.
+	- Class D stations no longer get points for working other Class D
+	  stations (rule 4.4). The QSO is still logged with a warning at
+	  entry time, but scores zero.
+	- Exporting the entry report now checks every QSO against the
+	  Field Day operating period (1800 UTC Sat - 2059 UTC Sun, fourth
+	  full June weekend) and warns about QSOs ARRL will not count.
+	  Warning only - test QSOs logged off-season are never blocked.
+	- Reference files updated to the official 2026 ARRL documents:
+	  Rules.pdf and W1AW.pdf. Section list verified current against
+	  ARRL (85 sections).
+	- build.py stays open on any failure and re-shows the error lines
+	  from build_log.txt so the message is readable.
+	- Documentation updated: Log Captain manual (logcaptain.txt) covers
+	  internet nodes, the 2026 power rules, the period check, and new
+	  troubleshooting entries (crash log, tunnel died). Keyhelp.txt and
+	  README.md refreshed to match.
+	- InfoTable: when UPnP succeeds, the External IP display shows the
+	  router-reported address instead of the web-detected one (a VPN
+	  on the PC fools the web check).
+	- Test suite expanded from 80 to 141 tests: N3FJP and rigctld
+	  protocol parsing, WSJT-X band/exchange helpers shared by five
+	  integrations, and the internet relay TCP framing format.
+	- macOS build support: double-click build_mac.command, Xcode tools
+	  auto-detected, icon format fixed. Build output now streams live
+	  and is saved to build_log.txt.
+
   v2026_Beta 4.2.9 10Feb2026 N3FJP Integration Polish
 
 	- Handle DELETECONTACT/CONTACTDELETE events from N3FJP. Displays
@@ -112,7 +197,7 @@ To Do and Ideas:
 
   v2026_Beta 4.2.3 30Jan2026 Enhanced Time Sync with NTP and Auto-Election
 
-	121 Enhanced Time Synchronization
+	+ 121 Enhanced Time Synchronization
 		- Three-tier time master priority: Designated GPS master > NTP > Auto-election.
 		- Opportunistic NTP sync using raw UDP (no external dependencies).
 		  Queries pool.ntp.org, time.nist.gov, time.google.com every 300 seconds
@@ -127,7 +212,7 @@ To Do and Ideas:
 
   v2026_Beta 4.2.2 30Jan2026 Hamlib rigctld Integration
 
-	120 Hamlib rigctld Rig Control Integration
+	+ 120 Hamlib rigctld Rig Control Integration
 		- TCP client connects to hamlib's rigctld daemon (default port 4532)
 			to poll rig frequency and mode.
 		- Polls frequency (f) and mode (m) commands on a configurable interval.
@@ -146,7 +231,7 @@ To Do and Ideas:
 
   v2026_Beta 4.2.1 30Jan2026 N3FJP API Integration (Client + Server)
 
-	119 N3FJP API Integration (Client + Server)
+	+ 119 N3FJP API Integration (Client + Server)
 		- TCP client connects to an N3FJP-compatible server (default port 1100)
 			to receive QSO notifications and band/frequency changes.
 		- TCP server accepts connections from N3FJP-compatible programs, allowing
@@ -171,7 +256,7 @@ To Do and Ideas:
 
   v2026_Beta 4.2.0 29Jan2026 fldigi Integration (Two-Way)
 
-	118 fldigi Integration (Two-Way)
+	+ 118 fldigi Integration (Two-Way)
 		- Two-way integration: QSOs logged in fldigi appear in FDLog, band changes
 			in FDLog push frequency to fldigi via XML-RPC.
 		- Polls fldigi XML-RPC interface (default port 7362) — no external dependencies,
@@ -197,7 +282,7 @@ To Do and Ideas:
 
   v2026_Beta 4.1.9 29Jan2026 JS8Call Integration
 
-	117 JS8Call Integration
+	+ 117 JS8Call Integration
 		- JS8Call uses the identical QDataStream UDP protocol as WSJT-X (default port 2442).
 		- JS8CallListener subclasses WSJTXListener — inherits all protocol parsing,
 			heartbeat tracking, and QSO processing logic.
@@ -208,7 +293,7 @@ To Do and Ideas:
 
   v2026_Beta 4.1.8 29Jan2026 WSJT-X Integration
 
-	116 WSJT-X Integration
+	+ 116 WSJT-X Integration
 		- One-way integration: QSOs logged in WSJT-X automatically appear in FDLog.
 		- Listens for WSJT-X UDP packets (default port 2237) using native Qt QDataStream
 			binary protocol parser — no external dependencies required.
@@ -240,7 +325,7 @@ To Do and Ideas:
 		- Status label shows "Sending: ..." during sidetone playback.
 	Voice Keyer
 		- "Stopped" status now resets to "Ready" after 2 seconds.
-	115 Prefix Search
+	+ 115 Prefix Search
 		- Typing a prefix (e.g., wa2) + space shows all logged calls matching that prefix across
 			all bands.
 		- Prefix remains in the input buffer so the user can continue typing the suffix.
@@ -279,7 +364,7 @@ To Do and Ideas:
   
   v2026_Beta 4.1.5 27Jan2026 New: Voice Keyer Integration (needs real world testing)
 
-	114 New file: voice_keying.py — complete voice keyer module mirroring cw_keying.py's pattern:
+	+ 114 New file: voice_keying.py — complete voice keyer module mirroring cw_keying.py's pattern:
 		- VoiceConfig — settings for TTS speed, volume, voice selection, and PTT control
 		- VoiceKeyer — TTS engine (pyttsx3) and recorded WAV playback (sounddevice/soundfile), with PTT keying before/after
 			audio
@@ -308,7 +393,7 @@ To Do and Ideas:
 		- Revision history moved from runtime variable to comments
 		- serve() function accepts directory argument, can be imported by other
 			scripts
-	113 share_fdlog.py - New file
+	+ 113 share_fdlog.py - New file
 		- Creates a distribution zip of the full project source (Python scripts,
 			data files, docs, PDFs, tests, build config) into share/FDLog_Enhanced.zip
 		- Zips into a FDLog_Enhanced/ folder for clean extraction on any platform

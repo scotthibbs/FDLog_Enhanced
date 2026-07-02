@@ -4,6 +4,17 @@
 
 block_cipher = None
 
+from PyInstaller.utils.hooks import collect_all
+
+# Collect upnpclient and all its dependencies (lazy import — static analysis misses them)
+_upnp_datas, _upnp_bins, _upnp_hidden = collect_all('upnpclient')
+_ifaddr_datas, _ifaddr_bins, _ifaddr_hidden = collect_all('ifaddr')
+_lxml_datas, _lxml_bins, _lxml_hidden = collect_all('lxml')
+_req_datas, _req_bins, _req_hidden = collect_all('requests')
+_dateutil_datas, _dateutil_bins, _dateutil_hidden = collect_all('dateutil')
+_charset_datas, _charset_bins, _charset_hidden = collect_all('charset_normalizer')
+_ws_datas, _ws_bins, _ws_hidden = collect_all('websockets')
+
 # Data files to include (source, destination folder)
 data_files = [
     ('Arrl_sections_ref.txt', '.'),
@@ -27,8 +38,8 @@ data_files = [
 a = Analysis(
     ['FDLog_Enhanced.py'],
     pathex=[],
-    binaries=[],
-    datas=data_files,
+    binaries=[] + _upnp_bins + _ifaddr_bins + _lxml_bins + _req_bins + _dateutil_bins + _charset_bins + _ws_bins,
+    datas=data_files + _upnp_datas + _ifaddr_datas + _lxml_datas + _req_datas + _dateutil_datas + _charset_datas + _ws_datas,
     hiddenimports=[
         'pandas',
         'plotly',
@@ -39,7 +50,9 @@ a = Analysis(
         'serial.tools.list_ports',
         'cw_keying',
         'parser',
-    ],
+        'websockets.sync.server',
+        'websockets.sync.client',
+    ] + _upnp_hidden + _ifaddr_hidden + _lxml_hidden + _req_hidden + _dateutil_hidden + _charset_hidden + _ws_hidden,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -72,5 +85,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='FDLog Icon.ico',
+    icon=None if __import__('sys').platform == 'darwin' else 'FDLog Icon.ico',
 )

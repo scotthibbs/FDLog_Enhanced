@@ -14,9 +14,10 @@ In a Nutshell:
 	The up arrow will retype the previous entry.
 	The space will look up prefix, suffix or calls.
 	Copy and paste now work for complete contacts.
+	Orange text means we worked them in a previous Field Day.
        
 
--Call-Class-Sect- is seperated by spaces so  
+-Call-Class-Sect- is separated by spaces so
 kd4sir 1d ky <Enter> (Will log a contact)
 
 Optionally you can: 
@@ -31,9 +32,13 @@ To place an entry from a paper log use
 
 Commands starting with dot: 
 .band 160c      Will set the band using the keyboard.
-.off            Will set the station to off. 
+.off            Will set the station to off.
 .pow 100        Will change the power. 100n also works.
-.st             Will list this station's status. 
+                (over 100 watts drops the score multiplier to x1)
+.st             Will list this station's status.
 .re             Will list a summary of the bands.
 .ba             Will list the stations on bands.
 .pr             Will Create a report for after field day.
+
+The Log Captain's commands (setup, time master, internet nodes, .set)
+are in the Log Captain manual under the Help menu.

@@ -24,6 +24,11 @@ N3FJP API Integration
 &nbsp;&nbsp;&nbsp;&nbsp;- TCP client pulls QSOs from N3FJP    
 &nbsp;&nbsp;&nbsp;&nbsp;- TCP server lets N3FJP-compatible programs send QSOs to FDLog.    
 Hamlib rigctld Rig Control Integration for 200+ rigs support    
+Internet nodes - remote operators join your network over the internet    
+&nbsp;&nbsp;&nbsp;&nbsp;- UPnP automatic port forward or free Cloudflare Tunnel - no accounts needed    
+Previous Field Day history - stations we worked before pre-fill in orange (N1MM+ community history bundled)    
+Info table shows the true live score - QSO points plus all bonus points, same math as the entry form    
+Scoring follows the current ARRL rules (2026) - power multiplier, GOTA, Class D, operating period check    
 
 Log entry is just three simple things : KD4SIR 1D IN
 
@@ -62,6 +67,8 @@ To make sure you have a complete log, the time master should be the last to shut
 - Node names are automatically padded or trunked to 8 characters with random letters for uniqueness   
 - if a node goes down (power/network/shutdown) restart will remember it's node name, just enter the auth to continue.   
 &nbsp;&nbsp; it will automatically get fills from the other nodes.   
+- Remote operators: enable internet on the info node (UPnP or Cloudflare Tunnel), share the    
+&nbsp;&nbsp; address, and they connect with the Internet menu or --remote. Their clocks sync via NTP.   
    
 Please see the Release Log which has all the changes from the present 
 back to the beginning of FDLog in 1984. 
