@@ -4,11 +4,11 @@ import struct
 import unittest
 from datetime import datetime, timezone
 from wsjtx_integration import (
-    QDataStreamParser, WSJTXMessage, WSJTXConfig,
+    QDataStreamParser, WSJTXMessage, WSJTXConfig, WSJTXListener,
     HeartbeatMessage, StatusMessage, DecodeMessage,
     QSOLoggedMessage, CloseMessage, LoggedADIFMessage,
     freq_to_band, parse_exchange,
-    JS8CallConfig,
+    JS8CallConfig, MSHVConfig, MSHVListener,
 )
 
 
@@ -243,6 +243,92 @@ class TestJS8CallConfig(unittest.TestCase):
         self.assertEqual(c.udp_ip, "127.0.0.1")
         self.assertTrue(c.auto_log)
         self.assertTrue(c.auto_band)
+
+
+class TestMSHVConfig(unittest.TestCase):
+
+    def test_defaults(self):
+        c = MSHVConfig()
+        self.assertFalse(c.enabled)
+        # MSHV's own default matches WSJT-X's default (2237) - a user running
+        # both on one PC must change one of them to avoid a port collision.
+        self.assertEqual(c.udp_port, 2237)
+        self.assertEqual(c.udp_ip, "127.0.0.1")
+        self.assertTrue(c.auto_log)
+        self.assertTrue(c.auto_band)
+
+
+def _build_status_bytes(dial_freq=14074000, mode="FT8"):
+    buf = _build_header(1)
+    buf += struct.pack('>Q', dial_freq)
+    buf += _pack_utf8(mode)
+    buf += _pack_utf8("W1ABC")
+    buf += _pack_utf8("-15")
+    buf += _pack_utf8(mode)
+    buf += struct.pack('>?', True)
+    buf += struct.pack('>?', False)
+    buf += struct.pack('>?', True)
+    buf += struct.pack('>I', 1500)
+    buf += struct.pack('>I', 1500)
+    buf += _pack_utf8("K2DEF")
+    buf += _pack_utf8("FN31")
+    buf += _pack_utf8("FN42")
+    buf += struct.pack('>?', False)
+    buf += _pack_utf8("")
+    buf += struct.pack('>?', False)
+    buf += struct.pack('>B', 0)
+    buf += struct.pack('>I', 0)
+    buf += struct.pack('>I', 15)
+    buf += _pack_utf8("Default")
+    return buf
+
+
+class TestHeartbeatIndependentConnection(unittest.TestCase):
+    """MSHV never sends a Heartbeat message - connection state must not
+    depend on it exclusively, or MSHV would show 'Disconnected' forever
+    even while correctly auto-logging QSOs."""
+
+    def _make_listener(self, cls=WSJTXListener, config=None):
+        statuses = []
+        listener = cls(config or WSJTXConfig(), on_qso_logged=lambda *a: None,
+                        on_status_update=lambda s: statuses.append(s))
+        return listener, statuses
+
+    def test_status_message_alone_marks_connected(self):
+        listener, statuses = self._make_listener()
+        self.assertFalse(listener.is_connected())
+        msg = WSJTXMessage.parse(_build_status_bytes())
+        listener._handle_message(msg)
+        self.assertTrue(listener.is_connected())
+        self.assertTrue(any("Connected" in s for s in statuses))
+
+    def test_qso_logged_message_alone_marks_connected(self):
+        listener, statuses = self._make_listener()
+        buf = _build_header(5)
+        dt = datetime(2025, 6, 28, 18, 30, 0, tzinfo=timezone.utc)
+        buf += _pack_qdatetime(dt) + _pack_utf8("W1ABC") + _pack_utf8("FN42")
+        buf += struct.pack('>Q', 14074000) + _pack_utf8("FT8")
+        buf += _pack_utf8("-10") + _pack_utf8("-15") + _pack_utf8("") + _pack_utf8("") + _pack_utf8("")
+        buf += _pack_qdatetime(dt) + _pack_utf8("") + _pack_utf8("K2DEF") + _pack_utf8("FN31")
+        buf += _pack_utf8("2A EMA") + _pack_utf8("3F NH")
+        msg = WSJTXMessage.parse(buf)
+        listener._handle_message(msg)
+        self.assertTrue(listener.is_connected())
+
+    def test_mshv_listener_uses_mshv_prefix(self):
+        listener, statuses = self._make_listener(cls=MSHVListener, config=MSHVConfig())
+        msg = WSJTXMessage.parse(_build_status_bytes())
+        listener._handle_message(msg)
+        self.assertTrue(listener.is_connected())
+        self.assertEqual(listener._log_prefix, "MSHV")
+
+    def test_close_message_disconnects(self):
+        listener, statuses = self._make_listener()
+        listener._handle_message(WSJTXMessage.parse(_build_status_bytes()))
+        self.assertTrue(listener.is_connected())
+        close_msg = WSJTXMessage.parse(_build_header(6, "WSJT-X"))
+        listener._handle_message(close_msg)
+        self.assertFalse(listener.is_connected())
 
 
 if __name__ == '__main__':

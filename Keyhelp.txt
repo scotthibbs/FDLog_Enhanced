@@ -25,7 +25,7 @@ Optionally you can:
 <ESC>                           to abort the entry or continue with 
 <prefix><space>                 to add prefix to previous suffix
 
-#<message>                      send a message to everyone using the program.
+#<message> or *<message>        send a message to everyone using the program.
 
 To place an entry from a paper log use
 :<dd.hhmm><space><call><space><report><return>   

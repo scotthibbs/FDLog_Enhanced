@@ -111,8 +111,6 @@ def check_dependencies():
     missing = []
     # Map of import name to pip package name
     packages = {
-        'pandas': 'pandas',
-        'plotly': 'plotly',
         'serial': 'pyserial',  # CW keying support
     }
     for import_name, pip_name in packages.items():
@@ -125,6 +123,37 @@ def check_dependencies():
         print(f"Installing missing dependencies: {missing}")
         subprocess.check_call([sys.executable, '-m', 'pip', 'install'] + missing)
 
+def platform_exe_names():
+    """Return (name PyInstaller produces in dist/, name in the main folder)."""
+    if sys.platform == 'win32':
+        return 'FDLog_Enhanced.exe', 'FDLog_Enhanced.exe'
+    elif sys.platform == 'darwin':
+        return 'FDLog_Enhanced', 'FDLog_Enhanced_mac'
+    return 'FDLog_Enhanced', 'FDLog_Enhanced_linux'
+
+
+def remove_stale_exe(dst):
+    """Delete the previous executable BEFORE building.
+    A running FDLog instance locks the exe, which used to make the final
+    copy fail while the old exe stayed in place - so a "successful" rebuild
+    could silently leave you testing stale code (Scott, 05Jul2026). Failing
+    the delete up front catches that before the slow build even starts."""
+    if not os.path.exists(dst):
+        return True
+    try:
+        os.remove(dst)
+        print(f"Removed previous {dst} - it will be replaced after the build.")
+        return True
+    except OSError as e:
+        print("\n" + "!" * 60)
+        print(f"ERROR: Can't remove the old {dst}:")
+        print(f"  {e}")
+        print("A running FDLog_Enhanced instance is probably locking it.")
+        print("Close ALL FDLog windows, then run build.py again.")
+        print("!" * 60)
+        return False
+
+
 def build():
     """Build the executable."""
     print("=" * 50)
@@ -134,6 +163,11 @@ def build():
     # Change to script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(script_dir)
+
+    # Fail fast if the old exe is locked by a running instance
+    exe_name, dst = platform_exe_names()
+    if not remove_stale_exe(dst):
+        return False
 
     # Check dependencies
     check_pyinstaller()
@@ -160,20 +194,22 @@ def build():
 
         # Copy exe to main directory with platform-specific name
         import shutil
-        if sys.platform == 'win32':
-            exe_name = 'FDLog_Enhanced.exe'
-            dst = exe_name
-        elif sys.platform == 'darwin':
-            exe_name = 'FDLog_Enhanced'
-            dst = 'FDLog_Enhanced_mac'
-        else:
-            exe_name = 'FDLog_Enhanced'
-            dst = 'FDLog_Enhanced_linux'
         src = os.path.join('dist', exe_name)
         if os.path.exists(src):
-            shutil.copy2(src, dst)
-            print(f"\nExecutable copied to: {dst}")
-            print("(Also available in dist/ folder)")
+            try:
+                shutil.copy2(src, dst)
+                print(f"\nExecutable copied to: {dst}")
+                print("(Also available in dist/ folder)")
+            except OSError as e:
+                print("\n" + "!" * 60)
+                print(f"WARNING: Build succeeded but copying to {dst} FAILED:")
+                print(f"  {e}")
+                print("A running FDLog_Enhanced instance is probably locking it.")
+                print(f"There is NO fresh {dst} in this folder - do not test with")
+                print(f"an old one! Close FDLog, then copy dist\\{exe_name} here")
+                print("manually or run build.py again.")
+                print("!" * 60)
+                return False
 
         print("\nTo distribute:")
         print("  1. Zip the entire FDLog_Enhanced folder")

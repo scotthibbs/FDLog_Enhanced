@@ -3,6 +3,7 @@ Voice Keying Interface for FDLog_Enhanced
 Text-to-Speech and recorded audio voice keyer for Phone mode.
 """
 
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -24,13 +25,38 @@ try:
 except ImportError:
     PYSERIAL_AVAILABLE = False
 
+def _cpu_supports_modern_simd():
+    """True if this CPU meets the x86-64-v2 baseline modern NumPy wheels
+    require (SSSE3/SSE4.1/SSE4.2, ~2009+). On older CPUs numpy's
+    _multiarray_umath .pyd fail-fasts the whole process during DLL load
+    (exception c0000409) - a Python try/except can never catch that, so
+    the check MUST happen before the import is even attempted. Confirmed
+    on Scott's old Win10 Pro box 04Jul2026 (flash-and-close, no error log,
+    Event Viewer showed the faulting .pyd). Non-Windows: assume OK."""
+    if sys.platform != 'win32':
+        return True
+    try:
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        # IsProcessorFeaturePresent: 36=SSSE3, 37=SSE4.1, 38=SSE4.2.
+        # Unknown constants (very old Win10 builds) return FALSE, so the
+        # worst case is recording stays off - the safe direction.
+        return all(k32.IsProcessorFeaturePresent(f) for f in (36, 37, 38))
+    except Exception:
+        return False
+
+
 # Try to import recording support
 try:
+    if not _cpu_supports_modern_simd():
+        raise RuntimeError("CPU below x86-64-v2 - numpy would crash the process")
     import sounddevice as sd
     import soundfile as sf
     import numpy as np
     RECORDING_AVAILABLE = True
-except ImportError:
+except Exception:
+    # broad except: numpy raises RuntimeError (not ImportError) on CPUs
+    # older than x86-64-v2 - recording must degrade, not crash the app
     RECORDING_AVAILABLE = False
 
 RECORDINGS_DIR = Path.home() / ".fdlog_voice_recordings"

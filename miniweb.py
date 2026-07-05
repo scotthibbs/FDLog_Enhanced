@@ -9,6 +9,11 @@ import functools
 # Little Web Server. Serve files from a directory over HTTP.
 #
 # Revision History:
+#   3.2  03Jul2026  Claude / Scott Hibbs KD4SIR - Serve every connection in
+#        its own thread. The old single-threaded server went deaf after the
+#        first visit: browsers open idle "preconnect" sockets, and one of
+#        those blocked the server forever. Multiple machines can now
+#        download simultaneously; idle connections are dropped after 30s.
 #   3.1  04Feb2026  Claude / Scott Hibbs KD4SIR - Prevent multiple instances.
 #   3.0  27Jan2026  Claude / Scott Hibbs KD4SIR - Reliable LAN IP detection,
 #        error handling, serve from specific directory, graceful shutdown.
@@ -19,8 +24,15 @@ import functools
 #   1.5  21Jun2004  Alan Biocca - Minor adjustments.
 #   1.4  21Jun2004  Alan Biocca - Comments added.
 
-VERSION = "3.1"
+VERSION = "3.2"
 PORT = 55555
+
+
+class MiniWebHandler(http.server.SimpleHTTPRequestHandler):
+    """Request handler with an idle timeout so a connection that never sends
+    a request (browser preconnect) gets dropped instead of held open."""
+    protocol_version = "HTTP/1.0"
+    timeout = 30
 
 
 def get_lan_ip():
@@ -65,11 +77,13 @@ def serve(directory=None, port=PORT):
         input("\n\nPress Enter to exit...")
         sys.exit(1)
 
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=directory)
-    handler.protocol_version = "HTTP/1.0"
+    handler = functools.partial(MiniWebHandler, directory=directory)
 
     try:
-        httpd = http.server.HTTPServer(("", port), handler)
+        # ThreadingHTTPServer: one thread per connection, so several machines
+        # can download at the same time and one stuck client can't block the
+        # rest. Threads are daemonic - Ctrl+C still exits immediately.
+        httpd = http.server.ThreadingHTTPServer(("", port), handler)
     except OSError as e:
         print(f"Error: Could not start server on port {port}: {e}")
         input("Press Enter to exit...")

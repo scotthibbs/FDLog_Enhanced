@@ -27,6 +27,7 @@ INCLUDE_FILES = [
     "share_fdlog.py",
     "miniweb.py",
     "n3fjp_integration.py",
+    "n1mm_integration.py",
     "wsjtx_integration.py",
     "voice_keying.py",
     "fldigi_integration.py",

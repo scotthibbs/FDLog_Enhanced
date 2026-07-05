@@ -320,7 +320,11 @@ LOG CAPTAIN COMMANDS:
 	entries in the log.
 
 	The age and visitor title fields are used to track official visitors and youth
-	participants for Field Day reporting.
+	participants for Field Day reporting. The bonuses feed automatically from the
+	sign-in form: anyone signed in with age 18 or under counts toward the Youth
+	Participation bonus (20 pts each, 5 counted max), and checking "Elected
+	official visit" or "Agency rep visit" when signing in a visitor records their
+	name and earns that 100 pt site-visit bonus. The InfoTable score updates live.
 
 	Editing Log Entries:
 
@@ -338,7 +342,8 @@ LOG CAPTAIN COMMANDS:
 	Messaging:
 
 	#<message>   Send a broadcast message (QST) to all nodes on the network.
-	             Messages can be up to 40 characters.
+	             Also works with a * prefix: *<message>.
+	             Messages can be up to 80 characters.
 
 	Status and Reports:
 
@@ -403,8 +408,10 @@ LOG CAPTAIN COMMANDS:
 	  .set public <val>   Public location description (max 35 chars)
 	  .set infob <0|1>    Public information booth (0=no, 1=yes)
 	  .set svego <val>    Government official visitor name (max 35 chars)
+	                      (or check the box on the sign-in form)
 	  .set svroa <val>    Agency site visitor name (max 35 chars)
-	  .set youth <val>    Number of participating youth (max 2 digits)
+	                      (or check the box on the sign-in form)
+	  (Youth participation counts automatically from sign-in form ages.)
 
 	Bonus Points:
 	  .set websub <0|1>   Web submission bonus
@@ -426,12 +433,20 @@ LOG CAPTAIN COMMANDS:
 	  .set tmast <val>    Designated Time Master node (max 8 chars)
 	  .set telect <val>   Auto-elected Time Master (max 8 chars)
 	  .set tntp <val>     Shared NTP server address (max 50 chars)
-	  .set kick <val>     Minutes of inactivity before kick (max 2 digits)
+	  .set idletm <min>   Band idle timeout in minutes, 5-60 or 0 = off.
+	                      Admin PIN required; applies to every node.
+	                      Bands release after this long with no operator
+	                      activity (keystrokes or logged QSOs), with a
+	                      warning beep 30 seconds before.
 
 	Other Admin Commands:
 
 	.node <name>       Set the ID of this logging node (1-8 chars)
-	.kick <min>        Set inactivity kick timer in minutes
+	.alias <text>      Optional station alias shown on the info display's
+	                   STATIONS panel instead of the node name (up to 12
+	                   chars, e.g. "tent 1", "trailer"). Also asked once at
+	                   first startup. ".alias off" clears it. gota and info
+	                   nodes always display as "gota" and "info".
 	.debug <n>         Set debug level for troubleshooting
 	.tdwin <sec>       Set time difference window in seconds (for displaying
 	                   node broadcast time skew)
@@ -458,6 +473,9 @@ LOG CAPTAIN COMMANDS:
 	  [ ] Allow the program's port through each machine's firewall if needed
 	  [ ] If using remote operators: enable internet on the info node,
 	      share the URL/IP, and don't restart that node afterwards
+	  [ ] Sign in every visitor - ages 18 and under count toward the youth
+	      bonus, and the elected official / agency rep checkboxes earn the
+	      100 pt site-visit bonuses automatically
 
 	After Field Day:
 	  [ ] Be the last computer turned off

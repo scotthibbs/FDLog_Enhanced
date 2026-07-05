@@ -41,10 +41,6 @@ a = Analysis(
     binaries=[] + _upnp_bins + _ifaddr_bins + _lxml_bins + _req_bins + _dateutil_bins + _charset_bins + _ws_bins,
     datas=data_files + _upnp_datas + _ifaddr_datas + _lxml_datas + _req_datas + _dateutil_datas + _charset_datas + _ws_datas,
     hiddenimports=[
-        'pandas',
-        'plotly',
-        'plotly.express',
-        'plotly.graph_objects',
         'serial',
         'serial.tools',
         'serial.tools.list_ports',
@@ -56,7 +52,22 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # pandas/plotly no longer used (WAS map is pure Tkinter) - excluded so
+    # nothing pulls them back in. numpy stays: voice recording uses it, and
+    # voice_keying checks the CPU (IsProcessorFeaturePresent) BEFORE
+    # importing it so old CPUs skip it instead of fail-fasting. 04Jul2026
+    # cryptography/bcrypt/paramiko/nacl/OpenSSL: only reachable via requests'
+    # OPTIONAL try-imports (requests.help, urllib3.contrib.pyopenssl) when
+    # they happen to be installed in the build Python (+9MB for nothing).
+    # requests uses the stdlib ssl module without them. Excluding keeps the
+    # exe size the same no matter which Python builds it. 04Jul2026
+    # pytest & friends ride in via numpy.testing's optional imports; PIL via
+    # pygments; bs4/soupsieve via lxml.html.soupparser's optional import;
+    # werkzeug similar. All dead weight at runtime.
+    excludes=['pandas', 'plotly', 'cryptography', 'bcrypt', 'paramiko',
+              'nacl', 'OpenSSL',
+              'pytest', '_pytest', 'pluggy', 'iniconfig', 'pygments',
+              'PIL', 'bs4', 'soupsieve', 'werkzeug'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

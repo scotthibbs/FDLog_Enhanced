@@ -431,23 +431,34 @@ class WSJTXListener:
             self._handle_message(msg)
 
     def _handle_message(self, msg):
-        if isinstance(msg, HeartbeatMessage):
-            was_connected = self._connected
+        # Any message is evidence of a live connection - some clients that
+        # speak this protocol (MSHV) never send a Heartbeat message at all,
+        # so connection state can't depend on Heartbeat exclusively.
+        was_connected = self._connected
+        if not isinstance(msg, CloseMessage):
             self._connected = True
             self._last_heartbeat = time.time()
+
+        if isinstance(msg, HeartbeatMessage):
             self._client_id = msg.client_id
             if not was_connected:
                 self.on_status_update("Connected")
                 print(f"{self._log_prefix}: Connected - {msg.version} ({msg.client_id})")
 
         elif isinstance(msg, StatusMessage):
+            if not was_connected:
+                self.on_status_update("Connected")
+                print(f"{self._log_prefix}: Connected (no heartbeat seen)")
             self._current_freq = msg.dial_freq
             self._current_mode = msg.mode
             band = freq_to_band(msg.dial_freq)
-            if band and self._connected:
+            if band:
                 self.on_status_update(f"Connected ({band[:-1]}m {msg.mode})")
 
         elif isinstance(msg, QSOLoggedMessage):
+            if not was_connected:
+                self.on_status_update("Connected")
+                print(f"{self._log_prefix}: Connected (no heartbeat seen)")
             if self.config.auto_log:
                 self._process_qso(msg)
 
@@ -612,3 +623,37 @@ class JS8CallSettingsDialog(WSJTXSettingsDialog):
     _dialog_title = "JS8Call Integration Settings"
     _app_name = "JS8Call"
     _default_port = 2442
+
+
+# --- MSHV Integration (uses identical QDataStream protocol, no Heartbeat) ---
+
+@dataclass
+class MSHVConfig:
+    """Configuration for MSHV integration.
+
+    MSHV's own default UDP port (2237) is the same as WSJT-X's default -
+    if running both on one PC, change one of them so they don't collide.
+    """
+    enabled: bool = False
+    udp_port: int = 2237
+    udp_ip: str = "127.0.0.1"
+    auto_log: bool = True
+    auto_band: bool = True
+
+
+class MSHVListener(WSJTXListener):
+    """MSHV integration controller. Identical protocol to WSJT-X, except MSHV
+    never sends a Heartbeat message - connection detection falls back to any
+    Status/QSOLogged message (see the heartbeat-independent logic above)."""
+
+    @property
+    def _log_prefix(self):
+        return "MSHV"
+
+
+class MSHVSettingsDialog(WSJTXSettingsDialog):
+    """Tkinter dialog for MSHV integration settings."""
+
+    _dialog_title = "MSHV Integration Settings"
+    _app_name = "MSHV"
+    _default_port = 2237

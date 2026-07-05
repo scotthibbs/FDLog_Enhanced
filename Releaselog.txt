@@ -1,5 +1,5 @@
 Release Log for FDLog and FDLog_Enhanced
-We have added 125 enhancements to the original FDLog so far.
+We have added 129 enhancements to the original FDLog so far.
 
 This release log has the present back to the beginning of FDLog in 1984.
 
@@ -7,18 +7,110 @@ Scott Hibbs at gmail.com (email ideas for enhancements/bugs)
 
 To Do and Ideas:
 
-		N1MM+ UDP broadcast listener - receive QSOs from stations
-			running N1MM+ (UDP port 12060) for mixed-software setups.
-		MSHV support - verify the WSJT-X listener handles MSHV's
-			broadcasts (same port 2237); add a listener if not.
-		Info Table Display redesign.
-		Sign-in form update - feed the visit/participation bonuses
-			automatically from sign-in (live on the InfoTable score):
-			1. Youth bonus from the age field (replaces .set youth).
-			2. Elected official visit checkbox (replaces .set svego).
-			3. First responder / agency representative visit checkbox
-			   (replaces .set svroa).
-		
+  v2026_Beta 4.3.1 05Jul2026 N1MM+, MSHV, and Stability
+
+	+ 129 Sign-in form feeds the visit/participation bonuses automatically
+	  (live on the InfoTable score): anyone signed in with age 18 or under
+	  counts toward the Youth Participation bonus (replaces .set youth and
+	  the setup question), and "Elected official visit" / "Agency rep
+	  visit" checkboxes on the sign-in form record the visitor's name and
+	  earn the 100 pt site-visit bonuses (replaces .set svego / .set svroa
+	  and their setup questions).
+	+ 126 N1MM+ integration: auto-log contacts from N1MM+'s UDP broadcasts
+	  (port 12060). Networked N1MM+ stations are handled - only original
+	  contacts are logged, not every station's rebroadcast of the shared
+	  log. Contact edits and deletes in N1MM+ are ignored with a console
+	  note. Menu, settings dialog, and status label like the other
+	  integrations.
+	+ 127 MSHV integration: auto-log contacts from MSHV (same protocol as
+	  WSJT-X, port 2237). Fixed connection status showing "Disconnected"
+	  forever for MSHV (it never sends heartbeats); benefits WSJT-X and
+	  JS8Call too. Warns if WSJT-X and MSHV are both set to the same UDP
+	  port - on Windows both silently bind and datagrams split
+	  unpredictably.
+	+ 128 Station alias: give a node a friendly display name (asked at first
+	  setup, or .alias <name> / .alias off). Shown on the InfoTable
+	  STATIONS panel and band tooltips.
+	- Band idle timeout (from Alan Biocca's FDLog): a band reservation
+	  is released after N minutes with no operator activity, freeing the
+	  transmitter. Warning beep 30 seconds before. Keystrokes, pastes,
+	  band clicks, and auto-logged QSOs (WSJT-X etc.) all count as
+	  activity. Set at event setup or with .set idletm <minutes>
+	  (PIN-gated, network-wide, 0=off). Replaces the old .kick
+	  autokicker, which could kick an actively-typing operator.
+	- QST messages expanded (from Alan Biocca's FDLog) from 40 to 80
+	  characters with a wider character set; messages can start with *
+	  as well as #. Long messages split into two log lines that sort
+	  together.
+	- Old computer support: pandas and plotly removed, WAS map rebuilt
+	  in pure Tkinter (exe 59.6MB -> 35MB). Fixed exe instantly closing
+	  on pre-2009 CPUs: modern NumPy kills the process during startup
+	  on CPUs without SSE4 - now detected before loading, voice
+	  recording disabled instead of crashing. Confirmed on a real
+	  Win10 machine.
+	- Fix missing QSOs: on Windows, one oversized network packet could
+	  permanently kill a node's receiver thread - the node looked alive
+	  but heard nothing and never answered fill requests. Receive
+	  buffer raised, error guarded, and fill responses kept under one
+	  packet for old versions too.
+	- Clock sync overhaul: fixed corrections oscillating forever
+	  (measure-during-slew, mid-slew replacement, asymmetric slew rate,
+	  NTP jitter stepping the master, sub-second limit cycle). Adopted
+	  Alan Biocca's clock "jerk" for fast startup convergence. Clock readings
+	  now pause during block-fill bursts so catch-up traffic can't
+	  inflate corrections.
+	- New nodes catch up much faster: journal writes from the network
+	  are batched (one commit per second instead of per record, ~370x
+	  faster) and the status bar shows "Filling (n gaps)" instead of
+	  "Alone?" while it happens. One console line per fill gap instead
+	  of one per held record.
+	- Log window entries now stay in time order even when old records
+	  arrive late from a network fill.
+	- Fix .set idletm and the admin PIN never syncing to other nodes
+	  (neither was registered in the shared-data table; the captain's
+	  idle timeout silently never applied anywhere).
+	- Fix GUI freeze when connecting to an integration that isn't
+	  running (status updates fired from listener threads; now
+	  marshaled to the main thread). All integration menu actions now
+	  report "Error" instead of hanging or crashing.
+	- All 9 integration menus consolidated under one "Integrations"
+	  menu; Help moved to the end of the menu bar. Status labels only
+	  appear for integrations that are actually running.
+	- InfoTable display round 2: header reorganized, STATIONS panel
+	  (active and idle nodes with operator/logger names, aliases, and
+	  invitation phrases on idle seats), OVERALL leader column, WAS and
+	  Sections progress click to open the maps, attendance log viewer
+	  ("  -  " shown for attendees without a callsign), GOTA QSOs shown
+	  separately in the mode breakdown, no more flash on the 10-second
+	  refresh.
+	- Band tooltips show the operator and logger full names.
+	- "Contestants Working" button removed (the InfoTable STATIONS
+	  panel shows it better).
+	- Contestant and Logger buttons show just the name (no initials),
+	  and turn green when someone is seated. Selected band button is
+	  green instead of white (red still warns of two nodes on one
+	  band/mode).
+	- Phonetic display: "Call" mode label shortened, output shown on
+	  green, refreshes when opened, and a new RR button - "Roger Roger,
+	  Please Copy <class> <section>" spelled out phonetically.
+	- Multiple changes to window layout and graphics: the main window
+	  no longer resizes itself as things appear and disappear - it
+	  opens at a fixed size at the top-left of any screen and stays
+	  the size you make it. F-key bar buttons squeeze to fit any
+	  window width, with mouseover showing clipped text.
+	- Version number now lives in one place at the top of the file -
+	  the banner, title bar, and network broadcast can't drift apart
+	  again (console showed 4.2.0 while broadcasting 4.3.0).
+	- miniweb v3.2: fixed the share server going deaf after the first
+	  visitor (browser preconnect blocked the single-threaded server).
+	  Simultaneous downloads now work.
+	- build.py deletes the old exe before building and stops loudly if
+	  a running FDLog has it locked - a rebuild can no longer silently
+	  leave the old exe in place to test against.
+	- Test suite expanded from 141 to 266 tests.
+	- Documentation updated: logcaptain.txt (idle timeout, aliases,
+	  QST changes), Keyhelp.txt.
+
   v2026_Beta 4.3.0 02Jul2026 Internet Nodes
 
 	+ 122 Internet node support! Remote operators can now join the club

@@ -36,8 +36,6 @@ try:
 except ImportError:
     _ws_srv = _ws_cli = _ws_exc = None
     _WEBSOCKETS_OK = False
-import pandas as pd
-import plotly.express as px
 from tkinter import END, Toplevel, Frame, Label, Entry, Button, \
     W, EW, E, NSEW, NS, StringVar, Radiobutton, Tk, Menu, Menubutton, Text, Scrollbar, \
     Checkbutton, IntVar, Listbox, SUNKEN, Canvas
@@ -121,6 +119,15 @@ try:
 except ImportError:
     JS8CALL_AVAILABLE = False
 
+# MSHV Integration support
+try:
+    from wsjtx_integration import (
+        MSHVConfig, MSHVListener, MSHVSettingsDialog
+    )
+    MSHV_AVAILABLE = True
+except ImportError:
+    MSHV_AVAILABLE = False
+
 # fldigi Integration support
 try:
     from fldigi_integration import (
@@ -150,12 +157,28 @@ try:
 except ImportError:
     RIGCTLD_AVAILABLE = False
 
+# N1MM+ Integration support
+try:
+    from n1mm_integration import (
+        N1MMConfig, N1MMListener, N1MMSettingsDialog
+    )
+    N1MM_AVAILABLE = True
+except ImportError:
+    N1MM_AVAILABLE = False
+
 #  Thanks to David (github.com/B1QUAD) 2022 for help with the python 3 version.
 
 #  Main program starts about line 5759
 
-prog = 'FDLog_Enhanced v2026_Beta 4.2.0 29Jan2026\n\n' \
-       'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017 \n' \
+# Single source of truth for the version - used by the banner below, the
+# window title, and the 'b' status broadcasts. (The old separate banner
+# string sat at 4.2.0 for months while version moved on - Scott's consoles
+# showed "4.2.0 29Jan2026" next to nodes broadcasting 4.3.0. 04Jul2026)
+version = "v2026_Beta 4.3.1"  # Changed 05Jul2026
+verdate = "05Jul2026"
+
+prog = 'FDLog_Enhanced %s %s\n\n' % (version, verdate) + \
+       'Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2026 \n' \
        'FDLog_Enhanced by Scott A Hibbs (KD4SIR) Copyright 2013-2026. \n' \
        'FDLog_Enhanced is under the GNU Public License v2 without warranty. \n'
 
@@ -163,7 +186,7 @@ about = """
 
 FDLog_Enhanced can be found on https://github.com/scotthibbs/FDLog_Enhanced
 
-Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2017
+Forked with thanks from FDLog by Alan Biocca (W6AKB) Copyright 1984-2026
     Previous code contributors were: 
     Eric WD6CMU, Steve KA6S, Glenn WB6W, Frank WB6MRQ and others
 
@@ -257,6 +280,7 @@ class ClockClass:
     _election_pending = False  # True while election is in progress
     _election_start_time = 0  # When election started (monotonic)
     _election_seen_time = 0  # When non-judge first saw stalled election (monotonic)
+    _jerk_arm = None  # previous cycle's large error, awaiting confirmation (clock jerk)
     gps_locked = False  # True if local GPS hardware provides time
 
     def __init__(self):
@@ -428,7 +452,12 @@ class ClockClass:
             if i_am_designated:
                 if self._source_type != 'designated':
                     print("Time Master (designated)")
-                self.offset = 0 if not self.ntp_offset else self.ntp_offset
+                # Deadband: don't re-snap to every fresh NTP measurement -
+                # measurement jitter would step the master's clock each 30s
+                # cycle, and every client on the network chases those steps.
+                target = self.ntp_offset if self.ntp_offset else 0
+                if abs(target - self.offset) > 0.25:
+                    self.offset = target
                 self.level = 0
                 self._no_master_cycles = 0
                 self._source_type = 'designated'
@@ -438,7 +467,10 @@ class ClockClass:
             elif i_am_elected and not tmast_online:
                 if self._source_type != 'elected':
                     print("Time Master (elected)")
-                self.offset = self.ntp_offset if self.ntp_ok else 0
+                # same deadband rationale as the designated-master branch above
+                target = self.ntp_offset if self.ntp_ok else 0
+                if abs(target - self.offset) > 0.25:
+                    self.offset = target
                 self.level = 0
                 self._no_master_cycles = 0
                 self._source_type = 'elected'
@@ -582,10 +614,62 @@ class ClockClass:
 
     def _do_client_sync(self):
         """Standard client time synchronization logic."""
+        # A previous correction is still slewing in (calib() collects no
+        # samples during it). Replacing the pending correction mid-slew with
+        # a stale average caused oscillation - hold until the slew completes,
+        # keeping the current sync level rather than degrading to 9.
+        if abs(self.adjusta) >= 0.05:
+            self.srclev = 10
+            self.src_node = ''
+            return
         if self.errorn > 0:
             error = float(self.errors) / self.errorn
         else:
             error = 0
+
+        # Clock "jerk" for fast convergence (from Alan's original FDLog):
+        # a large error means we're simply far off (e.g. just started) - step
+        # the clock once instead of slewing at 0.1 S/s for tens of seconds
+        # while the network watches us drift. Requires two consecutive
+        # large-error cycles that agree in sign and magnitude (singularity
+        # filter), so one anomalous measurement window can't cause a false
+        # jump. While armed the clock holds steady, which keeps the
+        # confirmation cycle's samples clean.
+        if self.errorn > 0 and self.srclev < 9 and abs(error) > 1.0:
+            prev, self._jerk_arm = self._jerk_arm, error
+            if prev is not None and prev * error > 0 and \
+                    abs(error - prev) < max(0.5, 0.25 * abs(error)):
+                self.offset += error
+                self._jerk_arm = None
+                print("Clock jerk: stepped %+.2f S, total offset %.2f S, src level %d, at %s"
+                      % (error, self.offset, self.srclev + 1, now()))
+            self.adjusta = 0  # armed or just jerked: no slew either way
+            self.level = self.srclev + 1
+            self._no_master_cycles = 0
+            self._source_type = 'synced'
+            self.srclev = 10
+            self.src_node = ''
+            return
+        self._jerk_arm = None
+
+        # Deadband below the measurement resolution. Packet timestamps carry
+        # WHOLE seconds (HHMMSS), so client error samples quantize to integers
+        # and their averages can't resolve finer than ~1 S. A true offset near
+        # a half-second boundary makes the 3-sample average flip either side of
+        # zero, producing a perpetual +/-1 S limit cycle (observed 04Jul2026:
+        # offset -0.667/+0.333 repeating) even while NTP shows the clock is
+        # essentially correct. Under 1 S there is nothing real to correct:
+        # hold steady but stay synced. (The master side already has its own
+        # 0.25 S NTP deadband; this is the client-slew equivalent.)
+        if self.errorn > 0 and self.srclev < 9 and abs(error) < 1.0:
+            self.adjusta = 0
+            self.level = self.srclev + 1
+            self._no_master_cycles = 0
+            self._source_type = 'synced'
+            self.srclev = 10
+            self.src_node = ''
+            return
+
         self.adjusta = error
         err = abs(error)
         if (err <= 2) & (self.errorn > 0) & (self.srclev < 9):
@@ -623,6 +707,25 @@ class ClockClass:
         """process time info in incoming pkt"""
         if fnod == node:
             return
+        # While adjust() is still slewing in a pending correction, the local
+        # clock is a moving target - td measured against it is stale by
+        # whatever slew remains. Averaging those samples into the NEXT
+        # correction overshoots (observed 2026-07-03: a +2.0 S slew completed,
+        # then a spurious +0.9 S follow-up = the average lag of samples taken
+        # mid-slew). Only sample while the clock is steady.
+        if abs(self.adjusta) >= 0.05:
+            return
+        # During a block-fill flood the receive thread runs seconds behind
+        # (a sqlite write per record) - td then measures receive-queue
+        # backlog, not clock skew (observed 2026-07-04: node saw its OWN
+        # looped-back status 12 S "off"; jerked -4.00 when NTP said -1.628).
+        # Hold sampling until the stream settles - same tlasqdr signal
+        # fillr() uses for its quiet period.
+        try:
+            if (time.time() - net.tlasqdr) < 2.0:
+                return
+        except NameError:
+            pass  # net not constructed yet - nothing is streaming
         self.lock.acquire()  # take semaphore
         #    print "time fm",fnod,"lev",stml,"diff",td
         stml = int(stml)
@@ -650,12 +753,21 @@ class ClockClass:
         if adj > rate:
             adj = rate
         elif adj < -rate:
-            adj = -rate + 0.05  # This so it doesn't kick back and forth - 30Nov2023 Scott KD4SIR
-            # ChatGPT 3.5 recommended "...0.05  # small positive offset to prevent oscillations" - ChatGPTv3.5
+            # Symmetric again. The old "-rate + 0.05" anti-kickback hack halved
+            # the downward rate, so large downward corrections outlived the 30s
+            # update cycle and were replaced mid-slew by stale averages - the
+            # very oscillation it was meant to prevent. The root cause is now
+            # fixed at the source: calib() doesn't sample and _do_client_sync()
+            # doesn't recompute while a slew is in progress.
+            adj = -rate
         self.offset += adj
         # or self.offset = float(database.get('tmast',0)) instead of the line above.
         self.adjusta -= adj
-        print("Slewing clock", adj, "to", self.offset, "difference is:", self.adjusta)
+        if debug:
+            print("Slewing clock", adj, "to", self.offset, "difference is:", self.adjusta)
+        if abs(self.adjusta) < threshold:
+            # one line at completion instead of one per second while slewing
+            print("Clock slew complete: offset now %+.3f S at %s" % (self.offset, now()))
 
 
 def initialize():
@@ -948,37 +1060,14 @@ def initialize():
                 else:
                     globDb.put('gotaco', "0")
                     qdb.globalshare('gotaco', "0")
-                # Youth Participants
-                print("\n8. How many youth participants (under 18)? (20 pts each, max 100)")
-                print("   Enter a number 0-99 (0 if none):")
-                while True:
-                    kinp = str.strip(sys.stdin.readline())
-                    if kinp.isdigit() and 0 <= int(kinp) <= 99:
-                        break
-                    print("Please enter a number 0-99")
-                globDb.put('youth', kinp)
-                qdb.globalshare('youth', kinp)
-                if int(kinp) > 0:
-                    print("  Youth participation: %s youth!" % kinp)
-                # Government Official Visit
-                print("\n9. Name of visiting elected government official? (100 pts)")
-                print("   (Leave blank if none, or enter name):")
-                kinp = str.strip(sys.stdin.readline())[:35]
-                globDb.put('svego', kinp)
-                qdb.globalshare('svego', kinp)
-                if kinp:
-                    print("  Government official visit: %s" % kinp)
-                # Agency Representative Visit
-                print("\n10. Name of visiting agency representative? (100 pts)")
-                print("    (Red Cross, FEMA, etc. Leave blank if none):")
-                kinp = str.strip(sys.stdin.readline())[:35]
-                globDb.put('svroa', kinp)
-                qdb.globalshare('svroa', kinp)
-                if kinp:
-                    print("  Agency representative visit: %s" % kinp)
+                # Youth participation and the elected official / agency rep
+                # site visits now feed automatically from the sign-in form
+                # (age field + visit checkboxes) - questions removed 05Jul2026
+                print("\n  (Youth participation and site-visit bonuses count")
+                print("   automatically from the sign-in form during the event.)")
                 # Web Submission
                 anscount = ""
-                print("\n11. Will you submit entry via web? (50 pts)")
+                print("\n8. Will you submit entry via web? (50 pts)")
                 print("Y = yes, N = no")
                 while anscount != "1":
                     kinp = str.lower(str.strip(sys.stdin.readline())[:1])
@@ -1001,7 +1090,32 @@ def initialize():
             else:
                 print("\nSkipping bonus questions. Use 'set' command later.")
                 print("Available bonus fields: public, infob, safety, sitere,")
-                print("eduact, social, gotaco, youth, svego, svroa, websub\n")
+                print("eduact, social, gotaco, svego, svroa, websub")
+                print("(Youth and site-visit bonuses count automatically")
+                print(" from the sign-in form during the event.)\n")
+        # Band idle timeout - event-wide setting, all nodes follow it
+        anscount = ""
+        print("\n--- BAND IDLE TIMEOUT ---")
+        print("Release a station's band reservation after this much time")
+        print("with no operator activity (keystrokes or logged QSOs):")
+        print("1 = 10 minutes")
+        print("2 = 15 minutes (recommended)")
+        print("3 = 30 minutes")
+        print("4 = 1 hour")
+        print("5 = not set (bands are never released)")
+        while anscount != "1":
+            kinp = str.strip(sys.stdin.readline())[:1]
+            if kinp in ('1', '2', '3', '4', '5'):
+                anscount = "1"
+            else:
+                print("Press 1, 2, 3, 4 or 5 please")
+        idlsec = {'1': 600, '2': 900, '3': 1800, '4': 3600, '5': 0}[kinp]
+        globDb.put('idletm', str(idlsec))
+        qdb.globalshare('idletm', str(idlsec))  # global to db
+        if idlsec:
+            print("Band idle timeout set to %d minutes." % (idlsec // 60))
+        else:
+            print("Band idle timeout disabled.")
         # Admin PIN setup
         print("\n--- ADMIN PIN SETUP ---")
         print("Enter a 4-digit admin PIN for editing participants.")
@@ -1070,6 +1184,27 @@ def exin(op):
     return r
 
 
+ALIAS_MAX = 12  # station alias length cap (info display only)
+
+
+def clean_alias(raw):
+    """Sanitize a station alias: lowercase, whitelist charset ('|' must
+    never appear - it delimits network packet fields), cap at ALIAS_MAX."""
+    a = str.lower(str.strip(raw))
+    a = re.sub(r"[^a-z\d .,/@'-]", '', a)
+    return a[:ALIAS_MAX].strip()
+
+
+small_font_widgets = set()  # widgets redrawall keeps at the reduced font (status rows, F-key bar)
+
+
+def fdfont_small():
+    """Reduced font for the integration status rows and F-key bar so their
+    fully-populated rows fit within the main window's band-grid width
+    instead of forcing the window wider. 05Jul2026"""
+    return (typeface, max(fontsize - 2, 7))
+
+
 def set_font(face, size):
     """ Font menu selection to change the font and size
         Consolidated from 10 separate functions - Scott Hibbs KD4SIR 09Aug2022
@@ -1093,7 +1228,8 @@ def redrawall():
             # Check if widget supports font option before trying to set it
             try:
                 if 'font' in child.keys():
-                    child.config(font=fdfont)
+                    child.config(font=fdfont_small() if child in small_font_widgets
+                                 else fdfont)
             except tkinter.TclError:
                 # Skip any widgets that cause errors
                 pass
@@ -1108,6 +1244,7 @@ def redrawall():
     bandset(band)
     renew_title()
     logwredraw()
+    _fkey_bar_fit()  # placed F-key buttons: frame height must track font size
 
 
 class SQDB:
@@ -1117,22 +1254,38 @@ class SQDB:
     # I found this online to correct thread errors with SQL locking to one thread only.
     # Scott Hibbs 7/5/2015
 
+    # One shared journal connection for the whole process. The old code
+    # opened a fresh connection AND committed per record - each commit is a
+    # disk sync, so a new node ingesting a few hundred fill records took
+    # minutes and starved the receiver thread ("Alone?" while filling,
+    # 04Jul2026). Net-received records now batch under commit=False and are
+    # flushed once a second from update(); locally logged QSOs still commit
+    # immediately (durability matters - net records are refillable).
+    _conn = None
+    _dirty = 0  # uncommitted insert count
+    _sqlock = threading.RLock()
+
     def __init__(self):
         self.dbPath = logdbf[0:-4] + '.sq3'
         #  print "Using database", self.dbPath
-        self.sqdb = sqlite3.connect(self.dbPath, check_same_thread=False)  # connect to the database
-        # Have to add FALSE here to get this stable - Scott Hibbs 7/17/2015
-        self.sqdb.row_factory = sqlite3.Row  # namedtuple_factory
+        with SQDB._sqlock:
+            if SQDB._conn is None:
+                SQDB._conn = sqlite3.connect(self.dbPath, check_same_thread=False)
+                # Have to add FALSE here to get this stable - Scott Hibbs 7/17/2015
+                SQDB._conn.row_factory = sqlite3.Row  # namedtuple_factory
+                curs = SQDB._conn.cursor()
+                sql = "create table if not exists qjournal(src text,seq int,date text,band " \
+                      "text,call text,rept text,powr text,oper text,logr text,primary key (src,seq))"
+                curs.execute(sql)
+                SQDB._conn.commit()
+        self.sqdb = SQDB._conn
         self.curs = self.sqdb.cursor()  # make a database connection cursor
-        sql = "create table if not exists qjournal(src text,seq int,date text,band " \
-              "text,call text,rept text,powr text,oper text,logr text,primary key (src,seq))"
-        self.curs.execute(sql)
-        self.sqdb.commit()
 
     def readlog(self):  # ,srcId,srcIdx):            # returns list of log journal items
         print("Loading log journal from sqlite database")
         sql = "select * from qjournal"
-        result = self.curs.execute(sql)
+        with SQDB._sqlock:
+            result = self.curs.execute(sql).fetchall()
         nl = []
         for r in result:
             # print dir(r)
@@ -1141,25 +1294,30 @@ class SQDB:
         # print nl
         return nl
 
-    def log(self, n):  # add item to journal logfile table (and other tables...)
+    def log(self, n, commit=True):  # add item to journal logfile table (and other tables...)
         parms = (n.src, n.seq, n.date, n.band, n.call, n.rept, n.powr, n.oper, n.logr)
-        sqdb1 = sqlite3.connect(self.dbPath)  # connect to the database
-        #        self.sqdb.row_factory = sqlite3.Row   # namedtuple_factory
-        curs = sqdb1.cursor()  # make a database connection cursor
-        # start commit, begin transaction
         sql = "insert into qjournal (src,seq,date,band,call,rept,powr,oper,logr) values (?,?,?,?,?,?,?,?,?)"
-        curs.execute(sql, parms)
-        # sql = "insert into qsos values (src,seq,date,band,call,sfx,rept,powr,oper,logr),(?,?,?,?,?,?,?,?,?,?)"
-        # self.cur(sql,parms)
-        # update qso count, scores? or just use q db count? this doesn't work well for different weights
-        # update sequence counts for journals?
-        sqdb1.commit()  # do the commit
+        with SQDB._sqlock:
+            self.curs.execute(sql, parms)
+            if commit:
+                self.sqdb.commit()
+                SQDB._dirty = 0
+            else:
+                SQDB._dirty += 1  # flushed by SQDB.flush() within 1s
         if n.band == '*QST':
             print(("QST " + n.rept + " -" + n.logr))
             try:
                 if sound_enabled.get(): root.bell()  # Audio notification for QST (if enabled)
             except NameError:
                 pass  # sound_enabled not yet defined during startup
+
+    @classmethod
+    def flush(cls):
+        """Commit any batched (net-received) journal inserts."""
+        with cls._sqlock:
+            if cls._conn is not None and cls._dirty:
+                cls._conn.commit()
+                cls._dirty = 0
 
 
 class QsoDb:
@@ -1179,6 +1337,8 @@ class QsoDb:
     byid = {}  # qso database by src.seq
     bysfx = {}  # call list by suffix.band
     hiseq = {}  # high sequence number by node
+    _gap_note = {}  # (src, expected_seq) -> [held_count, last_print_time]
+    maxdate_shown = ""  # newest record date sent to the log window - 04Jul2026
     lock = threading.RLock()  # sharing lock
 
     @staticmethod
@@ -1187,13 +1347,14 @@ class QsoDb:
         n.src = source  # source id
         return n
 
-    def to_log(self):
-        """Make log file entry."""
-        self._log_to_database()
+    def to_log(self, batch=False):
+        """Make log file entry. batch=True defers the sqlite commit
+        (net-received records - refillable, flushed within 1s)."""
+        self._log_to_database(batch)
         self._log_to_file()
 
-    def _log_to_database(self):
-        SQDB().log(self)
+    def _log_to_database(self, batch=False):
+        SQDB().log(self, commit=not batch)
 
     def _log_to_file(self):
         with self.lock:
@@ -1390,7 +1551,12 @@ class QsoDb:
 
     def qst(self, msg):
         """put a qst in database + log"""
-        return self.post_new_info(now(), '', '*QST', msg)
+        msg, n = msg.strip(), now()
+        if len(msg) > 40:  # long QST: two log entries with '-' continuation
+            # marks, same timestamp so the pair sorts together (Alan's FDLog)
+            self.post_new_info(n, '', '*QST', msg[:40] + '-')
+            return self.post_new_info(n, '', '*QST', '-' + msg[40:].strip())
+        return self.post_new_info(n, '', '*QST', msg)
 
     def globalshare(self, name1, value):
         """put global var set in db + log"""
@@ -1399,8 +1565,12 @@ class QsoDb:
     def post_new_info(self, time2, call4, bandmod, report):
         """post new locally generated info"""
         # Added tmob so that we can count time inactive - Scott Hibbs KD4SIR 09Aug2022
-        global tmob
+        global tmob, lastKeyTime
         tmob = now()
+        # any locally generated record counts as activity for the band idle
+        # timeout - critical for WSJT-X/MSHV/N1MM+ stations that auto-log
+        # QSOs with zero keystrokes; they must never be timed off their band
+        lastKeyTime = time.time()
         # 2026 rules 4.4: Class D gets no credit for working Class D - warn at
         # entry time; the QSO is still logged but band_rpt() scores it zero.
         if bandmod[:1] != '*' and re.match(r'\s*\d+\s*[dD]\b', report):
@@ -1445,8 +1615,9 @@ class QsoDb:
             # This avoids confusion by only listing items in the log to edit in the future.
             # Scott Hibbs KD4SIR - 03Jul2018
             # Fixed so that it wasn't printing in all blue - Scott Hibbs KD4SIR 31Jul2022
+            # Sorted by time so the redraw reads oldest -> newest - 04Jul2026
             # i9.prlogln(i9) gives the line of the log output.
-            for i9 in list(a.values()):
+            for i9 in sorted(a.values(), key=lambda i: (i.date, i.src, i.seq)):
                 if i9.seq == seq:
                     continue
                 else:
@@ -1484,8 +1655,9 @@ class QsoDb:
             # This avoids confusion by only listing items in the log to edit in the future.
             # Scott Hibbs KD4SIR - 03Jul2018
             # Fixed so that it wasn't printing in all blue - Scott Hibbs KD4SIR 31Jul2022
+            # Sorted by time so the redraw reads oldest -> newest - 04Jul2026
             # i9.prlogln(i9) is the line of the log output that was read.
-            for i9 in list(a.values()):
+            for i9 in sorted(a.values(), key=lambda i: (i.date, i.src, i.seq)):
                 if i9.seq == seq:
                     continue
                 else:
@@ -1584,16 +1756,35 @@ class QsoDb:
                 self.byid["%s.%s" % (self.src, self.seq)] = self
                 self.hiseq[self.src] = current + 1
                 # if debug: print "todb:",self.src,self.seq
+                self._gap_note.pop((self.src, self.seq), None)  # gap filled
                 r = self
             elif self.seq <= current:
                 pass  # dup or fill spill below hiseq — already have it
             else:  # seq > current + 1: genuine gap
-                print("out of sequence log entry ignored", self.seq, current + 1)
+                # One summary line per gap (throttled), not one per record -
+                # a burst with one lost packet used to print 40+ scary
+                # "out of sequence" lines and look broken. Scott 04Jul2026
+                key = (self.src, current + 1)
+                cnt, last = self._gap_note.get(key, (0, 0.0))
+                cnt += 1
+                now_t = time.time()
+                if now_t - last >= 5.0:
+                    print("node %s: gap at seq %s - holding %d record%s for fill (latest seen %s)"
+                          % (self.src, current + 1, cnt, '' if cnt == 1 else 's', self.seq))
+                    last = now_t
+                self._gap_note[key] = (cnt, last)
         # self.lock.release()
         return r
 
     def pr(self):
         """print Q record object"""
+        # Block fill can deliver old records after newer ones - appending
+        # them at the bottom breaks time order, so flag the log window for
+        # a (sorted) full redraw once the message queue drains. 04Jul2026
+        if self.date < QsoDb.maxdate_shown:
+            SynchMessage.out_of_order = True
+        else:
+            QsoDb.maxdate_shown = self.date
         sms.prmsg(self.prlogln(self))
 
     def dispatch(self, src):
@@ -1607,7 +1798,9 @@ class QsoDb:
         if r:  # r was set to self.todb() so always true
             self.pr()  # prints the q record object
             if src != 'logf':
-                self.to_log()
+                # net records batch their sqlite commit (fill floods were
+                # committing per record = minutes of ingestion, 04Jul2026)
+                self.to_log(batch=(src == 'net'))
             if src == 'user':
                 net.bc_qsomsg(self.src, self.seq)
             if self.band == '*set':
@@ -2232,8 +2425,11 @@ def logwredraw():
     logw.insert(END, "                            DATABASE DISPLAY WINDOW\n", "b")
     logw.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", "b")
     logw.insert(END, "%s\n" % prog, "b")
+    # Sort by time so the display always reads oldest -> newest even when
+    # block fill delivers old records late (arrival order != time order).
+    # src/seq tie-break keeps split QST continuation lines together. 04Jul2026
     # i32.prlogln(i32) gives the line of the log output.
-    for i32 in list(a.values()):
+    for i32 in sorted(a.values(), key=lambda i: (i.date, i.src, i.seq)):
         if node in i32.prlogln(i32):
             logw.insert(END, i32.prlogln(i32), "b")
             logw.insert(END, "\n")
@@ -2280,6 +2476,7 @@ class NodeInfoClass:
         self.gps_locked = False
         self.ntp_ok = False
         self.is_internet = False
+        self.alias = ''  # optional station alias (info display only)
 
     @staticmethod
     def sqd(src, seq, t, b, c3, rp, p1, o, logr1):
@@ -2301,7 +2498,8 @@ class NodeInfoClass:
             r[n] = ival(i14[n]) & ival(m6[n])
         return "%s.%s.%s.%s" % (r[0], r[1], r[2], r[3])
 
-    def ssb(self, pkt_tm, host, sip, nod, stm, stml, ver, td, gps_locked='0', ntp_ok='0', is_internet='0'):
+    def ssb(self, pkt_tm, host, sip, nod, stm, stml, ver, td, gps_locked='0', ntp_ok='0', is_internet='0',
+            alias4=''):
         """process status broadcast (first line)"""
         self.lock.acquire()
         if nod not in self.nodes:  # create if new
@@ -2314,6 +2512,7 @@ class NodeInfoClass:
         i15.gps_locked = (gps_locked == '1')
         i15.ntp_ok = (ntp_ok == '1')
         i15.is_internet = (is_internet == '1')
+        i15.alias = alias4
         self.lock.release()
         #   if debug:
         #  print "ssb:",pkt_tm,host,sip,nod,stm,stml,ver,td
@@ -2562,8 +2761,9 @@ class NetworkSync:
         gps_flag = '1' if mclock.gps_locked else '0'
         ntp_flag = '1' if mclock.ntp_ok else '0'
         inet_flag = '1' if self.is_internet_node() else '0'
-        msg = "b|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
-              (self.hostname, self.my_addr, node, now(), mclock.level, version, gps_flag, ntp_flag, inet_flag)
+        msg = "b|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
+              (self.hostname, self.my_addr, node, now(), mclock.level, version, gps_flag, ntp_flag, inet_flag,
+               alias)
         for i21 in self.si.node_status_list():
             msg += "s|%s|%s|%s|%s|%s\n" % i21  # nod,seq,bnd,msc,age
             # if debug: print i
@@ -2588,9 +2788,13 @@ class NetworkSync:
             # quiet period: wait for data stream to settle before requesting more
             if (time.time() - self.tlasqdr) < 0.5:
                 continue
-            r = self.si.fill_requests_list()
-            self.fills = len(r)
-            if self.fills:
+            # guarded: unsupervised background thread — one exception must not
+            # silently end fill requests forever (= missing QSOs with no warning)
+            try:
+                r = self.si.fill_requests_list()
+                self.fills = len(r)
+                if not self.fills:
+                    continue
                 now_t = time.time()
                 # drop backoff state for gaps that are no longer pending (resolved or superseded)
                 pending_keys = set((c[1], c[2], c[3]) for c in r)
@@ -2615,17 +2819,30 @@ class NetworkSync:
                     print("Fill request: node=%s seq %s-%s (%d gap(s) pending, next retry in %.0fs)" %
                           (c4[1], c4[2], c4[3], self.fills, backoff))
                     _last_req, _last_req_tm = key, now_t
+            except Exception as e:
+                self._tprint(('fillr-err',), "fillr error: %s" % e)
 
     def rcvr(self):
         """receiver thread processes incoming packets"""
-        buffer_size = 4096
+        # 65535 = max UDP datagram. The old 4096 was a landmine: a fill
+        # response with long participant fields can exceed it, and Windows
+        # raises OSError (WSAEMSGSIZE) on an undersized buffer instead of
+        # truncating like Linux — which killed this thread and left the node
+        # permanently deaf while still broadcasting (looks alive, hears nothing).
+        buffer_size = 65535
 
         if debug:
             print("receiver thread starting")
         r = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         r.bind(('', self.port))
         while 1:
-            raw_bytes, addr = r.recvfrom(buffer_size)
+            try:
+                raw_bytes, addr = r.recvfrom(buffer_size)
+            except OSError as e:
+                # one bad datagram must never kill the receiver thread
+                self._malformed_count += 1
+                print("rcvr: recvfrom error (packet dropped): %s" % e)
+                continue
             msg = raw_bytes.decode('utf-8', errors='replace')
             if addr[0] != self.my_addr:
                 self.pkts_rcvd += 1
@@ -2658,7 +2875,10 @@ class NetworkSync:
                         continue
                     if fields[0] == 'b':  # status bcast
                         # Parse with backwards compatibility for older nodes
-                        if len(fields) >= 10:
+                        alias_f = ''
+                        if len(fields) >= 11:
+                            host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag, inet_flag, alias_f = fields[1:11]
+                        elif len(fields) >= 10:
                             host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag, inet_flag = fields[1:10]
                         elif len(fields) >= 9:
                             host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag = fields[1:9]
@@ -2668,7 +2888,8 @@ class NetworkSync:
                             host, sip, fnod, stm, stml, ver = fields[1:7]
                             gps_flag, ntp_flag, inet_flag = '0', '0', '0'
                         td = tmsub(stm, pkt_tm)
-                        self.si.ssb(pkt_tm, host, sip, fnod, stm, stml, ver, td, gps_flag, ntp_flag, inet_flag)
+                        self.si.ssb(pkt_tm, host, sip, fnod, stm, stml, ver, td, gps_flag, ntp_flag, inet_flag,
+                                    alias_f)
                         if relayed_pkt:
                             # internet relay latency is indistinguishable from clock skew —
                             # same reason _tcp_proc_msg() skips calib() for direct internet packets
@@ -2692,6 +2913,15 @@ class NetworkSync:
                     elif fields[0] == 'm':  # block fill request
                         if len(fields) != 5: continue  # expected: m|destip|src|seqs|seqe
                         destip, src, seqs, seqe = fields[1:]
+                        # our own broadcast looped back (source port = our send
+                        # socket): answering our own request is pure console
+                        # noise — but do answer other same-host instances.
+                        try:
+                            if addr[0] == self.my_addr and \
+                                    addr[1] == self.skt.getsockname()[1]:
+                                continue
+                        except OSError:
+                            pass  # send socket not bound yet — can't be ours
                         self._tprint(('m-udp-rx', src, seqs, seqe),
                                      "Fill request received (UDP) from %s: node=%s seq %s-%s" %
                                      (addr, src, seqs, seqe))
@@ -3000,7 +3230,10 @@ class NetworkSync:
             try:
                 fields = line.split('|')
                 if fields[0] == 'b':
-                    if len(fields) >= 10:
+                    alias_f = ''
+                    if len(fields) >= 11:
+                        host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag, inet_flag, alias_f = fields[1:11]
+                    elif len(fields) >= 10:
                         host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag, inet_flag = fields[1:10]
                     elif len(fields) >= 9:
                         host, sip, fnod, stm, stml, ver, gps_flag, ntp_flag = fields[1:9]
@@ -3011,7 +3244,8 @@ class NetworkSync:
                     else:
                         continue
                     td = tmsub(stm, pkt_tm)
-                    self.si.ssb(pkt_tm, host, sip, fnod, stm, stml, ver, td, gps_flag, ntp_flag, inet_flag)
+                    self.si.ssb(pkt_tm, host, sip, fnod, stm, stml, ver, td, gps_flag, ntp_flag, inet_flag,
+                                alias_f)
                     # skip calib() — internet packet td includes tunnel latency, not just clock skew
                 elif fields[0] == 's':
                     if len(fields) != 6:
@@ -3065,47 +3299,65 @@ class NetworkSync:
             amsg = (self.auth(msg) + '\n' + msg).encode()
             self._send_one(addr_str, amsg)
 
+    # Flush a fill batch before its payload exceeds this many bytes. Keeps
+    # each UDP packet inside one ethernet frame (no fragment loss) and safely
+    # under the 4096-byte receive buffer of pre-4.3.1 nodes, whose receiver
+    # thread DIES on Windows if a datagram overflows it (WSAEMSGSIZE). A
+    # record count cap can't guarantee either — participant records ('*set')
+    # carry free-text names/titles of unbounded length.
+    _FILL_BATCH_BYTES = 1200
+
     def send_qsomsgs(self, nod, seqs, seqe, destip):
-        """Respond to a block fill request — send up to 20 QSOs per UDP packet."""
+        """Respond to a block fill request — batch QSOs per UDP packet."""
         batch = []
+        size = 0
         found = 0
         for s in range(seqs, seqe + 1):
             key = nod + '.' + str(s)
             if key in qdb.byid:
                 i20 = qdb.byid[key]
                 found += 1
-                batch.append("q|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
+                qline = "q|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
                     (i20.src, i20.seq, i20.date, i20.band, i20.call,
-                     i20.rept, i20.powr, i20.oper, i20.logr))
-            if len(batch) >= 20:
-                self._flush_qso_batch(batch, destip)
-                batch = []
+                     i20.rept, i20.powr, i20.oper, i20.logr)
+                if batch and size + len(qline) > self._FILL_BATCH_BYTES:
+                    self._flush_qso_batch(batch, destip)
+                    batch = []
+                    size = 0
+                batch.append(qline)
+                size += len(qline)
         if batch:
             self._flush_qso_batch(batch, destip)
         self._tprint(('m-udp-tx', nod, seqs, seqe),
-                     "Fill response (UDP): node=%s seq %s-%s -> found %d/%d, sent to %s" %
-                     (nod, seqs, seqe, found, seqe - seqs + 1, destip))
+                     "Fill response (UDP): node=%s seq %s-%s -> found %d/%d%s" %
+                     (nod, seqs, seqe, found, seqe - seqs + 1,
+                      (", sent to %s" % destip) if found else " (nothing to send)"))
 
     def send_qsomsgs_tcp(self, addr_str, nod, seqs, seqe):
-        """Respond to a block fill request over TCP — send up to 20 QSOs per packet."""
+        """Respond to a block fill request over TCP — batch QSOs per packet."""
         batch = []
+        size = 0
         found = 0
         for s in range(seqs, seqe + 1):
             key = nod + '.' + str(s)
             if key in qdb.byid:
                 i20 = qdb.byid[key]
                 found += 1
-                batch.append("q|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
+                qline = "q|%s|%s|%s|%s|%s|%s|%s|%s|%s\n" % \
                     (i20.src, i20.seq, i20.date, i20.band, i20.call,
-                     i20.rept, i20.powr, i20.oper, i20.logr))
-            if len(batch) >= 20:
-                self._flush_qso_batch_tcp(addr_str, batch)
-                batch = []
+                     i20.rept, i20.powr, i20.oper, i20.logr)
+                if batch and size + len(qline) > self._FILL_BATCH_BYTES:
+                    self._flush_qso_batch_tcp(addr_str, batch)
+                    batch = []
+                    size = 0
+                batch.append(qline)
+                size += len(qline)
         if batch:
             self._flush_qso_batch_tcp(addr_str, batch)
         self._tprint(('m-tcp-tx', nod, seqs, seqe),
-                     "Fill response (TCP): node=%s seq %s-%s -> found %d/%d, sent to %s" %
-                     (nod, seqs, seqe, found, seqe - seqs + 1, addr_str))
+                     "Fill response (TCP): node=%s seq %s-%s -> found %d/%d%s" %
+                     (nod, seqs, seqe, found, seqe - seqs + 1,
+                      (", sent to %s" % addr_str) if found else " (nothing to send)"))
 
     def _flush_qso_batch(self, batch, destip):
         """Send a batch of pre-formatted q-lines as one UDP packet."""
@@ -3349,8 +3601,13 @@ class GlobalDataClass:
         lhelp = ["   Set Commands\n   For the Logging Guru In Charge\n   eg: .set <parameter> <value>\n"]
         #  above is spaced for sort
         for i24 in list(self.byname.keys()):
-            if i24[:2] != 'p:':  # skip ops in help display
-                lhelp.append("  %-6s  %-43s  '%s'" % (i24, self.byname[i24].desc, self.byname[i24].val))
+            # skip ops; kick retired 04Jul2026, youth auto from sign-in 05Jul2026
+            if i24[:2] == 'p:' or i24 in ('kick', 'youth'):
+                continue
+            val = self.byname[i24].val
+            if i24 == 'adminpin' and val:
+                val = '(set)'  # don't display the PIN hash
+            lhelp.append("  %-6s  %-43s  '%s'" % (i24, self.byname[i24].desc, val))
         lhelp.sort()
         viewtextl(lhelp)
 
@@ -3363,6 +3620,7 @@ class SynchMessage:
 
     lock = threading.RLock()
     msgs = []
+    out_of_order = False  # set by QsoDb.pr() when an old record arrives late - 04Jul2026
 
     def prmsg(self, msg):
         """put message in queue for displaying log"""
@@ -3399,6 +3657,11 @@ class SynchMessage:
             logw.config(state="disabled")
             del self.msgs[0]
         self.lock.release()
+        # Late (block-fill) records append at the bottom out of time order -
+        # heal the display with a sorted full redraw. 04Jul2026
+        if SynchMessage.out_of_order:
+            SynchMessage.out_of_order = False
+            shonuff = "yes"
         if shonuff == "yes":
             logwredraw()
 
@@ -3469,8 +3732,9 @@ class GlobalDb:
 def loadglob():
     """load persistent local config to global vars from file"""
     # updated from 152i
-    global globDb, node, operator, logger, power, tdwin, debug, authk, kick
+    global globDb, node, operator, logger, power, tdwin, debug, authk, kick, alias
     node = globDb.get('node', '')
+    alias = globDb.get('alias', '')
     operator = globDb.get('operator', '')
     logger = globDb.get('logger', '')
     power = globDb.get('power', '0')
@@ -3487,6 +3751,7 @@ def loadglob():
 def saveglob():
     """save persistent local config global vars to file"""
     globDb.put('node', node)
+    globDb.put('alias', alias)
     globDb.put('operator', operator)
     globDb.put('logger', logger)
     globDb.put('power', power)
@@ -3534,6 +3799,39 @@ def fd_period(yr):
     sat = sats[3]  # fourth Saturday (its Sunday is always still in June)
     return ("%02d06%02d.180000" % (yr % 100, sat),
             "%02d06%02d.205959" % (yr % 100, sat + 1))
+
+
+def youth_count():
+    """Number of signed-in participants aged 18 and under (2026 rules:
+    20 pts each, 5 counted max). Fed automatically from the sign-in form's
+    age field - replaces the manual '.set youth' count and the setup
+    question, and updates the InfoTable score live. 05Jul2026"""
+    n = 0
+    for p in list(participants.values()):
+        try:  # "initials, name, call, age, title"
+            age = int(str(p).split(', ')[3])
+        except (ValueError, IndexError):
+            continue  # blank or non-numeric age - not a youth
+        if 1 <= age <= 18:
+            n += 1
+    return n
+
+
+def record_site_visit(key, name):
+    """Record a bonus site visit (svego = elected govt official, svroa =
+    agency representative) from the sign-in form's checkboxes. Appends the
+    visitor's name to the shared value so the 100 pt bonus and the entry
+    form documentation update live on every node. 05Jul2026"""
+    cur = gd.getv(key)
+    if not isinstance(cur, str) or cur.startswith('get error'):
+        cur = ''
+    if name.lower() in cur.lower():
+        return  # this visitor is already recorded
+    newv = "%s, %s" % (cur, name) if cur else name
+    if len(newv) > 35:  # gd field limit - keep the names already listed,
+        newv = cur if cur else name[:35]  # the bonus is earned either way
+    if newv != cur:
+        qdb.globalshare(key, newv)
 
 
 def calc_bonus_points(gotaq, nat, sat, xmttrs):
@@ -3595,11 +3893,12 @@ def calc_bonus_points(gotaq, nat, sat, xmttrs):
     if gd.getv('gotaco') == "1" and gotaq >= 10:
         tot += 100
         lines.append("    100 GOTA Coach Bonus (supervised 10+ contacts)")
-    if ival(gd.getv('youth')) > 0:
-        youth_bp = min(20 * ival(gd.getv('youth')), 100)  # 20/youth, max 5
+    yc = youth_count()  # auto from sign-in form ages (18 and under)
+    if yc > 0:
+        youth_bp = min(20 * yc, 100)  # 20/youth, max 5 counted
         tot += youth_bp
         lines.append("    %3s Youth Participation Bonus (%s youth x 20 pts)"
-                     % (youth_bp, min(ival(gd.getv('youth')), 5)))
+                     % (youth_bp, min(yc, 5)))
     if gd.getv('eduact') == "1":
         tot += 100
         lines.append("    100 Educational Activity Bonus")
@@ -3960,7 +4259,10 @@ def contestlog(pr):
 
 
 def bandset(b):
-    global band, tmob
+    global band, tmob, lastKeyTime
+    # selecting a band is mouse-only activity - without this, an operator who
+    # clicks a band but hasn't typed yet would be timed out immediately
+    lastKeyTime = time.time()
     if node == "":
         b = 'off'
         txtbillb.insert(END, "err - no node\n")
@@ -4031,6 +4333,8 @@ class NewParticipantDialog:
         self.age = None
         self.name = None
         self.initials = None
+        self.svego_var = None
+        self.svroa_var = None
 
     @staticmethod
     def dialog():
@@ -4055,6 +4359,8 @@ class NewParticipantDialog:
             s.call.delete(0, END)
             s.age.delete(0, END)
             s.vist.delete(0, END)
+            s.svego_var.set(0)
+            s.svroa_var.set(0)
             selection = event.widget.curselection()
             indx = selection[0]
             value = event.widget.get(indx)
@@ -4099,6 +4405,14 @@ class NewParticipantDialog:
         Label(fr2, text='Visitor Title', font=fdfont).grid(row=4, column=0, sticky=W)
         s.vist = Entry(fr2, width=20, font=fdfont)
         s.vist.grid(row=4, column=1, sticky=W)
+        # Site-visit bonus checkboxes - feed the 100 pt visit bonuses right
+        # from sign-in instead of '.set svego'/'.set svroa'. 05Jul2026
+        s.svego_var = IntVar()
+        Checkbutton(fr2, text='Elected official visit (100 pts)', font=fdfont,
+                    variable=s.svego_var).grid(row=5, column=0, columnspan=2, sticky=W)
+        s.svroa_var = IntVar()
+        Checkbutton(fr2, text='Agency rep visit (100 pts)', font=fdfont,
+                    variable=s.svroa_var).grid(row=6, column=0, columnspan=2, sticky=W)
         # Frame 3
         fr3 = Frame(s.t)
         fr3.grid(row=2, column=0, sticky=EW, pady=3)
@@ -4192,6 +4506,12 @@ class NewParticipantDialog:
             v = "%s, %s, %s, %s, %s" % (initials, name11, call11, age5, vist2)
             participants[initials] = v
             _dummy = qdb.globalshare(nam, v)  # store + bcast #
+            # Feed the site-visit bonuses from the checkboxes; the youth
+            # bonus feeds itself from the age field via youth_count(). 05Jul2026
+            if self.svego_var is not None and self.svego_var.get():
+                record_site_visit('svego', name11)
+            if self.svroa_var is not None and self.svroa_var.get():
+                record_site_visit('svroa', name11)
             txtbillb.insert(END, " New Participant Entered.")
             if sound_enabled.get(): root.bell()
             txtbillb.see(END)
@@ -4215,6 +4535,10 @@ class NewParticipantDialog:
         self.call.delete(0, END)
         self.age.delete(0, END)
         self.vist.delete(0, END)
+        if self.svego_var is not None:
+            self.svego_var.set(0)
+        if self.svroa_var is not None:
+            self.svroa_var.set(0)
 
     def quitbtn(self):
         self.t.destroy()
@@ -4222,7 +4546,7 @@ class NewParticipantDialog:
 
 def verify_admin_pin():
     """Open a dialog to verify the admin PIN. Returns True if correct, False otherwise."""
-    stored_hash = globDb.get('adminpin', '')
+    stored_hash = get_adminpin_hash()  # network-synced, local fallback 04Jul2026
     if not stored_hash:
         txtbillb.insert(END, "\nNo admin PIN set. Use initialize or .set adminpin\n")
         txtbillb.see(END)
@@ -4398,8 +4722,51 @@ class EditParticipantDialog:
         self.t.destroy()
 
 
+def get_idle_timeout():
+    """Effective band idle timeout in seconds; 0 = disabled.
+    The event-wide setting from the log captain's setup questions (globDb
+    'idletm', changeable live with '.set idletm <seconds>') wins; without
+    one, the idleTimeout default at the top of this file (or local.py)
+    applies. Clamped to 5..60 minutes unless explicitly 0 (disabled)."""
+    v = gd.getv('idletm')
+    if isinstance(v, str) and v.strip().isdigit():
+        v = int(v.strip())
+        if v == 0:
+            return 0
+        return max(min(v, 60 * 60), 5 * 60)
+    return idleTimeout
+
+
+def get_adminpin_hash():
+    """Admin PIN md5 hash. The network-synced copy (gd 'adminpin') wins so a
+    PIN set at the captain's node protects every node; falls back to this
+    node's local db for events set up before the sync fix. 04Jul2026"""
+    v = gd.getv('adminpin')
+    if isinstance(v, str) and v and not v.startswith('get error'):
+        return v
+    return globDb.get('adminpin', '')
+
+
 def renew_title():
     """renew title and various, called at 10 second rate"""
+    global kbuf
+    # Band idle timeout (from Alan's FDLog): release an abandoned band
+    # reservation so another station can take the transmitter.
+    idletm = get_idle_timeout()
+    idle = time.time() - lastKeyTime
+    if idletm and band != 'off' and idle > idletm:
+        print("BAND RESERVATION TIMED OUT - BAND %s RELEASED" % band)
+        txtbillb.insert(END, " BAND RESERVATION TIMED OUT - BAND %s RELEASED \n" % band)
+        txtbillb.see(END)
+        if sound_enabled.get():
+            root.bell()
+        bandoff()
+        kbuf = ""  # discard any half-typed entry from the departed operator
+    elif idletm and band != 'off' and idle + 30 > idletm:
+        txtbillb.insert(END, " WARNING - BAND RESERVATION NEARING IDLE TIMEOUT \n")
+        txtbillb.see(END)
+        if sound_enabled.get():
+            root.bell()
     if node == 'gotanode':
         call12 = str.upper(gd.getv('gcall'))
     else:
@@ -4795,7 +5162,7 @@ def updatebb():
             bm3 = "%s%s" % (i27, j4)
             if i27 == 'off':
                 continue
-            sc = 'white'
+            sc = 'pale green'  # selected band shows green (was white) 05Jul2026
             n = len(r.get(bm3, ''))  # This is the number of nodes on same band/mode.
             if n == 0:  # no one on this band/mode.
                 bc = 'light gray'
@@ -4869,16 +5236,15 @@ def updateqct():
         opds.config(text="<Select Contestant>", background='red')
     else:
         coin = exin(operator)
-        tails, dummy, dummy, dummy = str(operator).split(",")
-        # print("tails is %s" % tails)
+        tails = _part_display(operator)  # name only, no initials/colon 05Jul2026
         if coin in qpop:
             coin2 = qpop['%s' % coin]
             opmb.config(text='Contacts: %2s' % coin2, background='light gray')
-            opds.config(text=tails, background='light gray')
+            opds.config(text=tails, background='pale green')
         else:
             coin2 = "0"
             opmb.config(text='Contacts: %2s' % coin2, background='light gray')
-            opds.config(text=tails, background='light gray')
+            opds.config(text=tails, background='pale green')
     # Update for the logger LoQ - KD4SIR for FD 2014
     if logger == "":
         coil2 = "Logger"
@@ -4886,24 +5252,27 @@ def updateqct():
         logds.config(text="<Select Logger>", background='red')
     else:
         coil = exin(logger)
-        heads, dummy, dummy, dummy = str(logger).split(",")
+        heads = _part_display(logger)  # name only, no initials/colon 05Jul2026
         if coil in qplg:
             coil2 = qplg['%s' % coil]
             logmb.config(text='Logs: %2s' % coil2, background='light gray')
-            logds.config(text=heads, background='light gray')
+            logds.config(text=heads, background='pale green')
         else:
             coil2 = "0"
             logmb.config(text='Logs: %2s' % coil2, background='light gray')
-            logds.config(text=heads, background='light gray')
+            logds.config(text=heads, background='pale green')
     t = ""  # check for net config trouble
     if net.fills:
-        t = "NEED FILL"
+        t = "Filling (%d gap%s)" % (net.fills, "" if net.fills == 1 else "s")
     if net.badauth_rcvd:
         net.badauth_rcvd = 0
         t = "AUTH FAIL"
     if net.pkts_rcvd:
         net.pkts_rcvd = 0
-    else:
+    elif not net.fills:
+        # While filling, the receiver can spend whole seconds writing a
+        # batch to the db - zero packets dequeued then is backlog, not
+        # deafness, so "Filling" stays up instead of this. 04Jul2026
         # Firewall wording added back by Curtis E. Mills WE7U 25Jun2019
         t = "Alone? Not receiving data from others. (firewall?)"
     if net.send_errs:
@@ -4944,6 +5313,10 @@ def bandbuttons(w):
                 buttonbinder(bm4)  # Added to have each button have a binding - Scott Hibbs KD4SIR 13Aug2022
             bandb[bm4].grid(row=b, column=a, sticky=NSEW)
             b += 1
+        # every band column shares stretch so a widened/maximized window
+        # scales all columns evenly instead of ballooning only the
+        # Class/scoring columns (the old sole weight holders) 05Jul2026
+        w.grid_columnconfigure(a, weight=1)
         a += 1
     for i29, j5, dummy in (('Class', 0, 5),
                            ('VHF', 1, 13),
@@ -4986,6 +5359,26 @@ def _band_tooltip_hide(event=None):
         _band_tooltip = None
 
 
+def add_truncation_tooltip(widget):
+    """Mouseover shows the widget's full text - but only when the text is
+    too wide to fit inside the widget (i.e. visibly truncated). Used by the
+    reduced-font status labels and F-key buttons. 05Jul2026"""
+    def _enter(event, w9=widget):
+        try:
+            import tkinter.font as tkfont
+            txt = str(w9.cget('text'))
+            if not txt.strip():
+                return
+            fnt = tkfont.Font(font=w9.cget('font'))
+            widest = max(fnt.measure(ln) for ln in txt.split('\n'))
+            if widest > w9.winfo_width() - 6:
+                _band_tooltip_show(w9, txt.replace('\n', ' '))
+        except Exception:
+            pass
+    widget.bind('<Enter>', _enter, add='+')
+    widget.bind('<Leave>', _band_tooltip_hide, add='+')
+
+
 def buttonbinder(bmz):
     """ This adds the individual bindings for the band/mode buttons."""
     # Added by Scott Hibbs KD4SIR 13Aug2022
@@ -4993,25 +5386,56 @@ def buttonbinder(bmz):
     bandb[bmz].bind("<Leave>", _band_tooltip_hide, add='+')
 
 
+def _part_display(pstr):
+    """Button display name from an operator/logger string:
+    'sah: Scott Hibbs, W9SAH, 25, Y' -> 'Scott Hibbs' (no initials/colon). 05Jul2026"""
+    return str(pstr).split(",")[0].split(": ", 1)[-1]
+
+
+def _part_name(ini):
+    """Full name for a participant's initials ('---' if empty/unknown)."""
+    p = participants.get(ini.lower(), '') if ini else ''
+    if p:
+        parts = p.split(', ')  # "INI, Name, Call, Age, Vist"
+        if len(parts) > 1 and parts[1].strip():
+            return parts[1].strip()
+    return ini.upper() if ini else '---'
+
+
 def whosonfirstyes(naturally, event=None):
     """ This displays the information for who is on which band/mode."""
     # Added by Scott Hibbs KD4SIR 13Aug2022
     # naturally is the label button the mouse is over.
+    # Reworked 04Jul2026: shows Node (alias) + Contestant/Logger full names
+    # instead of node/band/initials/power/age.
     d = {}
-    woflist = []
     for t in list(net.si.nodinfo.values()):
         dummy1, dummy1, age6 = d.get(t.nod, ('', '', 9999))
         if age6 > t.age:
             if t.age < 25:
                 d[t.nod] = (t.bnd, t.msc, t.age)
-    for t in d:
-        bnd, msc, age = d[t]
+    rows = []
+    for nod in d:
+        bnd, msc, age6 = d[nod]
         if bnd and bnd != "off" and bnd == naturally:
-            woflist.append(t)
-    if woflist:
-        lines = ["Node     Band Opr/Lgr/Pwr        Last"]
-        for what in woflist:
-            lines.append("%8s %4s %-18s %4s" % (what, d[what][0], d[what][1], d[what][2]))
+            # msc is "op lg powerW" - split(' ') keeps an empty op slot in
+            # place (GOTA: blank contestant, coach logging)
+            msc_parts = msc.split(' ')
+            op_ini = msc_parts[0] if len(msc_parts) > 0 else ''
+            lg_ini = msc_parts[1] if len(msc_parts) > 1 else ''
+            alias5 = ''
+            ni = net.si.nodes.get(nod)
+            if ni is not None:
+                alias5 = getattr(ni, 'alias', '')
+            if nod == node and alias:
+                alias5 = alias  # our own alias may not have echoed back yet
+            node_disp = "%s (%s)" % (nod, alias5) if alias5 else nod
+            rows.append((node_disp, _part_name(op_ini), _part_name(lg_ini)))
+    if rows:
+        w0 = max(len(r[0]) for r in rows)
+        w1 = max(len(r[1]) for r in rows)
+        lines = ["%-*s  Opr: %-*s  Lgr: %s" % (w0, r0, w1, r1, r2)
+                 for r0, r1, r2 in rows]
         widget = event.widget if event else bandb.get(naturally)
         if widget:
             _band_tooltip_show(widget, "\n".join(lines))
@@ -5025,24 +5449,56 @@ def rnddig():
     return chr(random.randrange(ord('0'), ord('9') + 1))
 
 
-def autoksetter(n):
-    """ This is the minutes set before autokicker activates"""
-    global kick
-    kick = n
-    globDb.put('kick', n)
-    qdb.globalshare('kick', n)  # global to db
+def set_idletm_admin(val):
+    """'.set idletm <minutes>' - change the band idle timeout for the whole
+    event (every node follows it within one 10s cycle). Requires the admin
+    PIN, same auth as participant editing. 0 or 'off' disables it.
+    Replaces the 2022 autokicker, which only counted logged QSOs - this one
+    also counts keystrokes/pastes/band clicks and warns 30s before release."""
+    val = str(val).strip().lower()
+    if val == 'off':
+        val = '0'
+    if not val.isdigit() or not (int(val) == 0 or 5 <= int(val) <= 60):
+        txtbillb.insert(END, "\n Usage: .set idletm <minutes 5-60, or 0 = off>\n")
+        txtbillb.see(END)
+        return
+    minutes = int(val)
 
+    def _apply():
+        globDb.put('idletm', str(minutes * 60))
+        qdb.globalshare('idletm', str(minutes * 60))  # broadcast to every node
+        if minutes:
+            txtbillb.insert(END, "\n Band idle timeout set to %d minutes on all nodes.\n" % minutes)
+        else:
+            txtbillb.insert(END, "\n Band idle timeout disabled on all nodes.\n")
+        txtbillb.see(END)
 
-def autokicker():
-    """ This kicks band to off for inactivity - checked every 10 seconds"""
-    global kick, acttime
-    if band != "off":
-        digkick = int(kick)
-        if digkick != 0:
-            if digkick < acttime:
-                bandset("off")
-                txtbillb.insert(END, "\n ~~~~~ Kicked off band for inactivity ~~~~~")
-                topper()
+    stored = get_adminpin_hash()  # network-synced, local fallback 04Jul2026
+    if not stored:
+        _apply()  # no admin PIN configured anywhere on the network
+        return
+    dlg = Toplevel(root)
+    dlg.title('Admin PIN')
+    dlg.transient(root)
+    dlg.bind('<Escape>', lambda _e: dlg.destroy())
+    Label(dlg, text='Log captain PIN to change the idle timeout:',
+          font=fdfont).grid(row=0, column=0, columnspan=2, padx=8, pady=4)
+    pin_e = Entry(dlg, width=6, font=fdfont, show='*')
+    pin_e.grid(row=1, column=0, columnspan=2, pady=2)
+    pin_e.focus()
+    msg = Label(dlg, text='', font=fdfont, fg='red')
+    msg.grid(row=2, column=0, columnspan=2)
+
+    def _ok(_event=None):
+        if hashlib.md5(pin_e.get().strip().encode()).hexdigest() != stored:
+            msg.config(text='Incorrect PIN')
+            return
+        dlg.destroy()
+        _apply()
+
+    dlg.bind('<Return>', _ok)
+    Button(dlg, text='OK', font=fdfont, command=_ok).grid(row=3, column=0, pady=5)
+    Button(dlg, text='Cancel', font=fdfont, command=dlg.destroy).grid(row=3, column=1, pady=5)
 
 
 def testqgen(n):
@@ -5140,8 +5596,8 @@ def setoper(op):
     operatorsonline.update({node: ini})
     net.bc_user(node, operator, logger, band)
     # Adding red to the display - KD4SIR
-    operatorcolor = 'light gray'
-    opds.config(text=operator, background=operatorcolor)
+    operatorcolor = 'pale green'  # green = contestant selected 05Jul2026
+    opds.config(text=_part_display(operator), background=operatorcolor)
     opmb.config(background='gold')
     saveglob()
     buildmenus()
@@ -5153,8 +5609,8 @@ def setlog(logr):
     # print "setlog",logr
     ini, name10, call15, age8, vist4 = str.split(logr, ', ')
     logger = "%s: %s, %s, %s, %s" % (ini, name10, call15, age8, vist4)
-    loggercolor = 'light gray'
-    logds.config(text=logger, background=loggercolor)
+    loggercolor = 'pale green'  # green = logger selected 05Jul2026
+    logds.config(text=_part_display(logger), background=loggercolor)
     logmb.config(background='gold')
     saveglob()
 
@@ -5372,36 +5828,6 @@ def showthiscall2(call16a, tag=None):
     return findanya, repta
 
 
-def showoperatorsonline():
-    # Build node-to-band lookup from net status info
-    node_bands = {}
-    try:
-        for t in list(net.si.nodinfo.values()):
-            prev_age = node_bands.get(t.nod, ('', 9999))[1]
-            if prev_age > t.age:
-                node_bands[t.nod] = (t.bnd, t.age)
-    except Exception:
-        pass
-    # Local node always has current band
-    node_bands[node] = (band, 0)
-
-    for node_name, op_init in operatorsonline.items():
-        # Look up full name from participants
-        pinfo = participants.get(op_init, '')
-        if pinfo:
-            parts = pinfo.split(', ')
-            # Format: "INI, Name, Call, Age, Vist"
-            name_str = parts[1] if len(parts) > 1 else op_init
-        else:
-            name_str = op_init
-        # Get band for this node
-        node_band = node_bands.get(node_name, ('', 9999))[0]
-        band_str = f" on {node_band}" if node_band and node_band != 'off' else ""
-        txtbillb.insert(END, "\n")
-        txtbillb.insert(END, f"{node_name}: {op_init}, {name_str}{band_str}\n")
-    topper()
-
-
 def mhelp():
     """ added this to take out key help from the code - Scott Hibbs"""
     viewtextf('Keyhelp.txt')
@@ -5431,22 +5857,26 @@ def readsections():
 def proc_key(ch):
     """process keystroke"""
     #  Changes need to be made in proc_key(ch) and pasteinterpreter()
-    global stat, kbuf, power, operator, logger, debug, band, node, suffix, tdwin, goBack, kick
+    global stat, kbuf, power, operator, logger, debug, band, node, suffix, tdwin, goBack, kick, alias
+    global lastKeyTime
+    lastKeyTime = time.time()  # operator present - feeds the band idle timeout
     testq = 0
-    if ch == '?' and (kbuf == "" or kbuf[0] != '#'):  # ? for help
+    if ch == '?' and (kbuf == "" or kbuf[0] not in '#*'):  # ? for help
         mhelp()
         return
     # Adding a statement to check for uppercase. Previously unresponsive while capped locked. - Scott Hibbs Jul/01/2016
     # Thanks to WW9A Brian Smith for pointing out that the program isn't randomly frozen and not requiring a restart.
     if ch.isupper():
         # Allowing uppercase for QST messages. - Scott Hibbs KD4SIR 05Aug2022
-        if kbuf[0] != '#':
+        # kbuf[:1] not kbuf[0]: an uppercase FIRST keystroke hits an empty
+        # buffer - kbuf[0] raised IndexError in the key handler
+        if kbuf[:1] not in ('#', '*'):  # tuple, not string: '' is "in" any string
             txtbillb.insert(END, " LOWERCAPS PLEASE \n")
             kbuf = ""
             topper()
             return
     if ch == '\r':  # return, may be cmd or log entry
-        if kbuf[:1] == '#':  # QST Message
+        if kbuf[:1] in ('#', '*'):  # QST Message
             qdb.qst(kbuf[1:])
             kbuf = ""
             topper()
@@ -5458,7 +5888,8 @@ def proc_key(ch):
                 .off               change band to off
                 .pow <dddn>        power level in integer watts (suffix n for natural)
                 .node <call-n>     set id of this log node
-                .kick <n>          minutes to kick inactivity
+                .alias <text>      station alias for the info display (off to clear)
+                .set idletm <n>    band idle timeout minutes (admin PIN, 0=off)
                 .testq <n>         generate n test qsos (only in test mode)
                 .tdwin <sec>       display node bcasts exceeding this time skew
                 .st                this station status
@@ -5501,7 +5932,7 @@ def proc_key(ch):
             _adminpin_dlg.title('Set Admin PIN')
             _adminpin_dlg.grab_set()
             _ap_row = 0
-            _existing_hash = globDb.get('adminpin', '')
+            _existing_hash = get_adminpin_hash()  # network-synced 04Jul2026
             if _existing_hash:
                 Label(_adminpin_dlg, text='Current PIN:', font=fdfont).grid(row=_ap_row, column=0, padx=5, pady=2)
                 _old_pin_e = Entry(_adminpin_dlg, width=6, font=fdfont, show='*')
@@ -5551,9 +5982,16 @@ def proc_key(ch):
         m12 = re.match(r"[.]set ([a-z\d]{3,6}) (.*)$", kbuf)
         if m12:
             name12, val = m12.group(1, 2)  # command and number
-            # Added time out for inactivity - Scott Hibbs KD4SIR 10Aug2022
+            # Band idle timeout - admin PIN required, applies to every node
+            if name12 == "idletm":
+                set_idletm_admin(val)
+                kbuf = ""
+                topper()
+                return
+            # .set kick retired 03Jul2026 - superseded by idletm above
             if name12 == "kick":
-                autoksetter(val)
+                txtbillb.insert(END, "\n .set kick is retired - use '.set idletm"
+                                     " <minutes>' (admin PIN, 0 = off)\n")
                 kbuf = ""
                 topper()
                 return
@@ -5614,6 +6052,28 @@ def proc_key(ch):
             #  qdb.qdelete(nod,seq,reason)
             kbuf = ""
             txtbillb.insert(END, "To edit: click on the log entry\n")
+            return
+        if re.match(r'[.]alias', kbuf):  # station alias for the info display
+            if node in ('gotanode', 'infotable'):
+                txtbillb.insert(END, "\nThis node always displays as '%s'\n"
+                                % ('gota' if node == 'gotanode' else 'info'))
+            else:
+                m13 = re.match(r'[.]alias +(.+)$', kbuf)
+                if m13:
+                    newal = clean_alias(m13.group(1))
+                    if newal == 'off' or not newal:
+                        alias = ''
+                        txtbillb.insert(END, "\nStation alias cleared\n")
+                    else:
+                        alias = newal
+                        txtbillb.insert(END, "\nStation alias set to '%s'\n" % alias)
+                    saveglob()
+                else:
+                    txtbillb.insert(END, "\nStation alias: '%s'\n"
+                                         "(.alias <text> to set, .alias off to clear)\n"
+                                    % (alias or '---'))
+            kbuf = ""
+            topper()
             return
         # Found that .node needed fixing. Reworked - Scott Hibbs Mar/28/2017
         if re.match(r'[.]node', kbuf):
@@ -6031,13 +6491,17 @@ def proc_key(ch):
                         kbuf += exch
             return
     buf = kbuf + ch  # echo & add legal char to kbd buf
+    if buf[0] in '#*':  # QST Message ('#' or '*' prefix) - up to 80 chars (sent
+        # as two log entries past 40), expanded character set incl.
+        # quotes/brackets, from Alan's FDLog. '|' stays excluded - it
+        # delimits fields in network packets.
+        if re.match(r"[#*][ ^*_a-zA-Z\d.,?/!@#$;:+=%&()\[\]{}<>'\"-]{0,80}$", buf):
+            kbuf = buf
+            txtbillb.insert(END, ch)
+        return
     if len(buf) < 50:
         if buf[0] == '.':  # dot command
             if re.match(r'[ a-zA-Z\d.,/@-]{0,45}$', ch):
-                kbuf = buf
-                txtbillb.insert(END, ch)
-        elif buf[0] == '#':  # QST Message
-            if re.match(r'#[ a-zA-Z\d.,?/!@$;:+=%&()-]{0,40}$', buf):
                 kbuf = buf
                 txtbillb.insert(END, ch)
         else:
@@ -6221,6 +6685,8 @@ def pasteinterpreter():
     #  The program needs to interpret the paste event. Added by KD4SIR Scott Hibbs 08Jul2022
     #  Changes need to be made in proc_key(ch) and pasteinterpreter()
     global stat, kbuf, power, operator, logger, debug, band, node, suffix, tdwin, goBack, selected
+    global lastKeyTime
+    lastKeyTime = time.time()  # operator present - feeds the band idle timeout
     txtbillb.insert(END, selected)
     for pastebuf in selected:
         if pastebuf.isupper():
@@ -6698,47 +7164,95 @@ def deledialog(cxll2, seq, stn):
 
 
 class USAStateMap:
-    """This class displays a map of the USA with colored states based on a DataFrame"""
+    """This class displays a tile-grid map of the USA with worked states colored"""
     # Added with the help of ChatGPT 3.5 - Scott Hibbs 01Mar2024
+    # Rewritten in pure Tkinter (was pandas/plotly) so FDLog runs on any
+    # CPU and OS - plotly's numpy dependency refuses to start on pre-2009
+    # processors (x86-64-v2 baseline). - Scott Hibbs KD4SIR 03Jul2026
+
+    # (row, column) tile for each state, arranged roughly geographically
+    STATE_GRID = {
+        'AK': (0, 0), 'ME': (0, 10),
+        'WI': (1, 5), 'VT': (1, 8), 'NH': (1, 9),
+        'WA': (2, 0), 'ID': (2, 1), 'MT': (2, 2), 'ND': (2, 3), 'MN': (2, 4),
+        'IL': (2, 5), 'MI': (2, 6), 'NY': (2, 8), 'MA': (2, 9), 'RI': (2, 10),
+        'OR': (3, 0), 'NV': (3, 1), 'WY': (3, 2), 'SD': (3, 3), 'IA': (3, 4),
+        'IN': (3, 5), 'OH': (3, 6), 'PA': (3, 7), 'NJ': (3, 8), 'CT': (3, 9),
+        'CA': (4, 0), 'UT': (4, 1), 'CO': (4, 2), 'NE': (4, 3), 'MO': (4, 4),
+        'KY': (4, 5), 'WV': (4, 6), 'VA': (4, 7), 'MD': (4, 8), 'DE': (4, 9),
+        'AZ': (5, 1), 'NM': (5, 2), 'KS': (5, 3), 'AR': (5, 4), 'TN': (5, 5),
+        'NC': (5, 6), 'SC': (5, 7),
+        'OK': (6, 2), 'LA': (6, 3), 'MS': (6, 4), 'AL': (6, 5), 'GA': (6, 6),
+        'HI': (7, 0), 'TX': (7, 2), 'FL': (7, 6),
+    }
 
     def __init__(self, states_to_color):
         """ Initialize the USAStateMap object. """
-        self.states_to_color = states_to_color
+        self.states_to_color = [str(s).upper() for s in states_to_color]
 
-    def color_states(self):
-        """ Color states based on the list of state initials."""
-        # Define data for both Canada and the USA
-        combined_data = {'state': ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-                                   'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-                                   'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-                                   'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-                                   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'],
-                         'value': list(range(1, 51))}
-        # Create DataFrame
-        df = pd.DataFrame(combined_data)
-        # Initialize a new column for colors
-        df['color'] = 'white'
-        # Change the color of the specified states to dark blue
-        for state_initial in self.states_to_color:
-            # Ensure state_initial is a string and convert to uppercase
-            state_initial_str = str(state_initial).upper()
-            state_index = df.index[df['state'] == state_initial_str].tolist()
-            if state_index:
-                df.at[state_index[0], 'color'] = 'darkblue'
+    def show_map(self):
+        """Display the states map in a new window."""
+        map_window = Toplevel()
+        map_window.title("Worked All States Map")
+        map_window.configure(background='white')
+
+        worked = []
+        for state in self.states_to_color:
+            if state in self.STATE_GRID:
+                worked.append(state)
             else:
-                print(f"State '{state_initial_str}' not found in the DataFrame.")
-        # Create a choropleth map with the updated colors
-        fig = px.choropleth(df,
-                            locations='state',
-                            locationmode="USA-states",
-                            projection='albers usa',
-                            scope="north america",
-                            color='color',  # Use the 'color' column for color
-                            title='Map',
-                            color_discrete_map={'white': 'white', 'darkblue': 'darkblue'},
-                            category_orders={'color': ['white', 'darkblue']}
-                            )
-        fig.show()
+                print(f"State '{state}' not found in the state map.")
+
+        # Title label
+        title_label = Label(map_window,
+                            text=f"Worked All States: {len(worked)}/{len(self.STATE_GRID)}",
+                            font=('Courier', 14, 'bold'), background='white',
+                            foreground='darkblue')
+        title_label.grid(row=0, column=0, pady=10, sticky='ew')
+
+        # State tiles
+        grid_frame = Frame(map_window, background='white')
+        grid_frame.grid(row=1, column=0, padx=10)
+
+        for state, (grow, gcol) in self.STATE_GRID.items():
+            is_worked = state in worked
+            bg_color = 'darkblue' if is_worked else 'white'
+            fg_color = 'white' if is_worked else 'black'
+
+            # Create a frame for border effect
+            frame = Frame(grid_frame, background='darkblue', padx=1, pady=1)
+            frame.grid(row=grow, column=gcol, padx=2, pady=2)
+
+            Label(frame, text=state, font=('Courier', 10),
+                  background=bg_color, foreground=fg_color,
+                  width=4, relief='flat').pack()
+
+        # Legend
+        legend_frame = Frame(map_window, background='white')
+        legend_frame.grid(row=2, column=0, pady=10)
+
+        Label(legend_frame, text="Legend: ", font=('Courier', 10, 'bold'),
+              background='white').pack(side='left', padx=5)
+
+        worked_box = Frame(legend_frame, background='darkblue', padx=1, pady=1)
+        worked_box.pack(side='left', padx=2)
+        Label(worked_box, text="    ", background='darkblue').pack()
+        Label(legend_frame, text="= Worked", font=('Courier', 10),
+              background='white').pack(side='left', padx=(0, 15))
+
+        needed_box = Frame(legend_frame, background='darkblue', padx=1, pady=1)
+        needed_box.pack(side='left', padx=2)
+        Label(needed_box, text="    ", background='white').pack()
+        Label(legend_frame, text="= Needed", font=('Courier', 10),
+              background='white').pack(side='left')
+
+        # Center the window
+        map_window.update_idletasks()
+        width = map_window.winfo_width()
+        height = map_window.winfo_height()
+        x_pos = (map_window.winfo_screenwidth() // 2) - (width // 2)
+        y_pos = (map_window.winfo_screenheight() // 2) - (height // 2)
+        map_window.geometry(f'+{x_pos}+{y_pos}')
 
 
 def generate_map():
@@ -6747,7 +7261,7 @@ def generate_map():
     if not have_states:
         have_states = []  # Show blank map if no states worked
     state_map = USAStateMap(have_states)
-    state_map.color_states()
+    state_map.show_map()
 
 
 class SectionMap:
@@ -6875,6 +7389,7 @@ class InfoTableWindow:
         self.mode_label = None
         self.contestant_labels = []
         self.logger_labels = []
+        self.overall_label = None
         self.was_label = None
         self.sections_label = None
         self.active_bands_frame = None
@@ -6898,6 +7413,35 @@ class InfoTableWindow:
         self._cf_status_label = None
         self._cf_enabled = False
         self.attendees_label = None
+        self._gota_by_mode = (0, 0, 0)  # per-mode GOTA counts (cw, dig, phone)
+
+        # Scale-to-fit font system — content shrinks so nothing needs to
+        # scroll on typical windows/screens; roles map to Font objects whose
+        # size is adjusted together by _apply_font_scale(). Bases match the
+        # literal sizes the create_* methods used before this was added.
+        import tkinter.font as tkFont
+        self._font_bases = {
+            'hero': 24,       # header/score/progress/time + section titles
+            'row_bold': 18,   # active-station band/QSO-count (Courier bold)
+            'row': 18,        # active-station op/log text (Courier)
+            'leader': 14,     # leaderboard entries (Courier)
+            'button': 18,     # sign-in button
+            'attendees': 16,  # attendee count
+        }
+        self._fonts = {
+            'hero': tkFont.Font(family='Helvetica', size=24, weight='bold'),
+            'row_bold': tkFont.Font(family='Courier', size=18, weight='bold'),
+            'row': tkFont.Font(family='Courier', size=18, weight='normal'),
+            'leader': tkFont.Font(family='Courier', size=14, weight='normal'),
+            'button': tkFont.Font(family='Helvetica', size=18, weight='bold'),
+            'attendees': tkFont.Font(family='Helvetica', size=16, weight='bold'),
+        }
+        self._font_scale = 1.0
+        self._padded_frames = []  # (frame, base_padx, base_pady, base_pack_pady)
+        self._resize_after_id = None
+        self.canvas = None
+        self.main_frame = None
+
         self.setup_ui()
         self.update_display()
 
@@ -6940,6 +7484,9 @@ class InfoTableWindow:
 
         main_frame = Frame(canvas, background='#1a1a2e', padx=20, pady=10)
         canvas_window = canvas.create_window((0, 0), window=main_frame, anchor='nw')
+        self.canvas = canvas
+        self.main_frame = main_frame
+        self._register_padded(main_frame, padx=20, pady=10)
 
         def _on_frame_configure(_event):
             canvas.configure(scrollregion=canvas.bbox('all'))
@@ -6947,6 +7494,11 @@ class InfoTableWindow:
 
         def _on_canvas_configure(event):
             canvas.itemconfig(canvas_window, width=event.width)
+            # Debounce: window drags fire many Configure events; only refit once
+            # things settle, and only after the initial scale-to-fit has run.
+            if self._resize_after_id:
+                self.root.after_cancel(self._resize_after_id)
+            self._resize_after_id = self.root.after(150, self._compute_and_apply_scale)
         canvas.bind('<Configure>', _on_canvas_configure)
 
         # Mouse-wheel scrolling — only bound while the cursor is over this canvas,
@@ -6967,11 +7519,12 @@ class InfoTableWindow:
         if not self.popup:
             self.create_operator_panel_toggle(main_frame)
 
-        # Register button at TOP so it's always visible
-        self.create_register_button(main_frame)
-
-        # Header section
+        # Header section (club name / FD call / GOTA call) above the
+        # date-time line per Scott 04Jul2026
         self.create_header(main_frame)
+
+        # Register button (with date/time line) below the header
+        self.create_register_button(main_frame)
 
         # Score panel
         self.create_score_panel(main_frame)
@@ -6982,11 +7535,16 @@ class InfoTableWindow:
         # Leaderboards frame (side by side)
         leaderboards_frame = Frame(main_frame, background='#1a1a2e')
         leaderboards_frame.pack(fill='x', pady=5)
+        self._register_padded(leaderboards_frame, pack_pady=5)
         leaderboards_frame.columnconfigure(0, weight=1)
-        leaderboards_frame.columnconfigure(1, weight=1)
+        leaderboards_frame.columnconfigure(1, weight=0)  # Overall (natural width)
+        leaderboards_frame.columnconfigure(2, weight=1)
 
         # Top Contestants panel
         self.create_contestants_panel(leaderboards_frame)
+
+        # Overall leader panel (between the two Top 5 lists)
+        self.create_overall_panel(leaderboards_frame)
 
         # Top Loggers panel
         self.create_loggers_panel(leaderboards_frame)
@@ -6994,10 +7552,98 @@ class InfoTableWindow:
         # Progress section (WAS and Sections)
         self.create_progress_panel(main_frame)
 
+        # Initial scale-to-fit pass — deferred so the window (especially a
+        # 'zoomed' non-popup one) has actually realized its final geometry.
+        self.root.after(100, self._compute_and_apply_scale)
+
+    def _register_padded(self, frame, padx=None, pady=None, pack_pady=None):
+        """Remember a frame's original padding so _apply_font_scale() can
+        shrink it proportionally along with fonts. Only for frames created
+        once and never destroyed - rows rebuilt every refresh (active
+        stations) compute their padding inline from self._font_scale instead,
+        since registering them here would accumulate dead widget references."""
+        self._padded_frames.append((frame, padx, pady, pack_pady))
+
+    @staticmethod
+    def _scale_pad(value, scale, floor=1):
+        if value is None:
+            return None
+        if isinstance(value, tuple):
+            return tuple(max(0, round(v * scale)) for v in value)
+        return max(floor, round(value * scale))
+
+    def _apply_font_scale(self, scale):
+        for role, base in self._font_bases.items():
+            self._fonts[role].configure(size=max(7, round(base * scale)))
+        for frame, padx, pady, pack_pady in self._padded_frames:
+            if not frame.winfo_exists():
+                continue
+            cfg = {}
+            spx = self._scale_pad(padx, scale)
+            spy = self._scale_pad(pady, scale)
+            if spx is not None:
+                cfg['padx'] = spx
+            if spy is not None:
+                cfg['pady'] = spy
+            if cfg:
+                frame.configure(**cfg)
+            sppy = self._scale_pad(pack_pady, scale, floor=0)
+            if sppy is not None:
+                frame.pack_configure(pady=sppy)
+
+    def _compute_and_apply_scale(self):
+        """Shrink fonts/padding until the content fits the visible canvas
+        height, so the info display never needs to scroll at typical window
+        sizes. Floors out at _MIN_FONT_SCALE - a Canvas+Scrollbar remains as
+        a fallback for pathological cases (tiny windows, huge band counts).
+
+        Starts from the current scale, NOT 1.0 - resetting to full size
+        before measuring painted one big frame on screen every 10s refresh
+        (visible flash) before shrinking back down. Fonts are already at
+        the current scale, so measuring first is free; the fonts are only
+        touched when the scale actually needs to change."""
+        self._resize_after_id = None
+        if not (self.canvas and self.main_frame):
+            return
+        try:
+            if not self.canvas.winfo_exists() or not self.main_frame.winfo_exists():
+                return
+            avail_h = self.canvas.winfo_height()
+        except Exception:
+            return
+        if avail_h <= 1:
+            return
+        _MIN_FONT_SCALE = 0.55
+        self.main_frame.update_idletasks()
+        req_h = self.main_frame.winfo_reqheight()
+        if req_h <= 0:
+            return
+        cur = self._font_scale
+        # Required height is roughly linear in scale: estimate the largest
+        # scale that would fit, capped at full size.
+        est = max(_MIN_FONT_SCALE, min(1.0, cur * (avail_h * 0.97) / req_h))
+        if req_h <= avail_h and est - cur < 0.05:
+            # Fits and can't grow meaningfully - leave the screen alone.
+            # (The 0.05 hysteresis stops oscillation between two sizes on
+            # back-to-back refresh cycles.)
+            return
+        scale = est
+        for _ in range(3):
+            self._apply_font_scale(scale)
+            self.main_frame.update_idletasks()
+            req_h = self.main_frame.winfo_reqheight()
+            if req_h <= avail_h or scale <= _MIN_FONT_SCALE:
+                break
+            # Fonts/pads have floors, so shrinking is slightly sub-linear -
+            # refine until it actually fits.
+            scale = max(_MIN_FONT_SCALE, scale * (avail_h * 0.97) / req_h)
+        self._font_scale = scale
+
     def create_header(self, parent):
         """Create the header section with club name, calls, and time."""
-        header_frame = Frame(parent, background='#1a1a2e', padx=15, pady=15)
-        header_frame.pack(fill='x', pady=(0, 15))
+        header_frame = Frame(parent, background='#1a1a2e', padx=15, pady=5)
+        header_frame.pack(fill='x', pady=(0, 5))
+        self._register_padded(header_frame, padx=15, pady=5, pack_pady=(0, 5))
 
         # Get data with error handling
         org_name = self.gd.getv('grpnam')
@@ -7017,44 +7663,49 @@ class InfoTableWindow:
         # Horizontal layout: Title | FD Call | GOTA Call (justified across width)
         title_text = f"{org_name} Field Day" if org_name else "Field Day"
         self.title_label = Label(header_frame, text=title_text,
-                                  font=('Helvetica', 24, 'bold'),
+                                  font=self._fonts['hero'],
                                   foreground='white', background='#1a1a2e')
         self.title_label.pack(side='left', expand=True)
 
         # FD Call
         fd_call_text = f"FD Call: {fd_call}" if fd_call else "FD Call: Not Set"
         self.call_label = Label(header_frame, text=fd_call_text,
-                                 font=('Helvetica', 24, 'bold'),
+                                 font=self._fonts['hero'],
                                  foreground='white', background='#1a1a2e')
         self.call_label.pack(side='left', expand=True)
 
         # GOTA Call
         gota_text = f"GOTA Call: {gota_call}" if gota_call else "GOTA Call: Not Set"
         self.gota_label = Label(header_frame, text=gota_text,
-                                 font=('Helvetica', 24, 'bold'),
+                                 font=self._fonts['hero'],
                                  foreground='white', background='#1a1a2e')
         self.gota_label.pack(side='left', expand=True)
 
     def create_score_panel(self, parent):
         """Create the score display panel."""
-        score_frame = Frame(parent, background='#1a1a2e', padx=15, pady=15)
-        score_frame.pack(fill='x', pady=10)
+        score_frame = Frame(parent, background='#1a1a2e', padx=15, pady=5)
+        score_frame.pack(fill='x', pady=4)
+        self._register_padded(score_frame, padx=15, pady=5, pack_pady=4)
 
-        # Horizontal layout: Score | Total QSOs | Mode breakdown (justified across width)
+        # Line 1: score. Line 2: Total QSOs + mode breakdown - one long line
+        # didn't fit the screen (Scott 04Jul2026).
         self.score_label = Label(score_frame, text="CURRENT SCORE: 0",
-                                  font=('Helvetica', 24, 'bold'),
+                                  font=self._fonts['hero'],
                                   foreground='white', background='#1a1a2e')
-        self.score_label.pack(side='left', expand=True)
+        self.score_label.pack()
+
+        qso_row = Frame(score_frame, background='#1a1a2e')
+        qso_row.pack(fill='x')
 
         # QSO counts
-        self.qso_label = Label(score_frame, text="Total QSOs: 0",
-                                font=('Helvetica', 24, 'bold'),
+        self.qso_label = Label(qso_row, text="Total QSOs: 0",
+                                font=self._fonts['hero'],
                                 foreground='white', background='#1a1a2e')
         self.qso_label.pack(side='left', expand=True)
 
         # Mode breakdown
-        self.mode_label = Label(score_frame, text="CW: 0  |  Digital: 0  |  Phone: 0",
-                                 font=('Helvetica', 24, 'bold'),
+        self.mode_label = Label(qso_row, text="CW: 0  |  Digital: 0  |  Phone: 0  |  GOTA: 0",
+                                 font=self._fonts['hero'],
                                  foreground='white', background='#1a1a2e')
         self.mode_label.pack(side='left', expand=True)
 
@@ -7496,72 +8147,148 @@ class InfoTableWindow:
                 self._cgnat_label.config(text='OK — public IP',
                                          foreground='#88ff88')
 
+    # Shown for the operator/logger seats on an idle (band 'off') station
+    _IDLE_PHRASES = ("this is you!", "empty seat", "your chance", "try radio",
+                     "get active", "don't wait", "go here", "missing fun",
+                     "Bueller? Bueller?", "Anyone? Anyone?")
+
+    @staticmethod
+    def _station_display(nod, alias_map):
+        """Display name for a node in the stations panel: gota/info are
+        fixed, everything else uses its optional alias, else the node id."""
+        if nod == 'gotanode':
+            return 'gota'
+        if nod == 'infotable':
+            return 'info'
+        return alias_map.get(nod, '') or nod
+
     def create_active_bands_panel(self, parent):
-        """Create the active stations panel (nodes not on 'off')."""
+        """Create the stations panel (active nodes first, then idle ones)."""
         outer = Frame(parent, background='#1a1a2e', padx=10)
         outer.pack(fill='x', pady=5)
-        Label(outer, text="ACTIVE STATIONS",
-              font=('Helvetica', 20, 'bold'),
-              foreground='white', background='#1a1a2e').pack(pady=(0, 5))
+        self._register_padded(outer, padx=10, pack_pady=5)
+        Label(outer, text="STATIONS",
+              font=self._fonts['hero'],
+              foreground='white', background='#1a1a2e').pack(pady=(0, 3))
         self.active_bands_frame = Frame(outer, background='#1a1a2e')
         self.active_bands_frame.pack(fill='x')
 
     def update_active_bands(self):
-        """Refresh the active stations panel."""
+        """Refresh the stations panel: active nodes first, then nodes
+        sitting on 'off' shown as invitations to grab the empty seat."""
         if self.active_bands_frame is None:
             return
         for w in self.active_bands_frame.winfo_children():
             w.destroy()
 
-        # Gather active nodes (exclude 'off' and internal '*' bands)
+        # Gather nodes: active (a real band) vs idle ('off'). Internal '*'
+        # bands and long-gone nodes (empty bnd) are excluded entirely.
         active = []
+        idle = []
         for nod, seq, bnd, msc, age in self.net.si.node_status_list():
             if bnd and bnd != 'off' and not bnd.startswith('*'):
                 active.append((nod, bnd, msc))
+            elif bnd == 'off':
+                if not self.popup and nod == node:
+                    continue  # the dedicated info node is not an empty seat
+                idle.append((nod, bnd, msc))
 
-        # Sort by band frequency
+        # Sort active by band frequency, idle by node name
         _band_order = {b: i for i, b in enumerate(
             ('160', '80', '40', '20', '15', '10', '6', '2', '220', '440', '900', '1200', 'sat'))}
         active.sort(key=lambda x: _band_order.get(x[1][:-1], 99))
+        idle.sort(key=lambda x: x[0])
 
-        if not active:
-            Label(self.active_bands_frame, text="No active stations",
-                  font=('Courier', 18), foreground='#888888',
+        if not active and not idle:
+            Label(self.active_bands_frame, text="No stations",
+                  font=self._fonts['row'], foreground='#888888',
                   background='#1a1a2e').pack()
             return
 
-        qpb = self.qdb.band_rpt()[0]
         _mode_name = {'c': 'CW', 'd': 'Digital', 'p': 'Phone'}
 
+        # Station aliases: self-reported in each node's 'b' broadcast; our
+        # own comes straight from the local global (we may not hear our own
+        # broadcast). gota/info get fixed names in _station_display().
+        alias_map = {}
+        for ni in list(self.net.si.nodes.values()):
+            if getattr(ni, 'alias', ''):
+                alias_map[ni.nod] = ni.alias
+        if alias:
+            alias_map[node] = alias
+
+        # Rows are rebuilt every refresh, so their padding is computed inline
+        # from the current font scale rather than registered for later
+        # rescaling (that would leak references to destroyed widgets).
+        s = self._font_scale
+        row_padx = max(2, round(10 * s))
+        row_pady = max(1, round(4 * s))
+        row_gap = max(1, round(2 * s))
+        col_padx = max(2, round(10 * s))
+
+        # Build all row texts first so the Op column can get one uniform
+        # width - each row is its own grid, so without a fixed width the
+        # Log column drifted left/right depending on the Op name length
+        # (Walt was out of column, Scott 04Jul2026).
+        row_texts = []
         for nod, bnd, msc in active:
             band_num = bnd[:-1]
             mode_char = bnd[-1:]
             band_text = '%sm %s' % (band_num, _mode_name.get(mode_char, mode_char.upper()))
-            qso_count = qpb.get(bnd, 0)
 
-            msc_parts = msc.split()
+            # split(' ') not split(): msc is "op lg powerW" and the op slot
+            # may legitimately be empty (GOTA: blank contestant, coach as
+            # logger) - collapsing whitespace would promote the logger
+            # initials into the Op column and the power into Log.
+            msc_parts = msc.split(' ')
             op_ini = msc_parts[0] if len(msc_parts) > 0 else ''
             lg_ini = msc_parts[1] if len(msc_parts) > 1 else ''
             op_text = 'Op: %s' % self._participant_display(op_ini) if op_ini else 'Op: ---'
             lg_text = 'Log: %s' % self._participant_display(lg_ini) if lg_ini else 'Log: ---'
+            st_text = 'Station: %s' % self._station_display(nod, alias_map)
+            row_texts.append((band_text, op_text, lg_text, st_text,
+                              '#00ff88', 'white', 'white'))
 
-            row = Frame(self.active_bands_frame, background='#16213e', padx=10, pady=4)
-            row.pack(fill='x', pady=2)
-            row.columnconfigure(1, weight=1)
-            row.columnconfigure(2, weight=1)
+        for nod, bnd, msc in idle:
+            # A contestant may still be signed in at an idle node - show them.
+            # The logger seat always gets an invitation phrase. split(' ')
+            # (not split()) so an empty op slot in "op lg powerW" keeps its
+            # position instead of promoting the logger initials into it.
+            msc_parts = msc.split(' ')
+            op_ini = msc_parts[0] if len(msc_parts) > 0 else ''
+            if op_ini:
+                op_text = 'Op: %s' % self._participant_display(op_ini)
+                lg_phrase = random.choice(self._IDLE_PHRASES)
+                op_fg = 'white'
+            else:
+                op_phrase, lg_phrase = random.sample(self._IDLE_PHRASES, 2)
+                op_text = 'Op: %s' % op_phrase
+                op_fg = '#ffb84d'
+            row_texts.append(('(off)', op_text, 'Log: %s' % lg_phrase,
+                              'Station: %s' % self._station_display(nod, alias_map),
+                              '#888888', op_fg, '#ffb84d'))
 
-            Label(row, text=band_text, font=('Courier', 18, 'bold'),
-                  foreground='#00ff88', background='#16213e',
-                  width=14, anchor='w').grid(row=0, column=0, sticky='w')
-            Label(row, text=op_text, font=('Courier', 18),
+        st_width = max(len(r[3]) for r in row_texts) + 2
+        op_width = max(len(r[1]) for r in row_texts) + 2
+
+        # Column order: Station | Band | Op | Log (Log expands)
+        for band_text, op_text, lg_text, st_text, band_fg, op_fg, lg_fg in row_texts:
+            row = Frame(self.active_bands_frame, background='#16213e', padx=row_padx, pady=row_pady)
+            row.pack(fill='x', pady=row_gap)
+            row.columnconfigure(3, weight=1)
+
+            Label(row, text=st_text, font=self._fonts['row_bold'],
                   foreground='white', background='#16213e',
-                  anchor='w').grid(row=0, column=1, sticky='ew', padx=10)
-            Label(row, text=lg_text, font=('Courier', 18),
-                  foreground='white', background='#16213e',
-                  anchor='w').grid(row=0, column=2, sticky='ew', padx=10)
-            Label(row, text='%d QSOs' % qso_count, font=('Courier', 18, 'bold'),
-                  foreground='#ffdd00', background='#16213e',
-                  anchor='e').grid(row=0, column=3, sticky='e', padx=(10, 0))
+                  width=st_width, anchor='w').grid(row=0, column=0, sticky='w')
+            Label(row, text=band_text, font=self._fonts['row_bold'],
+                  foreground=band_fg, background='#16213e',
+                  width=14, anchor='w').grid(row=0, column=1, sticky='w', padx=col_padx)
+            Label(row, text=op_text, font=self._fonts['row'],
+                  foreground=op_fg, background='#16213e',
+                  width=op_width, anchor='w').grid(row=0, column=2, sticky='w', padx=col_padx)
+            Label(row, text=lg_text, font=self._fonts['row'],
+                  foreground=lg_fg, background='#16213e',
+                  anchor='w').grid(row=0, column=3, sticky='ew', padx=col_padx)
 
     def create_contestants_panel(self, parent):
         """Create the top Contestants leaderboard."""
@@ -7570,88 +8297,130 @@ class InfoTableWindow:
 
         # Title
         Label(contestants_frame, text="TOP 5 CONTESTANTS",
-              font=('Helvetica', 24, 'bold'),
-              foreground='white', background='#1a1a2e').pack(pady=(0, 10))
+              font=self._fonts['hero'],
+              foreground='white', background='#1a1a2e').pack(pady=(0, 4))
 
         # Leaderboard entries
         self.contestant_labels = []
         for idx in range(5):
             entry_frame = Frame(contestants_frame, background='#16213e', padx=10, pady=5)
             entry_frame.pack(fill='x', pady=2)
+            self._register_padded(entry_frame, padx=10, pady=5, pack_pady=2)
             lbl = Label(entry_frame, text=f"{idx+1}. ---",
-                        font=('Courier', 14),
+                        font=self._fonts['leader'],
                         foreground='white', background='#16213e', anchor='w')
             lbl.pack(fill='x')
             self.contestant_labels.append(lbl)
 
+    def create_overall_panel(self, parent):
+        """Create the Overall leader panel (most QSOs + logs combined),
+        vertically centered between the two Top 5 leaderboards."""
+        overall_frame = Frame(parent, background='#1a1a2e', padx=10)
+        overall_frame.grid(row=0, column=1, sticky='nsew')
+        inner = Frame(overall_frame, background='#1a1a2e')
+        inner.pack(expand=True)  # centers content vertically in the column
+
+        Label(inner, text="OVERALL", font=self._fonts['hero'],
+              foreground='white', background='#1a1a2e').pack(pady=(0, 4))
+
+        box = Frame(inner, background='#16213e', padx=10, pady=5)
+        box.pack()
+        self._register_padded(box, padx=10, pady=5)
+        self.overall_label = Label(box, text="---",
+                                   font=self._fonts['leader'],
+                                   foreground='#00ff88', background='#16213e',
+                                   justify='center')
+        self.overall_label.pack()
+
     def create_loggers_panel(self, parent):
         """Create the top Loggers leaderboard."""
         loggers_frame = Frame(parent, background='#1a1a2e', padx=10)
-        loggers_frame.grid(row=0, column=1, sticky='nsew', padx=(5, 0))
+        loggers_frame.grid(row=0, column=2, sticky='nsew', padx=(5, 0))
 
         # Title
         Label(loggers_frame, text="TOP 5 LOGGERS",
-              font=('Helvetica', 24, 'bold'),
-              foreground='white', background='#1a1a2e').pack(pady=(0, 10))
+              font=self._fonts['hero'],
+              foreground='white', background='#1a1a2e').pack(pady=(0, 4))
 
         # Leaderboard entries
         self.logger_labels = []
         for idx in range(5):
             entry_frame = Frame(loggers_frame, background='#16213e', padx=10, pady=5)
             entry_frame.pack(fill='x', pady=2)
+            self._register_padded(entry_frame, padx=10, pady=5, pack_pady=2)
             lbl = Label(entry_frame, text=f"{idx+1}. ---",
-                        font=('Courier', 14),
+                        font=self._fonts['leader'],
                         foreground='white', background='#16213e', anchor='w')
             lbl.pack(fill='x')
             self.logger_labels.append(lbl)
 
     def create_progress_panel(self, parent):
         """Create the WAS and Sections progress panel."""
-        progress_frame = Frame(parent, background='#1a1a2e', padx=15, pady=15)
-        progress_frame.pack(fill='x', pady=10)
+        progress_frame = Frame(parent, background='#1a1a2e', padx=15, pady=5)
+        progress_frame.pack(fill='x', pady=4)
+        self._register_padded(progress_frame, padx=15, pady=5, pack_pady=4)
 
-        # WAS progress (justified across width)
+        # WAS progress (justified across width) - click opens the WAS map
         self.was_label = Label(progress_frame, text="WORKED ALL STATES: 0/50",
-                                font=('Helvetica', 24, 'bold'),
-                                foreground='white', background='#1a1a2e')
+                                font=self._fonts['hero'],
+                                foreground='white', background='#1a1a2e',
+                                cursor='hand2')
         self.was_label.pack(side='left', expand=True)
+        self.was_label.bind('<Button-1>', lambda e: generate_map())
 
-        # Sections progress
+        # Sections progress - click opens the section map
         self.sections_label = Label(progress_frame, text="SECTIONS: 0/84",
-                                     font=('Helvetica', 24, 'bold'),
-                                     foreground='white', background='#1a1a2e')
+                                     font=self._fonts['hero'],
+                                     foreground='white', background='#1a1a2e',
+                                     cursor='hand2')
         self.sections_label.pack(side='left', expand=True)
+        self.sections_label.bind('<Button-1>', lambda e: generate_section_map())
 
     def create_register_button(self, parent):
         """Create the visitor registration button with date/time above it."""
-        button_frame = Frame(parent, background='#1a1a2e', pady=20)
+        button_frame = Frame(parent, background='#1a1a2e', pady=8)
         button_frame.pack(fill='x')
+        self._register_padded(button_frame, pady=8)
 
         # Date and time display above the button
         self.time_label = Label(button_frame, text="",
-                                 font=('Helvetica', 24, 'bold'),
+                                 font=self._fonts['hero'],
                                  foreground='white', background='#1a1a2e')
-        self.time_label.pack(pady=(0, 10))
+        self.time_label.pack(pady=(0, 4))
 
         # Row holding the sign-in button and the attendee count side by side
         row = Frame(button_frame, background='#1a1a2e')
-        row.pack(pady=10)
+        row.pack(pady=4)
+        self._register_padded(row, pack_pady=4)
 
         # Use a more visible style for Windows compatibility
         register_btn = Button(row, text=">>> Sign In Here Please <<<",
-                               font=('Helvetica', 18, 'bold'),
+                               font=self._fonts['button'],
                                foreground='black', background='#00ff00',
                                activeforeground='white', activebackground='#00aa00',
                                relief='raised', borderwidth=4,
-                               padx=40, pady=20,
+                               padx=40, pady=12,
                                cursor='hand2',
                                command=self.register_visitor)
         register_btn.pack(side='left')
+        self._register_padded(register_btn, padx=40, pady=12)
 
         self.attendees_label = Label(row, text="Attendees: 0",
-                                      font=('Helvetica', 16, 'bold'),
+                                      font=self._fonts['attendees'],
                                       foreground='#00ff88', background='#1a1a2e')
         self.attendees_label.pack(side='left', padx=(20, 0))
+
+        # Attendance log viewer - same blue as the display panels, white text
+        attendance_btn = Button(row, text="See Attendance Log",
+                                 font=self._fonts['attendees'],
+                                 foreground='white', background='#16213e',
+                                 activeforeground='white', activebackground='#2a3a6e',
+                                 relief='raised', borderwidth=2,
+                                 padx=12, pady=6,
+                                 cursor='hand2',
+                                 command=self.show_attendance_log)
+        attendance_btn.pack(side='left', padx=(20, 0))
+        self._register_padded(attendance_btn, padx=12, pady=6)
 
     def _on_popup_close(self):
         """Cancel the update loop and destroy the popup window."""
@@ -7671,6 +8440,10 @@ class InfoTableWindow:
         self.update_operator_panel()
         self.update_attendees()
 
+        # Active-station row count can change (bands come/go), which changes
+        # how tall the content is - refit after rebuilding it.
+        self._compute_and_apply_scale()
+
         # Keep the network alive — only in standalone mode; popup relies on main GUI
         if not self.popup:
             self.net.bcast_now()
@@ -7684,6 +8457,54 @@ class InfoTableWindow:
         any node, not just walk-ins entered at this info table."""
         if self.attendees_label:
             self.attendees_label.config(text="Attendees: %d" % len(participants))
+
+    def show_attendance_log(self):
+        """Pop up a window listing every attendee in aligned columns.
+        participants values are 'ini, name, call, age, visitor' strings synced
+        network-wide, so this shows sign-ins from every node. Added 04Jul2026."""
+        win = Toplevel(self.root)
+        win.title('Attendance Log')
+        win.configure(background='#1a1a2e')
+        win.transient(self.root)
+
+        # Build (name, call) rows, sorted by name for easy scanning
+        rows = []
+        for entry in list(participants.values()):
+            parts = entry.split(', ')
+            name = parts[1].strip() if len(parts) > 1 else ''
+            call = parts[2].strip().upper() if len(parts) > 2 else ''
+            rows.append((name or '---', call or '  -  '))  # no callsign 05Jul2026
+        rows.sort(key=lambda r: r[0].lower())
+
+        Label(win, text="ATTENDANCE LOG  -  %d Attendees" % len(rows),
+              font=('Helvetica', 18, 'bold'),
+              foreground='white', background='#1a1a2e').pack(pady=(12, 8))
+
+        body = Frame(win, background='#1a1a2e', padx=20, pady=5)
+        body.pack(fill='both', expand=True)
+
+        if not rows:
+            Label(body, text="No attendees signed in yet.",
+                  font=('Courier', 14), foreground='#888888',
+                  background='#1a1a2e').pack(pady=20)
+        else:
+            # Fixed-width columns so every entry lines up regardless of name
+            # length; wrap into side-by-side columns of 20 so a big crowd
+            # still fits on screen.
+            per_col = 20
+            for start in range(0, len(rows), per_col):
+                chunk = rows[start:start + per_col]
+                text = "\n".join("%-22s %-10s" % (nm[:22], cl) for nm, cl in chunk)
+                Label(body, text=text, font=('Courier', 14),
+                      foreground='#00ff88', background='#16213e',
+                      justify='left', anchor='nw', padx=10, pady=8
+                      ).pack(side='left', anchor='n', padx=6)
+
+        Button(win, text="Close", font=('Helvetica', 12, 'bold'),
+               foreground='white', background='#16213e',
+               activeforeground='white', activebackground='#2a3a6e',
+               relief='raised', cursor='hand2', padx=20, pady=4,
+               command=win.destroy).pack(pady=(4, 12))
 
     def update_header(self):
         """Update header fields from synced global data."""
@@ -7720,13 +8541,18 @@ class InfoTableWindow:
     def update_score(self):
         """Update the score display."""
         score_data = self.get_score_data()
-        total_score, cwq, digq, fonq, total_qsos, qso_score, bonus_pts = score_data
+        total_score, cwq, digq, fonq, total_qsos, qso_score, bonus_pts, gotaq = score_data
 
         self.score_label.config(
             text=f"CURRENT SCORE: {total_score:,}  "
                  f"({qso_score:,} QSO + {bonus_pts:,} bonus)")
         self.qso_label.config(text=f"Total QSOs: {total_qsos}")
-        self.mode_label.config(text=f"CW: {cwq}  |  Digital: {digq}  |  Phone: {fonq}")
+        # CW/Digital/Phone show the primary station only; GOTA gets its own
+        # count (still full QSO credit in the score per rule 4.1.1.5). 04Jul2026
+        gc, gdq, gp = getattr(self, '_gota_by_mode', (0, 0, 0))
+        self.mode_label.config(
+            text=f"CW: {cwq - gc}  |  Digital: {digq - gdq}  |  "
+                 f"Phone: {fonq - gp}  |  GOTA: {gotaq}")
 
     def _participant_display(self, ini):
         """Get display name for a participant from initials.
@@ -7768,6 +8594,16 @@ class InfoTableWindow:
             else:
                 lbl.config(text=f"{idx+1}. ---")
 
+        # Update overall leader (most QSOs + logged contacts combined)
+        if self.overall_label is not None:
+            leader = self.get_overall_leader()
+            if leader:
+                ini, count = leader
+                self.overall_label.config(
+                    text=f"{self._participant_display(ini)}\n{count} combined")
+            else:
+                self.overall_label.config(text="---")
+
     def update_progress(self):
         """Update the WAS and sections progress."""
         have_states = self.qdb.get_have_states()
@@ -7787,10 +8623,15 @@ class InfoTableWindow:
     def get_score_data(self):
         """Calculate and return current score data.
 
-        Returns: (total_score, cwq, digq, fonq, total_qsos, qso_score, bonus)
+        Returns: (total_score, cwq, digq, fonq, total_qsos, qso_score, bonus, gotaq)
+        cwq/digq/fonq include GOTA contacts (rule 4.1.1.5: GOTA QSOs claim
+        full QSO credit) - gotaq is returned so the display can show them
+        as their own count instead of hiding them in the mode totals.
         """
         qpb, ppb, qpop, qplg, qpst, tq, score, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
             self.qdb.band_rpt()
+        # Per-mode GOTA breakdown (band_rpt files GOTA QSOs under gotac/d/p)
+        self._gota_by_mode = (qpb.get('gotac', 0), qpb.get('gotad', 0), qpb.get('gotap', 0))
 
         # Calculate QSO points
         qsop = cwq * 2 + digq * 2 + fonq
@@ -7819,7 +8660,7 @@ class InfoTableWindow:
         total_score = qso_score + tot_bonus
         total_qsos = cwq + digq + fonq
 
-        return total_score, cwq, digq, fonq, total_qsos, qso_score, tot_bonus
+        return total_score, cwq, digq, fonq, total_qsos, qso_score, tot_bonus, gotaq
 
     def get_top_operators(self, n=5):
         """Get the top n operators by QSO count.
@@ -7845,6 +8686,22 @@ class InfoTableWindow:
         sorted_loggers = sorted(qplg.items(), key=lambda item: item[1], reverse=True)
         return sorted_loggers[:n]
 
+    def get_overall_leader(self):
+        """Get the participant with the most QSOs + logged contacts combined.
+
+        Returns: (initials, combined_count), or None if the log is empty.
+        """
+        qpb, ppb, qpop, qplg, qpst, tq, score, maxp, cwq, digq, fonq, qpgop, gotaq, nat, sat = \
+            self.qdb.band_rpt()
+
+        combined = {}
+        for ini, cnt in list(qpop.items()) + list(qplg.items()):
+            if ini:
+                combined[ini] = combined.get(ini, 0) + cnt
+        if not combined:
+            return None
+        return max(combined.items(), key=lambda kv: kv[1])
+
     @staticmethod
     def register_visitor():
         """Open the new participant dialog for visitor registration."""
@@ -7858,6 +8715,8 @@ def update():
     root.after(1000, update)  # type: ignore  # reschedule early for reliability
     sms.prout()  # 1 hz items
     updatebb()
+    refresh_status_bar()  # hide/show integration labels as they start/stop
+    SQDB.flush()  # commit any batched net-received journal inserts
     net.si.age_data()
     mclock.adjust()
     #   if mclock.level == 0:  # time master broadcasts time more frequently
@@ -7866,7 +8725,9 @@ def update():
     # if (updatect % 5) == 0:         # 5 sec
     # net.bcast_now()
     if (updatect % 10) == 0:  # 10 sec
-        autokicker()  # this kicks user off band for inactivity - Scott Hibbs KD4SIR 10Aug2022
+        # autokicker() retired 03Jul2026 - superseded by the band idle timeout
+        # in renew_title(), which also counts keystrokes (not just logged QSOs)
+        # and warns 30s before releasing. Change with '.set idletm <minutes>'.
         updateqct()  # this updates rcv packet fail
         renew_title()  # this sends status broadcast
     if (updatect % 30) == 0:  # 30 sec
@@ -7879,7 +8740,7 @@ def update():
 """ ###########################   Main Program   ########################## """
 #  Moved the main program elements here for better readability - Scott Hibbs KD4SIR 05Jul2022
 print(prog)
-version = "v2026_Beta 4.3.0"  # Changed 02Jul2026
+# version is defined at the top of the file next to the prog banner
 fontsize = 12
 # fontinterval = 2  # removed for the new font selection menu. - Scott Hibbs KD4SIR 10Aug2022
 typeface = 'Courier'
@@ -7919,9 +8780,9 @@ for name, desc, default, okre, maxlen in (
         ('fmem', '<text>         entry form email', '', r'[A-Za-z\d@.:-]{0,35}$', 35),
         ('public', '<text>         public location desc', '', r'[A-Za-z\d@.: -]{0,35}$', 35),
         ('infob', '0/1            public info booth', '0', r'[0-1]$', 1),
-        ('svego', '<name>         govt official visitor name', '', r'[A-Za-z., -]{0,35}$', 35),
-        ('svroa', '<name>         agency site visitor name', '', r'[A-Za-z., -]{0,35}$', 35),
-        ('youth', '<n>            participating youth', '0', r'\d{1,2}$', 2),
+        ('svego', '<name>         govt official visit (or sign-in box)', '', r'[A-Za-z., -]{0,35}$', 35),
+        ('svroa', '<name>         agency rep visit (or sign-in box)', '', r'[A-Za-z., -]{0,35}$', 35),
+        ('youth', '<n>            retired - auto from sign-in ages', '0', r'\d{1,2}$', 2),
         ('websub', '0/1            web submission bonus', '0', r'[0-1]$', 1),
         ('eduact', '0/1            educational activity bonus', '0', r'[0-1]$', 1),
         ('gotaco', '0/1            GOTA coach bonus', '0', r'[0-1]$', 1),
@@ -7937,7 +8798,13 @@ for name, desc, default, okre, maxlen in (
         ('tmast', '<text>         Time Master Node', '', r'[A-Za-z\d-]{0,8}$', 8),
         ('telect', '<text>        Auto-elected Time Master', '', r'[A-Za-z\d-]{0,8}$', 8),
         ('tntp', '<text>         Shared NTP Server', '', r'[A-Za-z\d.-]{0,50}$', 50),
-        ('kick', '<n>            Time to kick inactivity', '0', r'\d{1,2}$', 2)):
+        ('kick', '<n>            retired - use idletm', '0', r'\d{1,2}$', 2),
+        # idletm/adminpin were set via globalshare but never registered here,
+        # so gd.setv() rejected them - the captain's idle timeout silently
+        # never applied and the admin PIN never synced off the node where it
+        # was set (no PIN prompt anywhere else). Fixed 04Jul2026.
+        ('idletm', '<n>            band idle timeout seconds (0=off)', '', r'\d{0,4}$', 4),
+        ('adminpin', '<hash>         admin PIN (md5, use .set adminpin)', '', r'[a-f\d]{0,32}$', 32)):
     gd.new(name, desc, default, okre, maxlen)
 
 # Phonetic alphabet dictionary - Added by Scott Hibbs KD4SIR
@@ -7964,13 +8831,18 @@ def callsign_to_phonetic(callsign):
     return " ".join(phonetic_parts)
 
 
-def get_phonetic_response(callsign, mode):
+def get_phonetic_response(callsign, mode, exchange=''):
     """
     Generate the phonetic response based on mode.
     mode: 'cq' = CQ Field Day format
           'qrz' = QRZed format
+          'rr' = Roger Roger, Please Copy class/section
           'answer' = Just the phonetic callsign
     """
+    if mode == 'rr':
+        if not exchange.strip():
+            return ""
+        return f"Roger Roger, Please Copy {callsign_to_phonetic(exchange)}"
     if not callsign:
         return ""
     phonetic = callsign_to_phonetic(callsign)
@@ -7992,7 +8864,16 @@ def update_phonetic_display():
         else:
             callsign = gd.getv('fdcall')
         mode = phonetic_mode.get()
-        response = get_phonetic_response(callsign, mode)
+        exchange = ''
+        if mode == 'rr':
+            clas = gd.getv('class')
+            sect = gd.getv('sect')
+            if clas.startswith('get error'):
+                clas = ''
+            if sect.startswith('get error'):
+                sect = ''
+            exchange = f"{clas} {sect}"
+        response = get_phonetic_response(callsign, mode, exchange)
         phonetic_label.config(text=response)
     except (NameError, tkinter.TclError, AttributeError):
         pass  # Silently ignore if widgets not ready
@@ -8007,6 +8888,7 @@ def toggle_phonetic_display():
             phonetic_toggle_btn.config(text="Show Phonetic")
             phonetic_visible = False
         else:
+            update_phonetic_display()  # refresh - fdcall/class/sect may have arrived since startup
             phonetic_frame.grid(row=5, column=0, columnspan=2, sticky=NSEW)
             phonetic_toggle_btn.config(text="Hide Phonetic")
             phonetic_visible = True
@@ -8024,10 +8906,26 @@ logger = ""
 age = 0
 vist = ""
 node = ""
+alias = ""  # optional station alias, shown instead of node on the info display
 authk = ""
 port_base = 7373
 tmob = now()  # time started on band in min
 tdwin = 5  # time diff window on displaying node clock diffs
+# Band idle timeout (from Alan's FDLog): with a band selected, this many
+# seconds without operator activity (keystroke, band click, or locally
+# logged QSO - so digital auto-logging stations are never released) frees
+# the band reservation for another station. Warning beep 30 seconds before
+# release. Clamped to 5..60 minutes at startup. This is only the fallback
+# default: the log captain's event setup answer (globDb 'idletm', also
+# '.set idletm <seconds>', 0 = disabled) overrides it network-wide.
+idleTimeout = 900  # seconds; 900 = 15 minutes
+lastKeyTime = time.time()  # time of last operator activity
+try:
+    from local import *  # optional local.py overrides (Alan's FDLog convention)
+except ImportError:
+    pass  # no local.py - the normal case
+except Exception as e:
+    print("local.py found but could not be loaded (ignored): %s" % e)
 showbc = 0  # show broadcasts
 debug = 0
 logdbf = "fdlog.fdd"  # persistent file copy of log database
@@ -8118,6 +9016,14 @@ elif node == "":
             print("Thank You!!")
             node = k + random.choice('abcdefghijklmnopqrstuvwxyz')
             print()
+            # Optional alias, shown instead of the node name on the info
+            # display only (gota/info show as 'gota'/'info' automatically)
+            print("  Optional station alias for the info display")
+            print("  (e.g. tent 1, trailer, barn - up to %d characters, Enter to skip)" % ALIAS_MAX)
+            alias = clean_alias(sys.stdin.readline())
+            if alias:
+                print("Using station alias: '%s'" % alias)
+                print()
     else:
         print("Thank You for being gota!!")
         node = 'gotanode'
@@ -8172,6 +9078,9 @@ if operator != "":
     ini3 = operator.split(':', 1)[0]
     operatorsonline.update({node: ini3})
 print("Time Difference Window (tdwin):", tdwin, "seconds")
+idleTimeout = max(min(idleTimeout, 60 * 60), 5 * 60)  # keep within 5..60 minutes
+print("Band Idle Timeout default: %d seconds (%d minutes) - event setup overrides"
+      % (idleTimeout, idleTimeout // 60))
 
 # Macro variable getter - shared by CW and Voice keyers
 def get_macro_variable(name):
@@ -8252,13 +9161,14 @@ if CW_AVAILABLE:
         return macros
 
     def cw_status_update(status):
-        """Update CW status display."""
-        global cw_status_label
-        if cw_status_label:
-            hint = " [Hide]" if fkey_bar_visible else " [Show]"
-            if str(cw_status_label.cget('state')) == 'disabled':
-                hint = ""
-            cw_status_label.config(text=f"CW: {status}{hint}")
+        """Update CW status display (marshaled to the Tk main thread)."""
+        def _apply():
+            if cw_status_label:
+                hint = " [Hide]" if fkey_bar_visible else " [Show]"
+                if str(cw_status_label.cget('state')) == 'disabled':
+                    hint = ""
+                cw_status_label.config(text=f"CW: {status}{hint}")
+        _status_label_update(_apply)
 
     def cw_settings_dialog():
         """Open CW settings dialog."""
@@ -8286,10 +9196,13 @@ if CW_AVAILABLE:
         global cw_controller
         if cw_controller:
             if cw_controller.config.port:
-                if cw_controller.connect():
-                    print(f"CW: Connected to {cw_controller.config.port}")
-                else:
-                    print("CW: Failed to connect")
+                try:
+                    ok = cw_controller.connect()
+                except Exception as e:
+                    print("CW: Failed to connect - %s" % e)
+                    return
+                print("CW: Connected to %s" % cw_controller.config.port
+                      if ok else "CW: Failed to connect")
             else:
                 print("CW: No port configured - use CW > Settings to configure")
 
@@ -8297,7 +9210,7 @@ if CW_AVAILABLE:
         """Disconnect from CW keyer."""
         global cw_controller
         if cw_controller:
-            cw_controller.disconnect()
+            _safe_integration("CW", cw_controller.disconnect)
             print("CW: Disconnected")
 
     def cw_adjust_speed(delta):
@@ -8481,6 +9394,10 @@ wsjtx_status_label = None
 js8call_listener = None
 js8call_status_label = None
 
+# MSHV Integration initialization
+mshv_listener = None
+mshv_status_label = None
+
 # fldigi Integration initialization
 fldigi_poller = None
 fldigi_status_label = None
@@ -8493,6 +9410,40 @@ n3fjp_status_label = None
 # rigctld Integration initialization
 rigctld_client = None
 rigctld_status_label = None
+
+# N1MM+ Integration initialization
+n1mm_listener = None
+n1mm_status_label = None
+
+
+def _status_label_update(apply_fn):
+    """Run a status-label change on the Tk main thread. Integration status
+    callbacks arrive on listener/poller threads, and Tcl is not thread-safe
+    (Bug 9 rule: never touch widgets from a background thread) - calling
+    label.config() directly from those threads can freeze the whole GUI.
+    Silently drops updates while root doesn't exist (startup/shutdown)."""
+    try:
+        root.after(0, apply_fn)
+    except Exception:
+        pass  # no Tk yet, or already torn down - nothing to update
+
+
+def _safe_integration(name, action, status_fn=None):
+    """Run an integration connect/disconnect/start/stop action so a missing
+    or unreachable target can never freeze or crash the GUI. Any failure is
+    logged and (if a status updater is given) shown as 'Error' on that
+    integration's status label. 04Jul2026 - user asked for graceful failure
+    across all integrations after a WSJT-X connect froze the app."""
+    try:
+        action()
+    except Exception as e:
+        print("%s: action failed - %s" % (name, e))
+        if status_fn is not None:
+            try:
+                status_fn("Error")
+            except Exception:
+                pass
+
 
 if VOICE_AVAILABLE:
     print("Voice Keying support available (pyttsx3 found)")
@@ -8549,13 +9500,14 @@ if VOICE_AVAILABLE:
         return modes
 
     def voice_status_update(status):
-        """Update voice status display."""
-        global voice_status_label
-        if voice_status_label:
-            hint = " [Hide]" if fkey_bar_visible else " [Show]"
-            if str(voice_status_label.cget('state')) == 'disabled':
-                hint = ""
-            voice_status_label.config(text=f"Voice: {status}{hint}")
+        """Update voice status display (marshaled to the Tk main thread)."""
+        def _apply():
+            if voice_status_label:
+                hint = " [Hide]" if fkey_bar_visible else " [Show]"
+                if str(voice_status_label.cget('state')) == 'disabled':
+                    hint = ""
+                voice_status_label.config(text=f"Voice: {status}{hint}")
+        _status_label_update(_apply)
 
     def voice_settings_dialog():
         """Open voice settings dialog."""
@@ -8604,6 +9556,35 @@ else:
     def voice_stop():
         pass
 
+def _warn_udp_port_conflict(this_name, this_port, other_name, other_listener, modal=True):
+    """Warn if two UDP listeners (e.g. WSJT-X and MSHV) are configured to the
+    same port. Both can bind it without erroring (SO_REUSEADDR), but only one
+    will reliably receive each broadcast - QSOs can be silently missed, or
+    logged under the wrong status indicator, depending which listener the OS
+    happens to deliver the packet to.
+
+    modal=False is used at startup (config-driven auto-start, before the user
+    has taken any action) to avoid popping a blocking dialog before the main
+    window is even up - a console warning is enough there."""
+    if not (other_listener and other_listener._running):
+        return
+    if other_listener.config.udp_port != this_port:
+        return
+    print(f"WARNING: {this_name} and {other_name} are both configured for UDP port {this_port}")
+    if modal:
+        try:
+            import tkinter.messagebox
+            tkinter.messagebox.showwarning(
+                "UDP Port Conflict",
+                f"{this_name} and {other_name} are both set to listen on UDP port {this_port}.\n\n"
+                f"Only one of them will reliably receive broadcasts on that port - "
+                f"QSOs may be missed, or show up under the wrong status label.\n\n"
+                f"Change one of them to a different port in its Settings dialog "
+                f"before running both at once."
+            )
+        except Exception:
+            pass
+
 # WSJT-X Integration functions
 if WSJTX_AVAILABLE:
     print("WSJT-X Integration support available")
@@ -8627,15 +9608,16 @@ if WSJTX_AVAILABLE:
         globDb.put('wsjtx_auto_band', '1' if config.auto_band else '0')
 
     def wsjtx_status_update(status):
-        """Update WSJT-X status display."""
-        global wsjtx_status_label
-        if wsjtx_status_label:
-            if "Connected" in status and "Disconnected" not in status:
-                wsjtx_status_label.config(text=f"WSJT-X: {status}",
-                                          foreground='green')
-            else:
-                wsjtx_status_label.config(text=f"WSJT-X: {status}",
-                                          foreground='gray')
+        """Update WSJT-X status display (marshaled to the Tk main thread)."""
+        def _apply():
+            if wsjtx_status_label:
+                if "Connected" in status and "Disconnected" not in status:
+                    wsjtx_status_label.config(text=f"WSJT-X: {status}",
+                                              foreground='green')
+                else:
+                    wsjtx_status_label.config(text=f"WSJT-X: {status}",
+                                              foreground='gray')
+        _status_label_update(_apply)
 
     def wsjtx_on_qso_logged(call, band_mode, report, timestamp):
         """Called by WSJTXListener when WSJT-X logs a QSO. Runs on listener thread."""
@@ -8676,13 +9658,15 @@ if WSJTX_AVAILABLE:
         """Start WSJT-X listener."""
         global wsjtx_listener
         if wsjtx_listener and not wsjtx_listener._running:
-            wsjtx_listener.start()
+            if MSHV_AVAILABLE:
+                _warn_udp_port_conflict("WSJT-X", wsjtx_listener.config.udp_port, "MSHV", mshv_listener)
+            _safe_integration("WSJT-X", wsjtx_listener.start, wsjtx_status_update)
 
     def wsjtx_disconnect():
         """Stop WSJT-X listener."""
         global wsjtx_listener
         if wsjtx_listener and wsjtx_listener._running:
-            wsjtx_listener.stop()
+            _safe_integration("WSJT-X", wsjtx_listener.stop)
 
 else:
     print("WSJT-X Integration support NOT available")
@@ -8719,15 +9703,16 @@ if JS8CALL_AVAILABLE:
         globDb.put('js8call_auto_band', '1' if config.auto_band else '0')
 
     def js8call_status_update(status):
-        """Update JS8Call status display."""
-        global js8call_status_label
-        if js8call_status_label:
-            if "Connected" in status and "Disconnected" not in status:
-                js8call_status_label.config(text=f"JS8Call: {status}",
-                                            foreground='green')
-            else:
-                js8call_status_label.config(text=f"JS8Call: {status}",
-                                            foreground='gray')
+        """Update JS8Call status display (marshaled to the Tk main thread)."""
+        def _apply():
+            if js8call_status_label:
+                if "Connected" in status and "Disconnected" not in status:
+                    js8call_status_label.config(text=f"JS8Call: {status}",
+                                                foreground='green')
+                else:
+                    js8call_status_label.config(text=f"JS8Call: {status}",
+                                                foreground='gray')
+        _status_label_update(_apply)
 
     def js8call_on_qso_logged(call, band_mode, report, timestamp):
         """Called by JS8CallListener when JS8Call logs a QSO. Runs on listener thread."""
@@ -8768,13 +9753,13 @@ if JS8CALL_AVAILABLE:
         """Start JS8Call listener."""
         global js8call_listener
         if js8call_listener and not js8call_listener._running:
-            js8call_listener.start()
+            _safe_integration("JS8Call", js8call_listener.start, js8call_status_update)
 
     def js8call_disconnect():
         """Stop JS8Call listener."""
         global js8call_listener
         if js8call_listener and js8call_listener._running:
-            js8call_listener.stop()
+            _safe_integration("JS8Call", js8call_listener.stop)
 
 else:
     print("JS8Call Integration support NOT available")
@@ -8786,6 +9771,101 @@ else:
         pass
 
     def js8call_disconnect():
+        pass
+
+# MSHV Integration functions
+if MSHV_AVAILABLE:
+    print("MSHV Integration support available")
+
+    def mshv_load_config():
+        """Load MSHV configuration from globDb."""
+        config = MSHVConfig()
+        config.enabled = globDb.get('mshv_enabled', '0') == '1'
+        config.udp_port = int(globDb.get('mshv_udp_port', '2237'))
+        config.udp_ip = globDb.get('mshv_udp_ip', '127.0.0.1')
+        config.auto_log = globDb.get('mshv_auto_log', '1') == '1'
+        config.auto_band = globDb.get('mshv_auto_band', '1') == '1'
+        return config
+
+    def mshv_save_config(config):
+        """Save MSHV configuration to globDb."""
+        globDb.put('mshv_enabled', '1' if config.enabled else '0')
+        globDb.put('mshv_udp_port', str(config.udp_port))
+        globDb.put('mshv_udp_ip', config.udp_ip)
+        globDb.put('mshv_auto_log', '1' if config.auto_log else '0')
+        globDb.put('mshv_auto_band', '1' if config.auto_band else '0')
+
+    def mshv_status_update(status):
+        """Update MSHV status display (marshaled to the Tk main thread)."""
+        def _apply():
+            if mshv_status_label:
+                if "Connected" in status and "Disconnected" not in status:
+                    mshv_status_label.config(text=f"MSHV: {status}",
+                                             foreground='green')
+                else:
+                    mshv_status_label.config(text=f"MSHV: {status}",
+                                             foreground='gray')
+        _status_label_update(_apply)
+
+    def mshv_on_qso_logged(call, band_mode, report, timestamp):
+        """Called by MSHVListener when MSHV logs a QSO. Runs on listener thread."""
+        def _do_log():
+            global band
+            # Validate operator and logger are set
+            if not gd.getv('ession'):
+                print("MSHV: Cannot log QSO - no operator set")
+                return
+            # Dupe check
+            if qdb.dupck(call, band_mode):
+                print(f"MSHV: Dupe - {call} on {band_mode}")
+                return
+            # Auto-switch band if configured
+            if mshv_listener and mshv_listener.config.auto_band:
+                if band != band_mode:
+                    bandset(band_mode)
+            # Log the QSO
+            qdb.qsl(timestamp, call, band_mode, report)
+            print(f"MSHV: Logged {call} on {band_mode} - {report}")
+        # Marshal to UI thread
+        try:
+            root.after(0, _do_log)
+        except Exception:
+            pass
+
+    def mshv_settings_dialog():
+        """Open MSHV settings dialog."""
+        global mshv_listener
+        if mshv_listener:
+            def on_save(config):
+                mshv_save_config(config)
+                mshv_listener.config = config
+                print(f"MSHV: Settings saved - Port: {config.udp_port}, Auto-log: {config.auto_log}")
+            MSHVSettingsDialog(root, mshv_listener.config, mshv_listener, on_save)
+
+    def mshv_connect():
+        """Start MSHV listener."""
+        global mshv_listener
+        if mshv_listener and not mshv_listener._running:
+            if WSJTX_AVAILABLE:
+                _warn_udp_port_conflict("MSHV", mshv_listener.config.udp_port, "WSJT-X", wsjtx_listener)
+            _safe_integration("MSHV", mshv_listener.start, mshv_status_update)
+
+    def mshv_disconnect():
+        """Stop MSHV listener."""
+        global mshv_listener
+        if mshv_listener and mshv_listener._running:
+            _safe_integration("MSHV", mshv_listener.stop)
+
+else:
+    print("MSHV Integration support NOT available")
+
+    def mshv_settings_dialog():
+        pass
+
+    def mshv_connect():
+        pass
+
+    def mshv_disconnect():
         pass
 
 # fldigi Integration functions
@@ -8817,15 +9897,16 @@ if FLDIGI_AVAILABLE:
         globDb.put('fldigi_push_callsign', '1' if config.push_callsign else '0')
 
     def fldigi_status_update(status):
-        """Update fldigi status display."""
-        global fldigi_status_label
-        if fldigi_status_label:
-            if "Connected" in status and "Disconnected" not in status:
-                fldigi_status_label.config(text=f"fldigi: {status}",
-                                           foreground='green')
-            else:
-                fldigi_status_label.config(text=f"fldigi: {status}",
-                                           foreground='gray')
+        """Update fldigi status display (marshaled to the Tk main thread)."""
+        def _apply():
+            if fldigi_status_label:
+                if "Connected" in status and "Disconnected" not in status:
+                    fldigi_status_label.config(text=f"fldigi: {status}",
+                                               foreground='green')
+                else:
+                    fldigi_status_label.config(text=f"fldigi: {status}",
+                                               foreground='gray')
+        _status_label_update(_apply)
 
     def fldigi_on_qso_logged(call, band_mode, report, timestamp):
         """Called by FldigiPoller when fldigi logs a QSO. Runs on poller thread."""
@@ -8877,13 +9958,13 @@ if FLDIGI_AVAILABLE:
         """Start fldigi poller."""
         global fldigi_poller
         if fldigi_poller and not fldigi_poller._running:
-            fldigi_poller.start()
+            _safe_integration("fldigi", fldigi_poller.start, fldigi_status_update)
 
     def fldigi_disconnect():
         """Stop fldigi poller."""
         global fldigi_poller
         if fldigi_poller and fldigi_poller._running:
-            fldigi_poller.stop()
+            _safe_integration("fldigi", fldigi_poller.stop)
 
 else:
     print("fldigi Integration support NOT available")
@@ -8924,13 +10005,14 @@ if N3FJP_AVAILABLE:
         globDb.put('n3fjp_auto_band', '1' if config.auto_band else '0')
 
     def n3fjp_status_update(status):
-        """Update N3FJP status display."""
-        global n3fjp_status_label
-        if n3fjp_status_label:
-            if status in ("Disconnected", "Off", "Error"):
-                n3fjp_status_label.config(text=f"N3FJP: {status}", foreground='gray')
-            else:
-                n3fjp_status_label.config(text=f"N3FJP: {status}", foreground='green')
+        """Update N3FJP status display (marshaled to the Tk main thread)."""
+        def _apply():
+            if n3fjp_status_label:
+                if status in ("Disconnected", "Off", "Error"):
+                    n3fjp_status_label.config(text=f"N3FJP: {status}", foreground='gray')
+                else:
+                    n3fjp_status_label.config(text=f"N3FJP: {status}", foreground='green')
+        _status_label_update(_apply)
 
     def n3fjp_on_qso_logged(call, band_mode, report, timestamp):
         """Called when N3FJP logs a QSO. Runs on network thread."""
@@ -9021,25 +10103,25 @@ if N3FJP_AVAILABLE:
         """Start N3FJP client."""
         global n3fjp_client
         if n3fjp_client and not n3fjp_client._running:
-            n3fjp_client.start()
+            _safe_integration("N3FJP client", n3fjp_client.start, n3fjp_status_update)
 
     def n3fjp_disconnect_client():
         """Stop N3FJP client."""
         global n3fjp_client
         if n3fjp_client and n3fjp_client._running:
-            n3fjp_client.stop()
+            _safe_integration("N3FJP client", n3fjp_client.stop)
 
     def n3fjp_start_server():
         """Start N3FJP server."""
         global n3fjp_server
         if n3fjp_server and not n3fjp_server._serving:
-            n3fjp_server.start()
+            _safe_integration("N3FJP server", n3fjp_server.start, n3fjp_status_update)
 
     def n3fjp_stop_server():
         """Stop N3FJP server."""
         global n3fjp_server
         if n3fjp_server and n3fjp_server._serving:
-            n3fjp_server.stop()
+            _safe_integration("N3FJP server", n3fjp_server.stop)
 
 else:
     print("N3FJP Integration support NOT available")
@@ -9084,15 +10166,16 @@ if RIGCTLD_AVAILABLE:
         globDb.put('rigctld_push_frequency', '1' if config.push_frequency else '0')
 
     def rigctld_status_update(status):
-        """Update rigctld status display."""
-        global rigctld_status_label
-        if rigctld_status_label:
-            if "Connected" in status and "Disconnected" not in status:
-                rigctld_status_label.config(text=f"Rig: {status}",
-                                            foreground='green')
-            else:
-                rigctld_status_label.config(text=f"Rig: {status}",
-                                            foreground='gray')
+        """Update rigctld status display (marshaled to the Tk main thread)."""
+        def _apply():
+            if rigctld_status_label:
+                if "Connected" in status and "Disconnected" not in status:
+                    rigctld_status_label.config(text=f"Rig: {status}",
+                                                foreground='green')
+                else:
+                    rigctld_status_label.config(text=f"Rig: {status}",
+                                                foreground='gray')
+        _status_label_update(_apply)
 
     def rigctld_on_band_change(new_band):
         """Called by RigctldClient when rig frequency changes band."""
@@ -9119,13 +10202,13 @@ if RIGCTLD_AVAILABLE:
         """Start rigctld client."""
         global rigctld_client
         if rigctld_client and not rigctld_client._running:
-            rigctld_client.start()
+            _safe_integration("rigctld", rigctld_client.start, rigctld_status_update)
 
     def rigctld_disconnect():
         """Stop rigctld client."""
         global rigctld_client
         if rigctld_client and rigctld_client._running:
-            rigctld_client.stop()
+            _safe_integration("rigctld", rigctld_client.stop)
 
 else:
     print("rigctld Integration support NOT available")
@@ -9137,6 +10220,123 @@ else:
         pass
 
     def rigctld_disconnect():
+        pass
+
+# N1MM+ Integration functions
+if N1MM_AVAILABLE:
+    print("N1MM+ Integration support available")
+
+    def n1mm_load_config():
+        """Load N1MM+ configuration from globDb."""
+        config = N1MMConfig()
+        config.enabled = globDb.get('n1mm_enabled', '0') == '1'
+        config.udp_ip = globDb.get('n1mm_udp_ip', '0.0.0.0')
+        config.udp_port = int(globDb.get('n1mm_udp_port', '12060'))
+        config.auto_log = globDb.get('n1mm_auto_log', '1') == '1'
+        config.auto_band = globDb.get('n1mm_auto_band', '1') == '1'
+        config.only_original = globDb.get('n1mm_only_original', '1') == '1'
+        return config
+
+    def n1mm_save_config(config):
+        """Save N1MM+ configuration to globDb."""
+        globDb.put('n1mm_enabled', '1' if config.enabled else '0')
+        globDb.put('n1mm_udp_ip', config.udp_ip)
+        globDb.put('n1mm_udp_port', str(config.udp_port))
+        globDb.put('n1mm_auto_log', '1' if config.auto_log else '0')
+        globDb.put('n1mm_auto_band', '1' if config.auto_band else '0')
+        globDb.put('n1mm_only_original', '1' if config.only_original else '0')
+
+    def n1mm_status_update(status):
+        """Update N1MM+ status display (marshaled to the Tk main thread)."""
+        def _apply():
+            if n1mm_status_label:
+                if "Connected" in status and "Disconnected" not in status:
+                    n1mm_status_label.config(text=f"N1MM+: {status}", foreground='green')
+                else:
+                    n1mm_status_label.config(text=f"N1MM+: {status}", foreground='gray')
+        _status_label_update(_apply)
+
+    def n1mm_on_qso_logged(call, band_mode, report, timestamp):
+        """Called when an N1MM+ station logs a QSO. Runs on listener thread."""
+        call_lower = call.lower()
+        def _do_log():
+            global band
+            if not gd.getv('ession'):
+                print("N1MM+: Cannot log QSO - no operator set")
+                return
+            if qdb.dupck(call_lower, band_mode):
+                print(f"N1MM+: Dupe - {call_lower} on {band_mode}")
+                return
+            if n1mm_listener and n1mm_listener.config.auto_band and band != band_mode:
+                bandset(band_mode)
+            qdb.qsl(now(), call_lower, band_mode, report)
+            print(f"N1MM+: Logged {call_lower} on {band_mode} - {report}")
+        try:
+            root.after(0, _do_log)
+        except Exception:
+            pass
+
+    def n1mm_on_band_change(new_band):
+        """Called by N1MMListener when RadioInfo reports a band change."""
+        def _do_band():
+            global band
+            if band != new_band:
+                bandset(new_band)
+        try:
+            root.after(0, _do_band)
+        except Exception:
+            pass
+
+    def n1mm_on_qso_deleted(call, msg):
+        """Called when an N1MM+ station deletes a QSO. Display notification only."""
+        def _do_notify():
+            sms.prmsg(f"N1MM+: QSO deleted - {call}")
+        try:
+            root.after(0, _do_notify)
+        except Exception:
+            pass
+
+    def n1mm_on_qso_replaced(call, msg):
+        """Called when an N1MM+ station edits/replaces a QSO. Display notification only."""
+        def _do_notify():
+            sms.prmsg(f"N1MM+: QSO edited - {call}")
+        try:
+            root.after(0, _do_notify)
+        except Exception:
+            pass
+
+    def n1mm_settings_dialog():
+        """Open N1MM+ settings dialog."""
+        global n1mm_listener
+        if n1mm_listener:
+            def on_save(config):
+                n1mm_save_config(config)
+                n1mm_listener.config = config
+                print(f"N1MM+: Settings saved - Port: {config.udp_port}")
+            N1MMSettingsDialog(root, n1mm_listener.config, n1mm_listener, on_save)
+
+    def n1mm_connect():
+        """Start N1MM+ listener."""
+        global n1mm_listener
+        if n1mm_listener and not n1mm_listener._running:
+            _safe_integration("N1MM+", n1mm_listener.start, n1mm_status_update)
+
+    def n1mm_disconnect():
+        """Stop N1MM+ listener."""
+        global n1mm_listener
+        if n1mm_listener and n1mm_listener._running:
+            _safe_integration("N1MM+", n1mm_listener.stop)
+
+else:
+    print("N1MM+ Integration support NOT available")
+
+    def n1mm_settings_dialog():
+        pass
+
+    def n1mm_connect():
+        pass
+
+    def n1mm_disconnect():
         pass
 
 print("Starting GUI setup")
@@ -9209,6 +10409,20 @@ if JS8CALL_AVAILABLE:
         js8call_listener.start()
     print(f"JS8Call: Initialized - Port: {js8call_config.udp_port}, Enabled: {js8call_config.enabled}")
 
+# Initialize MSHV Integration after root is created
+if MSHV_AVAILABLE:
+    mshv_config = mshv_load_config()
+    mshv_listener = MSHVListener(mshv_config, mshv_on_qso_logged, mshv_status_update)
+    if mshv_config.enabled:
+        mshv_listener.start()
+    print(f"MSHV: Initialized - Port: {mshv_config.udp_port}, Enabled: {mshv_config.enabled}")
+
+# Both listeners may have auto-started from a saved config (enabled=True from
+# a previous session) - check for a port collision only if both actually started.
+# Console-only (modal=False): this runs before the user has taken any action.
+if WSJTX_AVAILABLE and MSHV_AVAILABLE and wsjtx_listener._running:
+    _warn_udp_port_conflict("WSJT-X", wsjtx_listener.config.udp_port, "MSHV", mshv_listener, modal=False)
+
 # Initialize fldigi Integration after root is created
 if FLDIGI_AVAILABLE:
     fldigi_config = fldigi_load_config()
@@ -9240,6 +10454,16 @@ if RIGCTLD_AVAILABLE:
     if rigctld_config.enabled:
         rigctld_client.start()
     print(f"rigctld: Initialized - Host: {rigctld_config.host}:{rigctld_config.port}, Enabled: {rigctld_config.enabled}")
+
+# Initialize N1MM+ Integration after root is created
+if N1MM_AVAILABLE:
+    n1mm_config = n1mm_load_config()
+    n1mm_listener = N1MMListener(n1mm_config, n1mm_on_qso_logged, n1mm_status_update, n1mm_on_band_change,
+                                  on_qso_deleted=n1mm_on_qso_deleted,
+                                  on_qso_replaced=n1mm_on_qso_replaced)
+    if n1mm_config.enabled:
+        n1mm_listener.start()
+    print(f"N1MM+: Initialized - Port: {n1mm_config.udp_port}, Enabled: {n1mm_config.enabled}")
 
 # Previous contest log lookup
 prev_log_calls = {}  # normalized call -> {'bands': ['40p', '20p'], 'exchange': '1d in', 'source': '2025fd'}
@@ -9555,7 +10779,101 @@ internetmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Internet", menu=internetmenu)
 internetmenu.add_command(label="Connect to Remote Infotable...", command=internet_connect_dialog)
 
-# Help menu
+# Integrations menu - all keying/external-software integrations live under
+# one cascade so the menubar stays tidy and Help stays last. 04Jul2026
+integrationsmenu = Menu(menu, tearoff=0)
+
+# CW Keying menu - only shown if pyserial is available
+if CW_AVAILABLE:
+    cwmenu = Menu(integrationsmenu, tearoff=0)
+    integrationsmenu.add_cascade(label="CW", menu=cwmenu)
+    cwmenu.add_command(label="Settings...", command=cw_settings_dialog)
+    cwmenu.add_command(label="Macro Editor...", command=cw_macro_editor_dialog)
+    cwmenu.add_separator()
+    cwmenu.add_command(label="Connect", command=cw_connect)
+    cwmenu.add_command(label="Disconnect", command=cw_disconnect)
+    cwmenu.add_separator()
+    cwmenu.add_command(label="Speed Up (PgUp)", command=lambda: cw_adjust_speed(2))
+    cwmenu.add_command(label="Speed Down (PgDn)", command=lambda: cw_adjust_speed(-2))
+
+# Voice Keying menu - only shown if pyttsx3 is available
+if VOICE_AVAILABLE:
+    voicemenu = Menu(integrationsmenu, tearoff=0)
+    integrationsmenu.add_cascade(label="Voice", menu=voicemenu)
+    voicemenu.add_command(label="Settings...", command=voice_settings_dialog)
+    voicemenu.add_command(label="Macro Editor...", command=voice_macro_editor_dialog)
+
+# WSJT-X Integration menu
+if WSJTX_AVAILABLE:
+    wsjtxmenu = Menu(integrationsmenu, tearoff=0)
+    integrationsmenu.add_cascade(label="WSJT-X", menu=wsjtxmenu)
+    wsjtxmenu.add_command(label="Settings...", command=wsjtx_settings_dialog)
+    wsjtxmenu.add_separator()
+    wsjtxmenu.add_command(label="Connect", command=wsjtx_connect)
+    wsjtxmenu.add_command(label="Disconnect", command=wsjtx_disconnect)
+
+# JS8Call Integration menu
+if JS8CALL_AVAILABLE:
+    js8callmenu = Menu(integrationsmenu, tearoff=0)
+    integrationsmenu.add_cascade(label="JS8Call", menu=js8callmenu)
+    js8callmenu.add_command(label="Settings...", command=js8call_settings_dialog)
+    js8callmenu.add_separator()
+    js8callmenu.add_command(label="Connect", command=js8call_connect)
+    js8callmenu.add_command(label="Disconnect", command=js8call_disconnect)
+
+# MSHV Integration menu
+if MSHV_AVAILABLE:
+    mshvmenu = Menu(integrationsmenu, tearoff=0)
+    integrationsmenu.add_cascade(label="MSHV", menu=mshvmenu)
+    mshvmenu.add_command(label="Settings...", command=mshv_settings_dialog)
+    mshvmenu.add_separator()
+    mshvmenu.add_command(label="Connect", command=mshv_connect)
+    mshvmenu.add_command(label="Disconnect", command=mshv_disconnect)
+
+# fldigi Integration menu
+if FLDIGI_AVAILABLE:
+    fldigimenu = Menu(integrationsmenu, tearoff=0)
+    integrationsmenu.add_cascade(label="fldigi", menu=fldigimenu)
+    fldigimenu.add_command(label="Settings...", command=fldigi_settings_dialog)
+    fldigimenu.add_separator()
+    fldigimenu.add_command(label="Connect", command=fldigi_connect)
+    fldigimenu.add_command(label="Disconnect", command=fldigi_disconnect)
+
+# N3FJP Integration menu
+if N3FJP_AVAILABLE:
+    n3fjpmenu = Menu(integrationsmenu, tearoff=0)
+    integrationsmenu.add_cascade(label="N3FJP", menu=n3fjpmenu)
+    n3fjpmenu.add_command(label="Settings...", command=n3fjp_settings_dialog)
+    n3fjpmenu.add_separator()
+    n3fjpmenu.add_command(label="Connect Client", command=n3fjp_connect_client)
+    n3fjpmenu.add_command(label="Disconnect Client", command=n3fjp_disconnect_client)
+    n3fjpmenu.add_separator()
+    n3fjpmenu.add_command(label="Start Server", command=n3fjp_start_server)
+    n3fjpmenu.add_command(label="Stop Server", command=n3fjp_stop_server)
+
+# rigctld Integration menu
+if RIGCTLD_AVAILABLE:
+    rigmenu = Menu(integrationsmenu, tearoff=0)
+    integrationsmenu.add_cascade(label="Rig", menu=rigmenu)
+    rigmenu.add_command(label="Settings...", command=rigctld_settings_dialog)
+    rigmenu.add_separator()
+    rigmenu.add_command(label="Connect", command=rigctld_connect)
+    rigmenu.add_command(label="Disconnect", command=rigctld_disconnect)
+
+# N1MM+ Integration menu
+if N1MM_AVAILABLE:
+    n1mmmenu = Menu(integrationsmenu, tearoff=0)
+    integrationsmenu.add_cascade(label="N1MM+", menu=n1mmmenu)
+    n1mmmenu.add_command(label="Settings...", command=n1mm_settings_dialog)
+    n1mmmenu.add_separator()
+    n1mmmenu.add_command(label="Connect", command=n1mm_connect)
+    n1mmmenu.add_command(label="Disconnect", command=n1mm_disconnect)
+
+# Only show Integrations if at least one integration is actually available
+if integrationsmenu.index('end') is not None:
+    menu.add_cascade(label="Integrations", menu=integrationsmenu)
+
+# Help menu - kept last on the menubar. 04Jul2026
 helpmenu = Menu(menu, tearoff=0)
 menu.add_cascade(label="Help", menu=helpmenu)
 # Basically reworked the whole menu section. - Scott A Hibbs KD4SIR 7/25/13
@@ -9570,83 +10888,15 @@ helpmenu.add_command(label="Release Log", command=lambda: viewtextf('Releaselog.
 helpmenu.add_command(label="GitHub ReadMe", command=lambda: viewtextf('readme.txt'))
 helpmenu.add_command(label="About FDLOG_Enhanced", command=lambda: viewtextv(about, "About"))
 
-# CW Keying menu - only shown if pyserial is available
-if CW_AVAILABLE:
-    cwmenu = Menu(menu, tearoff=0)
-    menu.add_cascade(label="CW", menu=cwmenu)
-    cwmenu.add_command(label="Settings...", command=cw_settings_dialog)
-    cwmenu.add_command(label="Macro Editor...", command=cw_macro_editor_dialog)
-    cwmenu.add_separator()
-    cwmenu.add_command(label="Connect", command=cw_connect)
-    cwmenu.add_command(label="Disconnect", command=cw_disconnect)
-    cwmenu.add_separator()
-    cwmenu.add_command(label="Speed Up (PgUp)", command=lambda: cw_adjust_speed(2))
-    cwmenu.add_command(label="Speed Down (PgDn)", command=lambda: cw_adjust_speed(-2))
-
-# Voice Keying menu - only shown if pyttsx3 is available
-if VOICE_AVAILABLE:
-    voicemenu = Menu(menu, tearoff=0)
-    menu.add_cascade(label="Voice", menu=voicemenu)
-    voicemenu.add_command(label="Settings...", command=voice_settings_dialog)
-    voicemenu.add_command(label="Macro Editor...", command=voice_macro_editor_dialog)
-
-# WSJT-X Integration menu
-if WSJTX_AVAILABLE:
-    wsjtxmenu = Menu(menu, tearoff=0)
-    menu.add_cascade(label="WSJT-X", menu=wsjtxmenu)
-    wsjtxmenu.add_command(label="Settings...", command=wsjtx_settings_dialog)
-    wsjtxmenu.add_separator()
-    wsjtxmenu.add_command(label="Connect", command=wsjtx_connect)
-    wsjtxmenu.add_command(label="Disconnect", command=wsjtx_disconnect)
-
-# JS8Call Integration menu
-if JS8CALL_AVAILABLE:
-    js8callmenu = Menu(menu, tearoff=0)
-    menu.add_cascade(label="JS8Call", menu=js8callmenu)
-    js8callmenu.add_command(label="Settings...", command=js8call_settings_dialog)
-    js8callmenu.add_separator()
-    js8callmenu.add_command(label="Connect", command=js8call_connect)
-    js8callmenu.add_command(label="Disconnect", command=js8call_disconnect)
-
-# fldigi Integration menu
-if FLDIGI_AVAILABLE:
-    fldigimenu = Menu(menu, tearoff=0)
-    menu.add_cascade(label="fldigi", menu=fldigimenu)
-    fldigimenu.add_command(label="Settings...", command=fldigi_settings_dialog)
-    fldigimenu.add_separator()
-    fldigimenu.add_command(label="Connect", command=fldigi_connect)
-    fldigimenu.add_command(label="Disconnect", command=fldigi_disconnect)
-
-# N3FJP Integration menu
-if N3FJP_AVAILABLE:
-    n3fjpmenu = Menu(menu, tearoff=0)
-    menu.add_cascade(label="N3FJP", menu=n3fjpmenu)
-    n3fjpmenu.add_command(label="Settings...", command=n3fjp_settings_dialog)
-    n3fjpmenu.add_separator()
-    n3fjpmenu.add_command(label="Connect Client", command=n3fjp_connect_client)
-    n3fjpmenu.add_command(label="Disconnect Client", command=n3fjp_disconnect_client)
-    n3fjpmenu.add_separator()
-    n3fjpmenu.add_command(label="Start Server", command=n3fjp_start_server)
-    n3fjpmenu.add_command(label="Stop Server", command=n3fjp_stop_server)
-
-# rigctld Integration menu
-if RIGCTLD_AVAILABLE:
-    rigmenu = Menu(menu, tearoff=0)
-    menu.add_cascade(label="Rig", menu=rigmenu)
-    rigmenu.add_command(label="Settings...", command=rigctld_settings_dialog)
-    rigmenu.add_separator()
-    rigmenu.add_command(label="Connect", command=rigctld_connect)
-    rigmenu.add_command(label="Disconnect", command=rigctld_disconnect)
-
 # Network bar moved to the top - Scott Hibbs KD4SIR 05Aug2022
 frn1 = Frame(root, bd=1)
 # Row 0 sub-frame: Network, Time on Band, Node
 _frn1_row0 = Frame(frn1)
 _frn1_row0.pack(fill='x')
-# Row 1 sub-frame: CW, Voice, WSJT-X, JS8Call status labels
+# Row 1 sub-frame: CW, Voice, WSJT-X, JS8Call, MSHV status labels
 _frn1_row1 = Frame(frn1)
 _frn1_row1.pack(fill='x')
-# Row 2 sub-frame: fldigi, N3FJP, rigctld status labels
+# Row 2 sub-frame: fldigi, N3FJP, rigctld, N1MM+ status labels
 _frn1_row2 = Frame(frn1)
 _frn1_row2.pack(fill='x')
 # Network label
@@ -9683,6 +10933,14 @@ if JS8CALL_AVAILABLE:
 else:
     js8call_status_label = None
 
+# MSHV Status label
+if MSHV_AVAILABLE:
+    mshv_status_label = Label(_frn1_row1, text="MSHV: Off", font=fdfont, relief='raised',
+                              foreground='gray', background='light gray',
+                              width=22, anchor='w')
+else:
+    mshv_status_label = None
+
 # fldigi Status label
 if FLDIGI_AVAILABLE:
     fldigi_status_label = Label(_frn1_row2, text="fldigi: Off", font=fdfont, relief='raised',
@@ -9706,6 +10964,25 @@ if RIGCTLD_AVAILABLE:
                                 width=22, anchor='w')
 else:
     rigctld_status_label = None
+
+# N1MM+ Status label
+if N1MM_AVAILABLE:
+    n1mm_status_label = Label(_frn1_row2, text="N1MM+: Off", font=fdfont, relief='raised',
+                              foreground='gray', background='light gray',
+                              width=22, anchor='w')
+else:
+    n1mm_status_label = None
+
+# Integration status labels use a reduced font so a fully-populated row
+# still fits within the band-grid window width; mouseover shows the full
+# text if a label is ever truncated. 05Jul2026
+for _slbl in (cw_status_label, voice_status_label, wsjtx_status_label,
+              js8call_status_label, mshv_status_label, fldigi_status_label,
+              n3fjp_status_label, rigctld_status_label, n1mm_status_label):
+    if _slbl is not None:
+        _slbl.config(font=fdfont_small())
+        small_font_widgets.add(_slbl)
+        add_truncation_tooltip(_slbl)
 
 # Band Buttons
 f1 = Frame(root, bd=1)
@@ -9778,8 +11055,6 @@ sound_cb = Checkbutton(f1b, text="Sound", variable=sound_enabled,
 _funcbar = Frame(f1b, bd=0)
 redrawbutton = Button(_funcbar, text="Redraw Log", font=fdfont, relief='raised', foreground='blue', command=logwredraw,
                       background='light gray')
-opsonlinebutton = Button(_funcbar, text="Contestants Working", font=fdfont, relief='raised', foreground='blue',
-                         command=showoperatorsonline, background='light gray')
 mapbutton = Button(_funcbar, text="WAS Map", font=fdfont, relief='raised', foreground='blue',
                    command=generate_map, background='light gray')
 sectionmapbutton = Button(_funcbar, text="Section Map", font=fdfont, relief='raised', foreground='blue',
@@ -9796,8 +11071,11 @@ phonetic_toggle_btn = Button(_funcbar, text="Show Phonetic", font=fdfont, relief
 # lblport.grid(row=3, column=9, columnspan=1, sticky=NSEW)
 
 # log window
+# setgrid removed 05Jul2026: it made root's wm geometry be interpreted in
+# TEXT CELLS (cols x rows) instead of pixels, so lock_main_window_size()'s
+# "1010x691" meant 1010 columns -> Windows clamped to a full-screen window
 logw = Text(root, takefocus=0, height=11, width=80, font=fdfont,
-            background='light gray', wrap="none", setgrid=True)
+            background='light gray', wrap="none")
 scroll = Scrollbar(root, command=logw.yview, background='light gray')
 logw.config(yscrollcommand=scroll.set)
 scroll.grid(row=3, column=1, sticky=NS)
@@ -9807,9 +11085,9 @@ logw.insert(END, "                            DATABASE DISPLAY WINDOW\n", "b")
 logw.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", "b")
 logw.insert(END, "%s\n" % prog, "b")
 
-# Text Billboard - our entry window.
+# Text Billboard - our entry window. (setgrid removed - see log window note)
 txtbillb = Text(root, takefocus=1, height=10, width=80, font=fdfont,
-                wrap="none", setgrid=True, background='light gray')
+                wrap="none", background='light gray')
 scrollt = Scrollbar(root, command=txtbillb.yview)
 txtbillb.config(yscrollcommand=scrollt.set)
 txtbillb.insert(END, "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n", "b")
@@ -9831,11 +11109,15 @@ txtbillb.focus_set()
 phonetic_frame = Frame(root, bd=1, background='light gray')
 phonetic_mode = StringVar(value='answer')  # Default to Answer mode
 
-# Radio buttons for phonetic mode selection (Callsign first as default)
-phonetic_rb_answer = Radiobutton(phonetic_frame, text="Callsign", font=fdfont,
+# Radio buttons for phonetic mode selection (Call first as default)
+phonetic_rb_answer = Radiobutton(phonetic_frame, text="Call", font=fdfont,
                                   variable=phonetic_mode, value='answer',
                                   background='light gray', selectcolor='gold',
                                   command=update_phonetic_display)
+phonetic_rb_rr = Radiobutton(phonetic_frame, text="RR", font=fdfont,
+                              variable=phonetic_mode, value='rr',
+                              background='light gray', selectcolor='gold',
+                              command=update_phonetic_display)
 phonetic_rb_cq = Radiobutton(phonetic_frame, text="CQ", font=fdfont,
                               variable=phonetic_mode, value='cq',
                               background='light gray', selectcolor='gold',
@@ -9845,13 +11127,10 @@ phonetic_rb_qrz = Radiobutton(phonetic_frame, text="QRZ", font=fdfont,
                                background='light gray', selectcolor='gold',
                                command=update_phonetic_display)
 
-# Label for phonetic mode
-phonetic_mode_label = Label(phonetic_frame, text="Phonetic:", font=fdfont,
-                            background='light gray', foreground='blue')
-
 # Label for displaying the phonetic callsign response
+# pale green = same as the GOTA band button at target (1/1) 05Jul2026
 phonetic_label = Label(phonetic_frame, text="", font=fdfont,
-                       background='light gray', foreground='black',
+                       background='pale green', foreground='black',
                        anchor='w', justify='left')
 
 # startup
@@ -9950,25 +11229,78 @@ frn1.grid(row=0, column=0, columnspan=2, sticky=NSEW)
 lblnode.pack(in_=_frn1_row0, side='right')
 lbltimeonband.pack(in_=_frn1_row0, side='right')
 lblnet.pack(in_=_frn1_row0, side='left', fill='x', expand=True)
-# Row 1: Integration status labels packed left
-cw_status_label.pack(in_=_frn1_row1, side='left', fill='x', expand=True)
+# Rows 1+2: integration status labels. Only ACTIVE integrations are shown -
+# an off/idle label ("X: Off", "X: Disconnected", or CW/Voice greyed out for
+# the current band mode) is hidden entirely. Visibility is re-evaluated once
+# a second from update(), so labels appear/disappear as integrations start
+# and stop. 04Jul2026
 if CW_AVAILABLE:
     cw_status_label.config(cursor='hand2')
     cw_status_label.bind('<Button-1>', lambda e: toggle_fkey_bar() if str(cw_status_label.cget('state')) != 'disabled' else None)
-voice_status_label.pack(in_=_frn1_row1, side='left', fill='x', expand=True)
 if VOICE_AVAILABLE:
     voice_status_label.config(cursor='hand2')
     voice_status_label.bind('<Button-1>', lambda e: toggle_fkey_bar() if str(voice_status_label.cget('state')) != 'disabled' else None)
-if WSJTX_AVAILABLE and wsjtx_status_label:
-    wsjtx_status_label.pack(in_=_frn1_row1, side='left', fill='x', expand=True)
-if JS8CALL_AVAILABLE and js8call_status_label:
-    js8call_status_label.pack(in_=_frn1_row1, side='left', fill='x', expand=True)
-if FLDIGI_AVAILABLE and fldigi_status_label:
-    fldigi_status_label.pack(in_=_frn1_row2, side='left', fill='x', expand=True)
-if N3FJP_AVAILABLE and n3fjp_status_label:
-    n3fjp_status_label.pack(in_=_frn1_row2, side='left', fill='x', expand=True)
-if RIGCTLD_AVAILABLE and rigctld_status_label:
-    rigctld_status_label.pack(in_=_frn1_row2, side='left', fill='x', expand=True)
+
+_status_bar_shown = {'row1': None, 'row2': None}
+
+
+def refresh_status_bar():
+    """Show only active integration status labels; hide off/idle ones.
+    Visibility comes from the runner objects (is it actually started?), not
+    the label text - so a started-but-unreachable integration stays visible
+    as feedback while it retries. A row with nothing visible is unpacked
+    entirely (an empty packed frame paints a white sliver, Scott 04Jul2026)."""
+    def _running(runner):
+        try:
+            if runner is None:
+                return False
+            if hasattr(runner, 'is_running'):
+                return bool(runner.is_running())
+            return bool(runner._running)
+        except Exception:
+            return False
+
+    def _enabled_lbl(lbl):
+        return lbl is not None and str(lbl.cget('state')) != 'disabled'
+
+    vis1 = (
+        (cw_status_label, _enabled_lbl(cw_status_label)),
+        (voice_status_label, _enabled_lbl(voice_status_label)),
+        (wsjtx_status_label, wsjtx_status_label is not None and _running(wsjtx_listener)),
+        (js8call_status_label, js8call_status_label is not None and _running(js8call_listener)),
+        (mshv_status_label, mshv_status_label is not None and _running(mshv_listener)),
+    )
+    vis2 = (
+        (fldigi_status_label, fldigi_status_label is not None and _running(fldigi_poller)),
+        (n3fjp_status_label, n3fjp_status_label is not None and
+         (_running(n3fjp_client) or _running(n3fjp_server))),
+        (rigctld_status_label, rigctld_status_label is not None and _running(rigctld_client)),
+        (n1mm_status_label, n1mm_status_label is not None and _running(n1mm_listener)),
+    )
+    for key, row_frame, pairs in (('row1', _frn1_row1, vis1),
+                                  ('row2', _frn1_row2, vis2)):
+        vis = tuple(v for dummy, v in pairs)
+        if vis == _status_bar_shown[key]:
+            continue  # no change - don't churn the layout
+        _status_bar_shown[key] = vis
+        for lbl, dummy in pairs:
+            if lbl is not None:
+                lbl.pack_forget()
+        for lbl, v in pairs:
+            if v:
+                lbl.pack(in_=row_frame, side='left', fill='x', expand=True)
+        # collapse/restore the row frame itself, preserving row order
+        # (winfo_manager is synchronous; winfo_ismapped lags until idle)
+        if any(vis):
+            if row_frame.winfo_manager() != 'pack':
+                anchor = _frn1_row0 if (row_frame is _frn1_row1
+                                        or _frn1_row1.winfo_manager() != 'pack') else _frn1_row1
+                row_frame.pack(fill='x', after=anchor)
+        else:
+            row_frame.pack_forget()
+
+
+refresh_status_bar()
 # Grid for band buttons
 f1.grid(row=1, column=0, columnspan=2, sticky=NSEW)
 # Grid for Contestant, Logger and Power buttons
@@ -9993,29 +11325,33 @@ powlbl.grid(row=0, column=6, sticky=NSEW)
 powcb.grid(row=0, column=7, sticky=NSEW)
 natpwr_countdown.grid(row=0, column=8, sticky=NSEW)
 sound_cb.grid(row=0, column=9, sticky=NSEW)
-# Grid for functionbuttons — _funcbar spans all 10 cols of f1b, has its own 6-col grid
+# Grid for functionbuttons — _funcbar spans all 10 cols of f1b, has its own 5-col grid
+# ("Contestants Working" button removed 04Jul2026 - the Info Table's STATIONS
+#  panel shows the same information better)
 _funcbar.grid(row=1, column=0, columnspan=10, sticky=NSEW)
-for _i in range(6):
+for _i in range(5):
     _funcbar.grid_columnconfigure(_i, weight=1)
 redrawbutton.grid(row=0, column=0, sticky=NSEW)
-opsonlinebutton.grid(row=0, column=1, sticky=NSEW)
-mapbutton.grid(row=0, column=2, sticky=NSEW)
-sectionmapbutton.grid(row=0, column=3, sticky=NSEW)
-phonetic_toggle_btn.grid(row=0, column=4, sticky=NSEW)
+mapbutton.grid(row=0, column=1, sticky=NSEW)
+sectionmapbutton.grid(row=0, column=2, sticky=NSEW)
+phonetic_toggle_btn.grid(row=0, column=3, sticky=NSEW)
 Button(_funcbar, text="Info Table", font=fdfont, foreground='blue', background='light gray',
-       relief='raised', cursor='hand2', command=open_info_table_popup).grid(row=0, column=5, sticky=NSEW)
+       relief='raised', cursor='hand2', command=open_info_table_popup).grid(row=0, column=4, sticky=NSEW)
 # Grid for log window
-root.grid_rowconfigure(2, weight=1)
+# weights were on rows 2+3 (row 2 = the f1b button bar, which just painted
+# blank space when stretched) - extra vertical space belongs to the log
+# window (row 3) and billboard (row 4) 05Jul2026
+root.grid_rowconfigure(3, weight=1)
 logw.grid(row=3, column=0, sticky=NSEW)
 root.grid_columnconfigure(0, weight=1)
 # Grid for text billboard
-root.grid_rowconfigure(3, weight=1)
+root.grid_rowconfigure(4, weight=1)
 txtbillb.grid(row=4, column=0, sticky=NSEW)
 scrollt.grid(row=4, column=1, sticky=NSEW)
 # Grid for phonetic alphabet display (hidden by default, toggle with button)
 # phonetic_frame.grid(row=5, column=0, columnspan=2, sticky=NSEW)
-phonetic_mode_label.grid(row=0, column=0, padx=5, sticky=NSEW)
-phonetic_rb_answer.grid(row=0, column=1, padx=5, sticky=NSEW)
+phonetic_rb_answer.grid(row=0, column=0, padx=5, sticky=NSEW)
+phonetic_rb_rr.grid(row=0, column=1, padx=5, sticky=NSEW)
 phonetic_rb_cq.grid(row=0, column=2, padx=5, sticky=NSEW)
 phonetic_rb_qrz.grid(row=0, column=3, padx=5, sticky=NSEW)
 phonetic_label.grid(row=0, column=4, padx=10, sticky=NSEW)
@@ -10062,7 +11398,6 @@ def fkey_button_press(fkey):
         cw_send_macro(fkey)
 
 fkey_frame = Frame(root, bd=1, background='light gray')
-fkey_btn_width = 8  # wider to fit two-line labels
 fkey_buttons = {}  # dict to access buttons for label updates
 
 # Default F-key labels (N1MM-style for Field Day)
@@ -10133,12 +11468,17 @@ fkey_labels = fkey_get_labels()
 for i in range(1, 13):
     key = f'F{i}'
     lbl = fkey_labels[key]
-    btn = Button(fkey_frame, text=f"{key}\n{lbl}", font=fdfont, width=fkey_btn_width, relief='raised',
+    btn = Button(fkey_frame, text=f"{key}\n{lbl}", font=fdfont_small(), relief='raised',
                  foreground='black', background='light gray',
                  command=lambda k=key: fkey_button_press(k))
-    btn.grid(row=0, column=i-1, padx=1, pady=2)
+    # place() with fractional widths: the 13 buttons always divide the bar
+    # exactly, squeezing to fit instead of clipping at the right edge; a
+    # squeezed button's text clips inside it and the mouseover tooltip
+    # shows the full text. 05Jul2026
+    btn.place(relx=(i - 1) / 13.0, rely=0.0, relwidth=1 / 13.0, relheight=1.0)
     btn.bind('<Button-3>', lambda e: fkey_edit_labels())
-    fkey_frame.grid_columnconfigure(i-1, weight=1, uniform='fkey')
+    small_font_widgets.add(btn)
+    add_truncation_tooltip(btn)
     fkey_buttons[key] = btn
 
 # ESC / Stop button
@@ -10150,11 +11490,23 @@ def fkey_stop_all():
     elif current_mode in ('c', 'd') and CW_AVAILABLE:
         cw_abort()
 
-esc_btn = Button(fkey_frame, text="ESC\nStop", font=fdfont, width=fkey_btn_width, relief='raised',
+esc_btn = Button(fkey_frame, text="ESC\nStop", font=fdfont_small(), relief='raised',
                  foreground='white', background='#c00000',
                  command=fkey_stop_all)
-esc_btn.grid(row=0, column=12, padx=1, pady=2)
-fkey_frame.grid_columnconfigure(12, weight=1, uniform='fkey')
+esc_btn.place(relx=12 / 13.0, rely=0.0, relwidth=1 / 13.0, relheight=1.0)
+small_font_widgets.add(esc_btn)
+add_truncation_tooltip(esc_btn)
+
+
+def _fkey_bar_fit():
+    """Size the F-key bar frame to its buttons. place() doesn't propagate
+    child size to the parent, so the frame needs an explicit height (and it
+    must be recomputed when the Font menu changes sizes). 05Jul2026"""
+    h9 = max(b9.winfo_reqheight() for b9 in list(fkey_buttons.values()) + [esc_btn])
+    fkey_frame.config(height=h9 + 4)
+
+
+_fkey_bar_fit()
 
 fkey_frame.grid(row=6, column=0, columnspan=2, sticky=NSEW)
 fkey_frame.grid_remove()  # Hidden by default; toggle via CW/Voice status labels
@@ -10170,6 +11522,58 @@ txtbillb.bind('<Control-Key-v>', paste)  # paste event for the paste function
 
 bandset('off')
 update_phonetic_display()  # initial phonetic display update
+
+
+MAIN_WIN_WIDTH = 1010  # fixed main-window width in px - same on every screen
+
+
+def lock_main_window_size():
+    """Freeze the main window at the largest size its layout can need.
+    Without an explicit geometry, Tk resizes the window every time an
+    optional row appears or disappears (integration status rows, phonetic
+    display, F-key bar) - "flops around like a fish" (Scott 05Jul2026).
+    Measured once with every optional row visible (they use fdfont_small()
+    so they cost the window little width over the band grid). Pinning the
+    size via wm geometry means later layout changes redistribute space into
+    the weighted log/billboard rows instead of resizing the window. The
+    user can still resize and maximize normally."""
+    all_status_labels = (cw_status_label, voice_status_label, wsjtx_status_label,
+                         js8call_status_label, mshv_status_label,
+                         fldigi_status_label, n3fjp_status_label,
+                         rigctld_status_label, n1mm_status_label)
+    # temporarily show every optional row
+    phonetic_frame.grid(row=5, column=0, columnspan=2, sticky=NSEW)
+    fkey_frame.grid()
+    for lbl9 in all_status_labels:
+        if lbl9 is not None:
+            lbl9.pack(side='left', fill='x', expand=True)
+    _frn1_row1.pack(fill='x', after=_frn1_row0)
+    _frn1_row2.pack(fill='x', after=_frn1_row1)
+    root.update_idletasks()
+    # Deterministic on every screen (Scott 05Jul2026): fixed width, top-left
+    # corner. Height: content height, capped at 80% of the screen so window
+    # chrome (title/menu/taskbar) always fits - the weighted log/billboard
+    # rows absorb any height loss.
+    w9 = min(MAIN_WIN_WIDTH, root.winfo_screenwidth() - 20)
+    h9 = min(root.winfo_reqheight(), int(root.winfo_screenheight() * 0.80))
+    # restore the real layout
+    phonetic_frame.grid_remove()
+    fkey_frame.grid_remove()
+    for lbl9 in all_status_labels:
+        if lbl9 is not None:
+            lbl9.pack_forget()
+    _frn1_row1.pack_forget()
+    _frn1_row2.pack_forget()
+    _status_bar_shown['row1'] = _status_bar_shown['row2'] = None
+    refresh_status_bar()
+    # top-left corner - explicit position so Windows can't place the window
+    # partially off screen, and the same spot on every machine
+    root.geometry("%dx%d+0+0" % (w9, h9))
+    print("Main window: %dx%d at top-left (screen %dx%d)" % (
+        w9, h9, root.winfo_screenwidth(), root.winfo_screenheight()))
+
+
+lock_main_window_size()
 root.after(1000, update)  # type: ignore  # 1 hz activity
 root.mainloop()  # gui up
 print("\nShutting down")
@@ -10181,6 +11585,10 @@ if WSJTX_AVAILABLE and wsjtx_listener:
 if JS8CALL_AVAILABLE and js8call_listener:
     js8call_listener.stop()
     print("  JS8Call listener stopped")
+# Stop MSHV listener
+if MSHV_AVAILABLE and mshv_listener:
+    mshv_listener.stop()
+    print("  MSHV listener stopped")
 # Stop fldigi poller
 if FLDIGI_AVAILABLE and fldigi_poller:
     fldigi_poller.stop()
@@ -10196,6 +11604,10 @@ if N3FJP_AVAILABLE and n3fjp_server:
 if RIGCTLD_AVAILABLE and rigctld_client:
     rigctld_client.stop()
     print("  rigctld client stopped")
+# Stop N1MM+ listener
+if N1MM_AVAILABLE and n1mm_listener:
+    n1mm_listener.stop()
+    print("  N1MM+ listener stopped")
 # the end was updated from 152i
 band = 'off'  # gui down, xmt band off, preparing to quit
 net.bcast_now()  # push band out

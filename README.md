@@ -19,6 +19,8 @@ QST messages can be sent to all nodes (even GOTA) or one node.
 Full CW interface, and even a voice keyer (text to speech or recorded)    
 WSJT-X integration - QSOs logged in WSJT-X (FT8/FT4) automatically appear in FDLog.   
 JS8Call with WSJT-X supported.       
+MSHV integration (same protocol as WSJT-X).   
+N1MM+ integration - contacts logged in N1MM+ automatically appear in FDLog.   
 Fldigi Two-Way Integration.   
 N3FJP API Integration    
 &nbsp;&nbsp;&nbsp;&nbsp;- TCP client pulls QSOs from N3FJP    
@@ -27,7 +29,9 @@ Hamlib rigctld Rig Control Integration for 200+ rigs support
 Internet nodes - remote operators join your network over the internet    
 &nbsp;&nbsp;&nbsp;&nbsp;- UPnP automatic port forward or free Cloudflare Tunnel - no accounts needed    
 Previous Field Day history - stations we worked before pre-fill in orange (N1MM+ community history bundled)    
+Station alias - give each node a friendly display name for the info table and band tooltips    
 Info table shows the true live score - QSO points plus all bonus points, same math as the entry form    
+Sign-in form feeds the bonuses - youth ages and official/agency visit checkboxes score automatically    
 Scoring follows the current ARRL rules (2026) - power multiplier, GOTA, Class D, operating period check    
 
 Log entry is just three simple things : KD4SIR 1D IN
@@ -60,7 +64,8 @@ Run the executable - these computers say no to the setup question.
 To make sure you have a complete log, the time master should be the last to shut down for the event.    
 
 **Notes:**
-- All participants can sign in at any node. (check in every visitor you see -age is for youths)   
+- All participants can sign in at any node. Check in every visitor you see - ages 18 and under    
+&nbsp;&nbsp; count toward the youth bonus, and the visit checkboxes earn the site-visit bonuses.   
 - All nodes on the same network must use the same auth key     
 &nbsp;&nbsp; (last two digits of contest year) to communicate   
 &nbsp;&nbsp; this allows for one node to test separately from others using 'tst' auth        
